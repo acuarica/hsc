@@ -1,4 +1,4 @@
-#Notes
+# Notes
 
 - performance testing random haskell
 - invertible functions? generate instance. random generator.
@@ -8,4 +8,10 @@
 why map f.g xs is better than map f map g xs?
   map f xs ++ map f ys bettter/worst than map f (xs++ys)
 - bake all optimizations into the rules?
-- supercompilation
+
+
+## Supercompilation
+
+http://c2.com/cgi/wiki?SuperCompiler
+
+Generalization of partial evaluation.
