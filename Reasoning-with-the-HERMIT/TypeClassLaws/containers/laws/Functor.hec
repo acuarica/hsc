@@ -1,0 +1,34 @@
+set-pp-type Show
+
+-- fmap-id
+rule-to-lemma fmap-id
+inst-lemma fmap-id 'f [| Map k |]
+prove-lemma fmap-id
+inst-dictionaries
+extensionality 'm
+replicate 3 (one-td unfold)
+smash
+induction 'm
+any-call ((unfold 'map) >>> (case-reduce <+ undefined-case))
+smash
+any-td ((lemma-forward ind-hyp-0) <+ (lemma-forward ind-hyp-1))
+end-proof
+
+-- fmap-distrib
+rule-to-lemma fmap-distrib
+inst-lemma fmap-distrib 'f [| Map k |]
+prove-lemma fmap-distrib
+inst-dictionaries
+extensionality 'm
+smash
+any-call (unfold ['fmap,'$fFunctorMap])
+smash
+any-call (unfold '$fFunctorMap_$cfmap)
+induction 'm
+any-call (unfold 'map >>> (case-reduce <+ undefined-case))
+smash
+any-call (lemma-forward ind-hyp-0 <+ lemma-forward ind-hyp-1)
+{ forall-body ; consequent ; consequent ; eq-rhs
+  unfold ; smash
+}
+end-proof

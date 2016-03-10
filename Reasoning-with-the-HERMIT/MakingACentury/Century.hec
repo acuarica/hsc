@@ -1,0 +1,78 @@
+set-auto-corelint True
+set-pp-type Omit
+flatten-module
+
+-- load foldr-fusion and filter-split composite lemmas
+load-lemma-library 'HERMIT.Libraries.Century.lemmas
+
+{
+  load-and-run "verify-foldr-fusion.hec"
+  load-and-run "verify-comp-id.hec"
+  load-and-run "verify-comp-assoc.hec"
+  load-and-run "verify-comp-assoc4.hec"
+  load-and-run "verify-map-strict.hec"
+  load-and-run "verify-map-id.hec"
+  load-and-run "verify-map-fusion.hec"
+  load-and-run "verify-filter-strict.hec"
+  load-and-run "verify-filter-split.hec"
+  load-and-run "verify-6-2.hec"
+  rule-to-lemma "6.3" ; prove-lemma "6.3" ; assume
+  rule-to-lemma "6.4" ; prove-lemma "6.4" ; assume
+  load-and-run "verify-6-5.hec"
+  load-and-run "verify-6-6.hec"
+  load-and-run "verify-6-7.hec"
+  load-and-run "verify-6-8.hec"
+  load-and-run "verify-zip-unzip.hec"
+  load-and-run "verify-6-9.hec"
+  load-and-run "verify-6-10.hec"
+  load-and-run "verify-foldr-fusion-1.hec"
+  load-and-run "verify-foldr-fusion-2.hec"
+}
+
+
+{ rhs-of 'solutions
+
+  -- filter (good . value) . expressions
+
+        { app-arg ; inline 'expressions }
+
+  -- filter (good . value) . foldr extend []
+
+        { [ app-fun, app-arg ] ; lemma-forward "6.2" }
+        { lemma-forward "comp-assoc" }
+
+  -- filter (good . value) . filter (ok . value) . foldr extend []
+
+        { app-arg
+
+          -- filter (ok . value) . foldr extend []
+
+              { lemma-forward "foldr-fusion-1" }
+
+          -- foldr extend' []
+
+        }
+
+  -- filter (good . value) . foldr extend' []
+
+}
+
+{ rhs-of 'expressions2
+
+  -- map (fork (id,value)) . foldr extend' []
+
+        { lemma-forward "foldr-fusion-2" }
+
+  -- foldr expand []
+
+}
+
+{ rhs-of 'solutions2
+
+  -- map fst . filter (good . snd) . expressions2
+
+        { one-td (inline 'expressions2) }
+
+  -- map fst . filter (good . snd) . foldr expand []
+
+}

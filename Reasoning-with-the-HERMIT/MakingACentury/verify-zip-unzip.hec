@@ -1,0 +1,43 @@
+---------------------------
+-- Verify zip-unzip
+--
+-- zip . unzip  =  id
+--
+--
+---------------------------
+
+rule-to-lemma "zip-unzip"
+prove-lemma "zip-unzip"
+
+-- zip . unzip  =  id
+
+extensionality 'xys
+both unfold
+
+-- zip (unzip xyz) = xys
+
+{ application-of 'unzip
+
+  -- unzip xyz
+
+  unfold 'unzip
+
+  -- fork (map fst , map snd) xys
+
+  unfold 'fork >>> case-reduce
+}
+
+-- zip (map fst xys , map snd xys) = xys
+
+induction 'xys
+
+{ [forall-body, conj-rhs, conj-rhs, forall-body, consequent]
+  any-bu (unfold 'map)
+  one-td (unfold 'zip)
+  smash
+  one-td (lemma-forward ind-hyp-0)
+  any-bu (case-split-inline 'a)
+}
+any-call (unfold 'zip <+ unfold 'map)
+smash
+end-proof

@@ -1,0 +1,12 @@
+---------------------------
+-- Verify comp-assoc4
+--
+-- forall f g h k l.  f . g . h . k . l  = (f . g . h . k) . l
+--
+---------------------------
+
+rule-to-lemma "comp-assoc4"
+
+prove-lemma "comp-assoc4"
+  both (unfold '. >>> smash)
+end-proof

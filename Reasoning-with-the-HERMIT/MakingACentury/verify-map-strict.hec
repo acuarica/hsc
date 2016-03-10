@@ -1,0 +1,13 @@
+---------------------------
+-- Verify map-strict
+--
+-- map f undefined = undefined
+--
+--
+---------------------------
+
+rule-to-lemma "map-strict"
+
+prove-lemma "map-strict"
+  lhs (unfold 'map >>> undefined-expr)
+end-proof

@@ -1,0 +1,26 @@
+---------------------------
+-- Verify map-id
+--
+-- map id = id
+--
+--
+---------------------------
+
+rule-to-lemma "map-id"
+prove-lemma "map-id"
+
+extensionality 'x
+rhs (unfold 'id)
+induction 'x
+
+  one-td (lemma "map-strict")
+
+  one-td (unfold 'map >>> case-reduce)
+
+  { [forall-body, conj-rhs, conj-rhs, forall-body, consequent]
+    lhs unfold
+    smash
+    one-td (lemma-forward ind-hyp-0)
+  }
+
+end-proof

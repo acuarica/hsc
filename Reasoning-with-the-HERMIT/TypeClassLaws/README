@@ -1,0 +1,32 @@
+Note: this case study requires GHC 7.8 to run.
+
+First install HERMIT version 1.0.0.0, which can be done via Cabal:
+
+> cabal update
+> cabal install hermit-1.0.0.0
+
+To run the entire case study, invoke HERMIT in this directory as follows:
+
+> hermit Laws.hs All.hec
+
+If it runs successfully, you can use the HERMIT command "show-lemmas" to display all the lemmas (which should be noted as proved).
+
+hermit> show-lemmas
+
+To run the proofs for an individual type, run one of the following:
+
+> hermit Laws.hs +Laws Start.hec Maybe.hec
+> hermit Laws.hs +Laws Start.hec List.hec
+
+If you wish to stop a proof midway, find the appropriate proof in one of the script files and insert a 'stop-script' command where desired.
+
+To run the proofs for the Map type in the containers package, do the following:
+
+> cd containers
+> hermit laws/Laws.hs +Main laws/Functor.hec laws/Monoid.hec
+
+Or, to run them as part of cabal's build:
+
+> cd containers
+> cabal configure --enable-tests
+> cabal build

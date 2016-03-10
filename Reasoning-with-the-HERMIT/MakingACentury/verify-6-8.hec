@@ -1,0 +1,33 @@
+---------------------------
+-- Verify 6.8
+--
+-- forall f g.   fork (map f , map g)  =  unzip . map (fork (f , g))
+--
+--
+---------------------------
+
+rule-to-lemma "6.8"
+
+prove-lemma "6.8"
+
+-- forall f g.   fork (map f , map g)  =  unzip . map (fork (f , g))
+
+{ forall-body; eq-rhs
+
+-- unzip . map (fork (f , g))
+
+     one-td (unfold 'unzip)
+
+-- fork (map fst, map snd) . map (fork (f , g))
+
+     lemma-forward "6.6" ; any-td (lemma-forward "map-fusion")
+
+-- fork (map (fst . fork (f , g)) , map (snd . fork (f , g)))
+
+     one-td (lemma-forward "6.5a") ; one-td (lemma-forward "6.5b")
+
+-- fork (map f , map g)
+
+}
+
+end-proof

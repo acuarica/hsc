@@ -1,0 +1,291 @@
+rule-to-lemma append-fix
+prove-lemma append-fix ; assume
+rule-to-lemma map-fix
+prove-lemma map-fix ; assume
+
+-- first: prove auxiliary lemmas
+
+-- append-right
+rule-to-lemma append-right
+prove-lemma append-right
+lhs (one-td (lemma-forward append-fix) >>> unfold)
+induction 'x
+smash
+{ forall-body
+  consequent
+  one-td (unfold 'myAppend)
+  one-td (lemma-forward ind-hyp-0)
+}
+end-proof
+
+-- append-single-left
+rule-to-lemma append-single-left
+prove-lemma append-single-left
+lhs (one-td (lemma-forward append-fix))
+lhs (replicate 2 (one-td unfold >>> smash))
+end-proof
+
+-- bind-left-nil
+rule-to-lemma bind-left-nil
+prove-lemma bind-left-nil
+inst-dictionaries
+lhs (repeat (smash <+ one-td unfold))
+end-proof
+
+-- bind-left-cons
+rule-to-lemma bind-left-cons
+prove-lemma bind-left-cons
+inst-dictionaries
+lhs (replicate 2 (replicate 2 (one-td unfold) >>> smash))
+rhs (repeat (one-td (unfold ['">>=", '"$fMonad[]", '"$fMonad[]_$c>>="])) >>> smash)
+end-proof
+
+-- append-undefined
+rule-to-lemma append-undefined
+prove-lemma append-undefined
+lhs (one-td (lemma-forward append-fix))
+lhs (unfold >>> undefined-case)
+end-proof
+
+-- bind-append
+rule-to-lemma bind-append
+prove-lemma bind-append ; assume
+
+-- pure-singleton
+rule-to-lemma pure-singleton
+prove-lemma pure-singleton
+inst-dictionaries
+lhs (repeat (simplify <+ one-td unfold))
+end-proof
+
+-- ap-left
+rule-to-lemma ap-left
+prove-lemma ap-left
+inst-dictionaries
+replicate 5 (smash <+ any-call unfold)
+end-proof
+
+-- ap-eval
+rule-to-lemma ap-eval
+prove-lemma ap-eval ; assume
+
+-- ap-map
+rule-to-lemma ap-map
+prove-lemma ap-map ; assume
+
+-- ap-append
+rule-to-lemma ap-append
+prove-lemma ap-append ; assume
+
+-- now prove type class laws
+
+-- mempty-left
+copy-lemma mempty-left mempty-left-list
+inst-lemma mempty-left-list 'm [| [] a |]
+prove-lemma mempty-left-list
+inst-dictionaries
+lhs (repeat (one-td unfold <+ smash))
+lhs (any-bu (unfold-rule append-fix))
+lhs (unfold >>> smash)
+end-proof
+
+-- mempty-right
+copy-lemma mempty-right mempty-right-list
+inst-lemma mempty-right-list 'm [| [] a |]
+prove-lemma mempty-right-list
+inst-dictionaries
+lhs (repeat (one-td unfold <+ smash))
+lemma append-right
+end-proof
+
+-- mappend-assoc
+copy-lemma mappend-assoc mappend-assoc-list
+inst-lemma mappend-assoc-list 'm [| [] a |]
+prove-lemma mappend-assoc-list
+inst-dictionaries
+both (repeat (one-td unfold <+ smash))
+both (any-bu (unfold-rule append-fix))
+induction 'x
+replicate 2 (any-call (unfold 'myAppend))
+smash
+any-bu (fold 'myAppend)
+one-td (lemma-backward ind-hyp-0)
+{ forall-body ; consequent
+  lhs (replicate 2 (one-td (unfold 'myAppend)))
+  smash
+}
+one-td (fold 'myAppend)
+end-proof
+
+-- fmap-id
+copy-lemma fmap-id fmap-id-list
+inst-lemma fmap-id-list 'f [| [] |]
+prove-lemma fmap-id-list
+inst-dictionaries
+extensionality 'xs
+lhs (unfold >>> smash >>> one-td (lemma-forward map-fix)) -- find a better way
+induction 'xs
+any-call (unfold 'myMap) ; smash
+rhs (any-call (unfold 'myMap)) ; smash
+one-td (lemma-forward ind-hyp-0) ; end-proof -- proven fmap-id-list
+
+-- fmap-distrib
+copy-lemma fmap-distrib fmap-distrib-list
+inst-lemma fmap-distrib-list 'f [| [] |]
+prove-lemma fmap-distrib-list
+inst-dictionaries
+extensionality 'xs
+both (repeat (one-td unfold <+ smash))
+both (any-bu (lemma-forward map-fix))
+induction 'xs
+any-call (unfold 'myMap) ; smash
+rhs (any-call (unfold 'myMap)) ; smash
+one-td (lemma-forward ind-hyp-0) ; end-proof
+
+-- fmap-pure -- do first, as useful later
+copy-lemma fmap-pure fmap-pure-list
+inst-lemma fmap-pure-list 'f [| [] |]
+prove-lemma fmap-pure-list
+inst-dictionaries
+both (replicate 3 (one-td unfold))
+both simplify
+lhs (one-td (lemma-forward pure-singleton))
+rhs (any-bu (lemma-forward map-fix))
+lhs unfold ; lhs (replicate 2 (one-td (unfold 'go)))
+lhs (simplify >>> one-td (lemma-forward append-right))
+induction 'x
+any-call (unfold 'myMap) ; smash
+any-call (unfold 'go1) ; smash
+rhs (any-call (unfold 'myMap))
+one-td (lemma-backward ind-hyp-0) ; smash
+any-call (lemma-forward append-fix)
+{ [ forall-body, consequent, eq-lhs, let-body ]
+  replicate 2 (one-td (unfold 'myAppend))
+  smash
+}
+any-td (fold 'go1)
+end-proof
+
+-- identity
+copy-lemma identity identity-list
+inst-lemma identity-list 'f [| [] |]
+prove-lemma identity-list
+inst-dictionaries
+lhs (one-td (lemma-forward fmap-pure-list))
+lhs (one-td (unfold '$p1Applicative) >>> one-td case-reduce-unfold)
+lhs (one-td (lemma-forward fmap-id-list) >>> smash)
+end-proof
+
+-- homomorphism
+copy-lemma homomorphism homomorphism-list
+inst-lemma homomorphism-list 'f [| [] |]
+prove-lemma homomorphism-list
+inst-dictionaries
+lhs (one-td (lemma-forward fmap-pure-list))
+both (repeat (simplify <+ one-td unfold))
+lhs (one-td (lemma-forward map-fix))
+lhs (repeat (simplify <+ one-td unfold))
+end-proof
+
+-- interchange
+copy-lemma interchange interchange-list
+inst-lemma interchange-list 'f [| [] |]
+prove-lemma interchange-list
+inst-dictionaries
+rhs (one-td (lemma-forward fmap-pure-list))
+rhs (repeat (simplify <+ one-td unfold))
+rhs (one-td (lemma-forward map-fix) >>> unfold)
+lhs (one-td (lemma-forward pure-singleton))
+lhs (replicate 2 (one-td unfold) >>> smash)
+lhs (one-td unfold >>> one-td (unfold 'go))
+lhs (replicate 2 (any-bu (unfold 'go1)) >>> smash)
+lhs (any-bu (lemma-forward append-right))
+lhs (any-td (lemma-forward append-single-left))
+induction 'u
+smash
+rhs (any-call (unfold 'myMap)) ; smash
+one-td (lemma-backward ind-hyp-0) ; smash
+any-td (fold 'go)
+end-proof
+
+-- composition
+copy-lemma composition composition-list
+inst-lemma composition-list 'f [| [] |]
+prove-lemma composition-list
+inst-dictionaries
+any-td (lemma-forward pure-singleton)
+any-td (lemma-forward ap-eval)
+any-td (lemma-forward ap-left)
+any-td (lemma-forward append-right)
+induction 'u
+-- the inductive case
+{ forall-body ; conj-rhs ; conj-rhs ; forall-body ; consequent
+  { eq-lhs
+    lemma-forward ap-eval
+    one-td (lemma-forward ind-hyp-0)
+    one-td (lemma-forward ap-map)
+    lemma-forward ap-append
+    one-td (lemma-backward ap-eval)
+  }
+  any-td (lemma-forward map-fix)
+  eq-rhs
+  any-call (unfold 'myMap)
+}
+smash
+-- the base cases
+any-call (lemma-forward map-fix)
+replicate 20 (smash <+ (any-call unfold))
+end-proof
+
+-- return-left
+copy-lemma return-left return-left-list
+inst-lemma return-left-list 'm [| [] |]
+prove-lemma return-left-list
+inst-dictionaries
+lhs (any-call (unfold 'return) >>> smash)
+lhs (any-call (unfold '"$fMonad[]_$creturn"))
+lhs (one-td (lemma-forward bind-left-cons))
+lhs (one-td (lemma-forward bind-left-nil))
+lhs (one-td (lemma-forward append-right))
+end-proof
+
+-- return-right
+copy-lemma return-right return-right-list
+inst-lemma return-right-list 'm [| [] |]
+prove-lemma return-right-list
+inst-dictionaries
+both (repeat (one-td (unfold ['">>=", '"return", '"$fMonad[]", '"$fMonad[]_$c>>=", '"$fMonad[]_$creturn"]) <+ smash))
+induction 'k
+any-call (unfold 'go)
+smash
+any-td (fold 'go)
+{ forall-body ; consequent
+    { consider let
+      let-body
+      one-td (lemma-forward append-fix)
+      replicate 2 (one-td (unfold 'myAppend))
+      smash
+    }
+    eq-rhs
+    one-td (lemma-backward ind-hyp-0)
+}
+smash
+end-proof
+
+-- bind-assoc
+copy-lemma bind-assoc bind-assoc-list
+inst-lemma bind-assoc-list 'm [| [] |]
+prove-lemma bind-assoc-list
+inst-dictionaries
+induction 'j
+{ forall-body ; conj-rhs ; conj-rhs
+  any-td (lemma-forward bind-left-cons)
+  smash
+  one-td (lemma-backward ind-hyp-0)
+  one-td (lemma-forward bind-append)
+}
+smash
+repeat (one-td (unfold ['">>=", '"return", '"$fMonad[]", '"$fMonad[]_$c>>=", '"$fMonad[]_$creturn"]) <+ smash)
+any-call (unfold 'go)
+smash
+end-proof

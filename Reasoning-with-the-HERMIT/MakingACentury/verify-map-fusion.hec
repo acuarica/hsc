@@ -1,0 +1,25 @@
+---------------------------
+-- Verify map-fusion
+--
+-- map (f . g) = map f . map g
+--
+--
+---------------------------
+
+rule-to-lemma "map-fusion"
+prove-lemma "map-fusion"
+
+extensionality 'xs
+lhs (unfold '.)
+
+induction 'xs
+
+  { forall-body ; conj-rhs ; conj-rhs ; forall-body ; consequent
+    any-bu (unfold 'map)
+    smash
+    one-td (lemma-forward ind-hyp-0)
+  }
+
+  any-bu (unfold 'map)
+  smash
+  end-proof

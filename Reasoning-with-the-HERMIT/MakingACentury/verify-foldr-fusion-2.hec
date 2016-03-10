@@ -1,0 +1,43 @@
+---------------------------
+-- Verify foldr-fusion-2
+--
+--   map (fork (id, value)) . foldr extend' []  =  foldr expand []
+--
+-- Preconditions:
+--   map (fork (id, value)) undefined  =  undefined
+--   map (fork (id, value)) []         =  []
+--   forall x y.  map (fork (id, value)) (extend' x y)  =  expand x (map (fork (id, value)) y)
+--
+---------------------------
+
+rule-to-lemma foldr-fusion-2
+prove-lemma foldr-fusion-2
+lemma-consequent foldr-fusion
+
+{ [ conj-rhs, conj-rhs ]
+  { [ forall-body, eq-lhs ]
+    fold '.
+    one-td (unfold 'extend')
+    one-td (lemma-backward comp-assoc)
+    one-td (lemma-forward 6.10)
+    one-td (lemma-forward comp-assoc)
+    one-td (lemma-forward 6.9)
+    one-td (lemma-forward map-id)
+    one-td (lemma-forward comp-assoc)
+    one-td (lemma-forward 6.6)
+    one-td (lemma-forward comp-id-L)
+    one-td (lemma-forward 6.4)
+    focus (application-of 'extend) (promote (lemma-backward comp-id-R))
+    one-td (lemma-forward 6.7)
+    one-td (lemma-backward map-id)
+    one-td (lemma-forward 6.8)
+    one-td (lemma-forward comp-assoc4)
+    one-td (fold 'expand)
+    unfold '.
+  }
+  reflexivity
+}
+
+any-call (unfold 'map)
+smash
+end-proof

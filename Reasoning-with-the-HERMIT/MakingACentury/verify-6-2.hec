@@ -1,0 +1,56 @@
+---------------------------
+-- Verify 6.2
+--
+-- filter (good . value)  =  filter (good . value) . filter (ok . value)
+--
+---------------------------
+
+rule-to-lemma 6.2
+prove-lemma 6.2
+
+-- Goal:
+-- filter Expression ((.) Value Bool Expression good value)
+-- =
+-- (.) [Expression] [Expression] [Expression] (filter Expression ((.) Value Bool Expression good value))
+--     (filter Expression ((.) Value Bool Expression ok value))
+
+lemma-consequent filter-split
+
+-- Goal:
+-- forall (x :: Expression).
+-- ((.) Value Bool Expression ok value x = False) => ((.) Value Bool Expression good value x = False)
+
+any-td (unfold '.)
+
+-- Goal:
+-- forall (x :: Expression). (ok (value x) = False) => (good (value x) = False)
+
+abstract-forall y [| value x |]
+
+-- Goal:
+-- forall (y :: Value). (ok y = False) => (good y = False)
+
+any-td (unfold [ 'ok , 'good ])
+
+-- Goal:
+-- forall (y :: Value).
+-- (case y of wild Bool
+--    (,,,) (k :: Int) (f :: Int) (t :: Int) (e :: Int) ->
+--      (<=) Int $fOrdInt ((+) Int $fNumInt ((*) Int $fNumInt f t) e) c
+--  =
+--  False)
+-- =>
+-- (case y of wild Bool
+--    (,,,) (k :: Int) (f :: Int) (t :: Int) (e :: Int) ->
+--      (==) Int $fEqInt ((+) Int $fNumInt ((*) Int $fNumInt f t) e) c
+--  =
+--  False)
+
+prove-by-cases 'y
+
+smash
+
+load-lemma-library 'HERMIT.Libraries.Int.lemmas LteFalseImpliesEqFalseInt
+lemma LteFalseImpliesEqFalseInt
+
+end-proof

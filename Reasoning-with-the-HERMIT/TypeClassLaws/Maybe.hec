@@ -1,0 +1,121 @@
+-- return left unit law
+copy-lemma return-left return-left-maybe
+inst-lemma return-left-maybe 'm [| Maybe |]
+prove-lemma return-left-maybe
+inst-dictionaries
+lhs (repeat (one-td unfold <+ simplify))
+end-proof
+
+-- return right unit law
+copy-lemma return-right return-right-maybe
+inst-lemma return-right-maybe 'm [| Maybe |]
+prove-lemma return-right-maybe
+inst-dictionaries
+lhs (repeat (one-td unfold <+ smash))
+end-proof
+
+-- bind associativity law
+copy-lemma bind-assoc bind-assoc-maybe
+inst-lemma bind-assoc-maybe 'm [| Maybe |]
+prove-lemma bind-assoc-maybe
+inst-dictionaries
+both (repeat (one-td unfold <+ smash))
+end-proof
+
+-- functor identity law
+copy-lemma fmap-id fmap-id-maybe
+inst-lemma fmap-id-maybe 'f [| Maybe |]
+prove-lemma fmap-id-maybe
+inst-dictionaries
+lhs (repeat (one-td unfold <+ simplify))
+extensionality 'x
+both smash
+end-proof
+
+-- mempty-left
+copy-lemma mempty-left mempty-left-maybe
+inst-lemma mempty-left-maybe 'm [| Maybe a |]
+prove-lemma mempty-left-maybe
+inst-dictionaries
+lhs (repeat (smash <+ one-td unfold))
+end-proof
+
+-- mempty-right
+copy-lemma mempty-right mempty-right-maybe
+inst-lemma mempty-right-maybe 'm [| Maybe a |]
+prove-lemma mempty-right-maybe
+inst-dictionaries
+lhs (repeat (smash <+ one-td unfold))
+end-proof
+
+-- mappend-assoc
+copy-lemma mappend-assoc mappend-assoc-maybe
+inst-lemma mappend-assoc-maybe 'm [| Maybe a |]
+imply mappend-assoc-impl-maybe mappend-assoc mappend-assoc-maybe
+modify-lemma mappend-assoc-impl-maybe (merge-quantifiers 'm 'a)
+prove-lemma mappend-assoc-impl-maybe
+forall-body
+consequent
+inst-dictionaries
+both (any-td (unfold '<>))
+both (any-td (unfold 'mappend))
+both smash
+both (any-td (unfold '$fMonoidMaybe_$cmappend))
+both smash
+both (any-td (fold '<>))
+lhs (any-td (lemma-forward mappend-assoc))
+end-proof
+
+-- fmap-distrib
+copy-lemma fmap-distrib fmap-distrib-maybe
+inst-lemma fmap-distrib-maybe 'f [| Maybe |]
+prove-lemma fmap-distrib-maybe
+inst-dictionaries
+extensionality 'mb
+induction 'mb
+any-call (unfold 'fmap) ; smash
+any-call (unfold '$fFunctorMaybe_$cfmap) ; smash
+end-proof
+
+-- identity
+copy-lemma identity identity-maybe
+inst-lemma identity-maybe 'f [| Maybe |]
+prove-lemma identity-maybe
+inst-dictionaries
+induction 'v
+any-call (unfold '<*>) ; smash
+any-call (unfold '$fApplicativeMaybe_$c<*>) ; smash
+any-call (unfold 'pure) ; smash
+end-proof
+
+-- homomorphism
+copy-lemma homomorphism homomorphism-maybe
+inst-lemma homomorphism-maybe 'f [| Maybe |]
+prove-lemma homomorphism-maybe
+inst-dictionaries
+both (repeat (one-td unfold <+ smash))
+end-proof
+
+-- interchange
+copy-lemma interchange interchange-maybe
+inst-lemma interchange-maybe 'f [| Maybe |]
+prove-lemma interchange-maybe
+inst-dictionaries
+both (repeat (one-td unfold <+ smash))
+end-proof
+
+-- composition
+copy-lemma composition composition-maybe
+inst-lemma composition-maybe 'f [| Maybe |]
+prove-lemma composition-maybe
+inst-dictionaries
+both (repeat (one-td unfold <+ smash))
+end-proof
+
+-- fmap-pure
+copy-lemma fmap-pure fmap-pure-maybe
+inst-lemma fmap-pure-maybe 'f [| Maybe |]
+prove-lemma fmap-pure-maybe
+inst-dictionaries
+both (repeat (one-td unfold <+ simplify))
+end-proof

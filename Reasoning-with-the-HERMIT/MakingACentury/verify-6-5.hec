@@ -1,0 +1,17 @@
+---------------------------
+-- Verify 6.5
+--
+-- fst . fork (f,g)  =  f
+-- snd . fork (f,g)  =  g
+--
+---------------------------
+
+rule-to-lemma "6.5a"
+prove-lemma "6.5a"
+  lhs (one-td (inline 'fork) >>> unfold '. >>> smash)
+end-proof
+
+rule-to-lemma "6.5b"
+prove-lemma "6.5b"
+  lhs (one-td (inline 'fork) >>> unfold '. >>> smash)
+end-proof

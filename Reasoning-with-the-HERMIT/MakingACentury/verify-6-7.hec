@@ -1,0 +1,16 @@
+---------------------------
+-- Verify 6.7
+--
+-- forall f g h k.   fork (f . h, g . k)  =  cross (f,g) . fork (h,k)
+--
+-- Rewrite both sides to: \ a -> (f (h a), g (k a))
+--
+---------------------------
+
+rule-to-lemma "6.7"
+prove-lemma "6.7"
+
+rhs (unfold '.)
+smash-extended-with [inline [ 'cross , 'fork ]]
+
+end-proof

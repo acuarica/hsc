@@ -1,0 +1,26 @@
+set-pp-type Show
+
+-- mempty-left
+rule-to-lemma mempty-left
+copy-lemma mempty-left mempty-left-map
+inst-lemma mempty-left-map 'm [| Map k v |]
+prove-lemma mempty-left-map
+inst-dictionaries
+lhs (repeat (smash <+ one-td unfold))
+end-proof
+
+-- mempty-right
+rule-to-lemma mempty-right
+copy-lemma mempty-right mempty-right-map
+inst-lemma mempty-right-map 'm [| Map k v |]
+prove-lemma mempty-right-map
+inst-dictionaries
+lhs (repeat (smash <+ one-td unfold))
+end-proof
+
+-- mappend-assoc
+-- rule-to-lemma mappend-assoc
+-- copy-lemma mappend-assoc mappend-assoc-map
+-- inst-lemma mappend-assoc-map 'm [| Map k v |]
+-- prove-lemma mappend-assoc-map
+-- inst-dictionaries

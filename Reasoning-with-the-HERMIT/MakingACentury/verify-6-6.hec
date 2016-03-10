@@ -1,0 +1,14 @@
+---------------------------
+-- Verify 6.6
+--
+-- forall f g h.  fork (f,g) . h  =  fork (f . h, g . h)
+--
+-- Rewrite both sides to: \ x -> (f (h x), g (h x))
+--
+---------------------------
+
+rule-to-lemma "6.6"
+prove-lemma "6.6"
+  any-bu (inline [ 'fork, '. ])
+  smash
+end-proof

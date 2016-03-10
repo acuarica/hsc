@@ -1,0 +1,59 @@
+copy-lemma fmap-id fmap-id-identity
+inst-lemma fmap-id-identity 'f [| Identity |]
+prove-lemma fmap-id-identity
+inst-dictionaries
+any-td unfold ; both smash ; end-proof
+
+copy-lemma fmap-distrib fmap-distrib-identity
+inst-lemma fmap-distrib-identity 'f [| Identity |]
+prove-lemma fmap-distrib-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma identity identity-identity
+inst-lemma identity-identity 'f [| Identity |]
+prove-lemma identity-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma homomorphism homomorphism-identity
+inst-lemma homomorphism-identity 'f [| Identity |]
+prove-lemma homomorphism-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma interchange interchange-identity
+inst-lemma interchange-identity 'f [| Identity |]
+prove-lemma interchange-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma composition composition-identity
+inst-lemma composition-identity 'f [| Identity |]
+prove-lemma composition-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma fmap-pure fmap-pure-identity
+inst-lemma fmap-pure-identity 'f [| Identity |]
+prove-lemma fmap-pure-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma return-left return-left-identity
+inst-lemma return-left-identity 'm [| Identity |]
+prove-lemma return-left-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma return-right return-right-identity
+inst-lemma return-right-identity 'm [| Identity |]
+prove-lemma return-right-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma bind-assoc bind-assoc-identity
+inst-lemma bind-assoc-identity 'm [| Identity |]
+prove-lemma bind-assoc-identity
+inst-dictionaries
+both (repeat (one-td unfold <+ smash)) ; end-proof

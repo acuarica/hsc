@@ -1,0 +1,35 @@
+---------------------------
+-- Verify 6.10
+--
+-- forall f g p.   map (fork (f,g)) . filter (p . g)  =  filter (p . snd) . map (fork (f,g))
+--
+--
+---------------------------
+
+rule-to-lemma "6.10"
+prove-lemma "6.10"
+
+extensionality 'xs
+both (unfold '.)
+
+-- map (fork (f,g)) (filter (p . g) xs)  =  filter (p . snd) (map (fork (f,g)) xs)
+
+induction 'xs
+
+{ [forall-body, conj-rhs, conj-rhs, forall-body, consequent]
+  { eq-lhs
+    any-call (unfold ['map, 'filter])
+    smash
+    one-td (fold 'map)
+    any-td (lemma-forward ind-hyp-0) -- will apply once in each case alternative
+  }
+  { eq-rhs
+    any-call (unfold ['map, 'filter])
+    simplify
+    innermost let-subst
+    one-td (unfold 'fork)
+  }
+}
+any-call (unfold ['map, 'fork, 'filter])
+smash
+end-proof

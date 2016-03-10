@@ -1,0 +1,51 @@
+--------------------------------------------------------------------------------------------------------------------
+
+Note: this case study requires GHC 7.8 to run.
+
+--------------------------------------------------------------------------------------------------------------------
+
+First install HERMIT version 1.0.0.0, which can be done via Cabal:
+
+> cabal update
+> cabal install hermit-1.0.0.0
+
+Then install the package that contains the lemma library for the case study:
+
+> cd hermit-century-lemmas
+> cabal install
+
+--------------------------------------------------------------------------------------------------------------------
+
+The hermit-century-lemmas package can be tested by descending into the FoldrFusionExample directory and invoking
+HERMIT as follows:
+
+> hermit FoldrFusionExample.hs +FoldrFusionExample FoldrFusionExample.hec
+
+HERMIT should report that the foldr-fusion lemma, and several subsidiary lemmas, have been successfully proven.
+
+To get a feel for HERMIT, try running the example without loading the script:
+
+> hermit FoldrFusionExample.hs +FoldrFusionExample
+
+And then type in the commands from the HERMIT script "FoldrFusionExample.hec" one by one.  Note that lines starting
+"--" are comments, not HERMIT commands.
+
+--------------------------------------------------------------------------------------------------------------------
+
+To run the entire case study, invoke HERMIT in this directory as follows:
+
+> hermit Century.hs Century.hec
+
+If it runs successfully, you can use the HERMIT command "show-lemmas" to display all the lemmas (which should be
+noted as proved).
+
+hermit> show-lemmas
+
+To get a feel for using HERMIT, try re-doing the proof of one of the lemmas.  E.g.
+
+hermit> prove-lemma "6.8"
+
+and then type in the commands from the HERMIT script "verify-6-8.hec" one by one.  Note that lines starting
+"--" are comments, not HERMIT commands.
+
+--------------------------------------------------------------------------------------------------------------------

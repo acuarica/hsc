@@ -1,0 +1,140 @@
+copy-lemma fmap-id fmap-id-reader
+inst-lemma fmap-id-reader 'f [| ReaderT r Identity |]
+prove-lemma fmap-id-reader
+inst-dictionaries
+both (innermost let-float >>> repeat let-subst)
+both (repeat (any-td (unfold ['fmap, '"$fFunctorReaderT"])))
+both (repeat (any-td case-reduce))
+both (repeat (any-td (unfold '"$fFunctorReaderT_$cfmap")))
+lhs (one-td (lemma-forward fmap-id-identity))
+rhs unfold ; both smash ; end-proof
+
+copy-lemma fmap-distrib fmap-distrib-reader
+inst-lemma fmap-distrib-reader 'f [| ReaderT r Identity |]
+prove-lemma fmap-distrib-reader
+inst-dictionaries
+both (innermost let-float >>> repeat let-subst)
+both (repeat (any-td (unfold ['fmap, '"$fFunctorReaderT"])))
+both (repeat (any-td case-reduce))
+both (repeat (any-td (unfold '"$fFunctorReaderT_$cfmap")))
+lhs (one-td (lemma-forward fmap-distrib-identity))
+rhs unfold ; both smash ; end-proof
+
+copy-lemma identity identity-reader
+inst-lemma identity-reader 'f [| ReaderT r Identity |]
+prove-lemma identity-reader
+inst-dictionaries
+both (innermost let-float >>> repeat let-subst)
+lhs (unfold >>> smash)
+lhs (one-td (unfold '$fApplicativeReaderT_$c<*>))
+lhs smash
+lhs (one-td unfold)
+lhs (one-td (unfold 'pure))
+lhs smash
+lhs (one-td (unfold '$fApplicativeReaderT_$cpure))
+lhs smash
+lhs (one-td (lemma-forward identity-identity))
+lhs smash ; end-proof
+
+copy-lemma homomorphism homomorphism-reader
+inst-lemma homomorphism-reader 'f [| ReaderT r Identity |]
+prove-lemma homomorphism-reader
+inst-dictionaries
+both (innermost let-subst)
+both (any-call (unfold 'pure))
+both (any-call (unfold '<*>))
+both smash
+both (any-call (unfold '$fApplicativeReaderT_$c<*>))
+both (any-call (unfold '$fApplicativeReaderT_$cpure))
+both smash
+both (any-call (unfold '$fApplicativeReaderT2))
+both smash
+lhs (one-td (lemma-forward homomorphism-identity))
+end-proof
+
+copy-lemma interchange interchange-reader
+inst-lemma interchange-reader 'f [| ReaderT r Identity |]
+prove-lemma interchange-reader
+inst-dictionaries
+both (innermost let-subst)
+both (any-call (unfold 'pure))
+both (any-call (unfold '<*>))
+both smash
+both (any-call (unfold '$fApplicativeReaderT_$c<*>))
+both (any-call (unfold '$fApplicativeReaderT_$cpure))
+both smash
+both (any-call (unfold '$fApplicativeReaderT2))
+both smash
+lhs (one-td (lemma-forward interchange-identity))
+both smash ; end-proof
+
+copy-lemma composition composition-reader
+inst-lemma composition-reader 'f [| ReaderT r Identity |]
+prove-lemma composition-reader
+inst-dictionaries
+both (innermost let-subst)
+both (any-call (unfold 'pure))
+both (any-call (unfold '<*>))
+both smash
+both (any-call (unfold '$fApplicativeReaderT_$c<*>))
+both (any-call (unfold '$fApplicativeReaderT_$cpure))
+both smash
+both (any-call (unfold '$fApplicativeReaderT2))
+both smash
+lhs (one-td (lemma-forward composition-identity))
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma fmap-pure fmap-pure-reader
+inst-lemma fmap-pure-reader 'f [| ReaderT r Identity |]
+prove-lemma fmap-pure-reader
+inst-dictionaries
+both (innermost let-subst)
+both (any-call (unfold 'pure))
+both (any-call (unfold '<*>))
+both smash
+both (any-call (unfold '$fApplicativeReaderT_$c<*>))
+both (any-call (unfold '$fApplicativeReaderT_$cpure))
+both smash
+both (any-call (unfold '$fApplicativeReaderT2))
+both smash
+lhs (one-td (lemma-forward fmap-pure-identity))
+both (repeat (one-td unfold <+ smash)) ; end-proof
+
+copy-lemma return-left return-left-reader
+inst-lemma return-left-reader 'm [| ReaderT r Identity |]
+prove-lemma return-left-reader
+inst-dictionaries
+both (innermost let-subst)
+lhs (repeat (any-call (unfold ['>>=, 'return])))
+lhs smash
+lhs (repeat (any-call (unfold ['$fMonadReaderT_$c>>=, '$fMonadReaderT_$creturn])))
+lhs smash
+lhs (any-call (unfold '$fMonadReaderT1) >>> smash)
+lhs (one-td (lemma-forward return-left-identity))
+lhs smash ; end-proof
+
+copy-lemma return-right return-right-reader
+inst-lemma return-right-reader 'm [| ReaderT r Identity |]
+prove-lemma return-right-reader
+inst-dictionaries
+both (innermost let-subst)
+lhs (repeat (any-call (unfold ['>>=, 'return])))
+lhs smash
+lhs (repeat (any-call (unfold ['$fMonadReaderT_$c>>=, '$fMonadReaderT_$creturn])))
+lhs smash
+lhs (any-call (unfold '$fMonadReaderT1) >>> smash)
+lhs (one-td (lemma-forward return-right-identity))
+lhs smash ; end-proof
+
+copy-lemma bind-assoc bind-assoc-reader
+inst-lemma bind-assoc-reader 'm [| ReaderT r Identity |]
+prove-lemma bind-assoc-reader
+inst-dictionaries
+both (innermost let-subst)
+both (repeat (any-call (unfold ['>>=, 'return])))
+both smash
+both (repeat (any-call (unfold ['$fMonadReaderT_$c>>=, '$fMonadReaderT_$creturn])))
+both smash
+both (repeat (any-call (unfold '$fMonadReaderT1) <+ smash))
+lhs (one-td (lemma-forward bind-assoc-identity))
+both smash ; end-proof

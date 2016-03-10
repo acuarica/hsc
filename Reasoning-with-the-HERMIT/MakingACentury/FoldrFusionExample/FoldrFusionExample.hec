@@ -1,0 +1,82 @@
+-- Run HERMIT on this example as follows:
+-- hermit FoldrFusionExample.hs -opt=HERMIT.Dictionary.CenturyPlugin +FoldrFusionExample FoldrFusionExample.hec
+
+-- module main:FoldrFusionExample where
+--   b :: B
+--   a :: A
+--   f :: A -> B
+--   g :: Int -> A -> A
+--   expr :: [Int] -> B
+--   h :: Int -> B -> B
+
+set-pp-type Omit
+flatten-module
+
+load-lemma-library 'HERMIT.Libraries.Century.lemmas foldr-fusion
+
+load-and-run "../verify-foldr-fusion.hec"
+
+rule-to-lemma foldr-fusion-example
+prove-lemma foldr-fusion-example
+
+-- Goal:
+-- (.) f (foldr g a) = foldr h b
+
+lemma-consequent foldr-fusion
+
+-- Goal:
+-- (f undefined = undefined) ^ ((f a = b) ^ (forall x y. f (g x y) = h x (f y)))
+
+any-call (unfold ['f,'b,'g,'h])
+
+-- Goal:
+-- (case undefined of wild
+--    A1 -> B1
+--    A2 -> B2
+--  =
+--  undefined)
+-- ^
+-- ((case a of wild
+--     A1 -> B1
+--     A2 -> B2
+--   =
+--   B1)
+--  ^
+--  (forall x y.
+--   case case (>) $fOrdInt x (I# 0) of wild
+--          False -> y
+--          True -> A2
+--    of wild
+--     A1 -> B1
+--     A2 -> B2
+--   =
+--   case (>) $fOrdInt x (I# 0) of wild
+--     False ->
+--       case y of wild
+--         A1 -> B1
+--         A2 -> B2
+--     True -> B2))
+
+smash
+
+-- Goal:
+-- forall x y. true
+
+end-proof -- proven foldr-fusion-example
+
+-- module main:FoldrFusionExample where
+--   b :: B
+--   h :: Int -> B -> B
+--   f :: A -> B
+--   g :: Int -> A -> A
+--   a :: A
+--   expr :: [Int] -> B
+
+binding-of 'expr
+
+-- expr = (.) f (foldr g a)
+
+{ def-rhs ; lemma-forward foldr-fusion-example }
+
+-- expr = foldr h b
+

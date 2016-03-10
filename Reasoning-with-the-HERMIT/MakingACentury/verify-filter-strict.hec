@@ -1,0 +1,15 @@
+---------------------------
+-- Verify filter-strict
+--
+-- filter f undefined = undefined
+--
+--
+---------------------------
+
+rule-to-lemma "filter-strict"
+
+prove-lemma "filter-strict"
+
+  lhs (unfold 'filter >>> undefined-expr)
+
+end-proof

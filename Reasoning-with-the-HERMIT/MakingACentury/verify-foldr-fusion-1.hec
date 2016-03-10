@@ -1,0 +1,36 @@
+---------------------------
+-- Verify foldr-fusion-1
+--
+--   filter (ok . value) . foldr extend  []  =  foldr extend' []
+--
+-- Preconditions:
+--   filter (ok . value) undefined  =  undefined
+--   filter (ok . value) []         =  []
+--   forall x y.  filter (ok . value) (extend x y)  =  extend' x (filter (ok . value) y)
+--
+---------------------------
+
+-- load the rule which is equivalent to the consequent
+rule-to-lemma foldr-fusion-1
+prove-lemma foldr-fusion-1
+lemma-consequent foldr-fusion
+
+{ [ conj-rhs, conj-rhs ]
+  { [ forall-body, eq-lhs ]
+
+    -- filter (ok . value) (extend x y)
+
+    fold '.
+
+    -- (filter (ok . value) . (extend x)) y
+
+    one-td (lemma-forward 6.3)
+    one-td (lemma-backward comp-assoc)
+    one-td (fold 'extend')
+    unfold '.
+  }
+  reflexivity
+}
+any-call (unfold 'filter)
+smash
+end-proof

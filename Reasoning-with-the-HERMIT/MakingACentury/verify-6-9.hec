@@ -1,0 +1,34 @@
+---------------------------
+-- Verify 6.9
+--
+-- forall f g.   map (fork (f , g))  =  zip . fork (map f , map g)
+--
+--
+---------------------------
+
+rule-to-lemma "6.9"
+prove-lemma "6.9"
+
+{ forall-body; eq-rhs
+
+-- zip . fork (map f , map g)
+
+        { app-arg ; lemma-forward "6.8" }
+
+-- zip . (unzip . map (fork (f , g)))
+
+        { lemma-backward "comp-assoc" }
+
+-- (zip . unzip) . map (fork (f , g))
+
+        { one-td (lemma-forward "zip-unzip") }
+
+-- id . map (fork (f , g))
+
+        { lemma-forward "comp-id-L" }
+
+-- map (fork (f , g))
+
+}
+
+end-proof

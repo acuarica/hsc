@@ -1,0 +1,80 @@
+---------------------------
+-- Verify filter-split
+--
+-- forall p q.
+--     (forall x.  q x = False  =>  p x = False)
+--  =>
+--     filter p = filter p . filter q
+--
+---------------------------
+
+prove-lemma filter-split
+
+-- Goal:
+-- forall p q. (forall x. (q x = False) => (p x = False)) => (filter p = (.) (filter p) (filter q))
+
+forall-body
+consequent
+
+-- Assumed lemmas:
+-- filter-split-antecedent (Assumed)
+--   forall x. (q x = False) => (p x = False)
+-- Goal:
+-- forall p q. filter p = (.) (filter p) (filter q)
+
+extensionality 'xs
+
+-- Assumed lemmas:
+-- filter-split-antecedent (Assumed)
+--   forall x. (q x = False) => (p x = False)
+-- Goal:
+-- forall p q xs. filter p xs = (.) (filter p) (filter q) xs
+
+rhs (unfold '.)
+
+-- Assumed lemmas:
+-- filter-split-antecedent (Assumed)
+--   forall x. (q x = False) => (p x = False)
+-- Goal:
+-- forall p q xs. filter p xs = filter p (filter q xs)
+
+induction 'xs
+
+{ [forall-body, conj-rhs, conj-rhs, forall-body, consequent]
+
+  { eq-rhs
+    { app-arg
+      unfold 'filter
+      smash
+    }
+
+    case-float-arg-lemma filter-strict
+
+    { [case-alt 1, alt-rhs]
+      unfold 'filter
+    }
+
+    smash
+  }
+
+  any-td (lemma-backward ind-hyp-0)
+
+  { eq-lhs
+    unfold 'filter
+    smash
+
+    case-split [| q a |]
+
+    one-td (forward (lemma-consequent-birewrite filter-split-antecedent))
+
+    -- Goal:
+    -- q a = False
+    lhs ((fold 'w) >>> unfold)
+    end-proof
+  }
+
+}
+
+any-bu (unfold 'filter)
+smash
+end-proof

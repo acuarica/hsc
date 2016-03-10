@@ -1,0 +1,488 @@
+---------------------------
+--  Verify Foldr Fusion
+--
+--  strict f    /\    f a = b    /\    forall x y. f (g x y) = h x (f y)
+--  --------------------------------------------------------------------
+--                      f . foldr g a = foldr h b
+--
+---------------------------
+
+prove-lemma foldr-fusion
+
+-- Goal:
+-- forall (a :: *) (b :: *) (c :: *) (f :: a -> b) (g :: c -> a -> a) (h :: c -> b -> b) (a :: a) (b :: b).
+-- ((f (undefined a) = undefined b) ^ ((f a = b) ^ (forall (x :: c) (y :: a). f (g x y) = h x (f y))))
+-- =>
+-- ((.) a b [c] f (foldr c a g a) = foldr c b h b)
+
+forall-body
+
+-- Goal:
+-- ((f (undefined a) = undefined b) ^ ((f a = b) ^ (forall (x :: c) (y :: a). f (g x y) = h x (f y))))
+-- =>
+-- ((.) a b [c] f (foldr c a g a) = foldr c b h b)
+
+split-antecedent
+
+-- Goal:
+-- (f (undefined a) = undefined b)
+-- =>
+-- (((f a = b) ^ (forall (x :: c) (y :: a). f (g x y) = h x (f y)))
+--  =>
+--  ((.) a b [c] f (foldr c a g a) = foldr c b h b))
+
+consequent
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- Goal:
+-- ((f a = b) ^ (forall (x :: c) (y :: a). f (g x y) = h x (f y)))
+-- =>
+-- ((.) a b [c] f (foldr c a g a) = foldr c b h b)
+
+split-antecedent
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- Goal:
+-- (f a = b)
+-- =>
+-- ((forall (x :: c) (y :: a). f (g x y) = h x (f y)) => ((.) a b [c] f (foldr c a g a) = foldr c b h b))
+
+consequent
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- Goal:
+-- (forall (x :: c) (y :: a). f (g x y) = h x (f y)) => ((.) a b [c] f (foldr c a g a) = foldr c b h b)
+
+consequent
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (.) a b [c] f (foldr c a g a) = foldr c b h b
+
+extensionality 'xs
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- forall (xs :: [c]). (.) a b [c] f (foldr c a g a) xs = foldr c b h b xs
+
+lhs (unfold '.)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- forall (xs :: [c]). f (foldr c a g a xs) = foldr c b h b xs
+
+induction 'xs
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (forall (c :: *). f (foldr c a g a (undefined [c])) = foldr c b h b (undefined [c]))
+-- ^
+-- ((forall (c :: *). f (foldr c a g a ([] c)) = foldr c b h b ([] c))
+--  ^
+--  (forall (c :: *) (a :: c) (b :: [c]).
+--   (f (foldr c a g a b) = foldr c b h b b) => (f (foldr c a g a ((:) c a b)) = foldr c b h b ((:) c a b))))
+
+{
+forall-body
+conj-rhs
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (forall (c :: *). f (foldr c a g a ([] c)) = foldr c b h b ([] c))
+-- ^
+-- (forall (c :: *) (a :: c) (b :: [c]).
+--  (f (foldr c a g a b) = foldr c b h b b) => (f (foldr c a g a ((:) c a b)) = foldr c b h b ((:) c a b)))
+
+conj-rhs
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- forall (c :: *) (a :: c) (b :: [c]).
+-- (f (foldr c a g a b) = foldr c b h b b) => (f (foldr c a g a ((:) c a b)) = foldr c b h b ((:) c a b))
+
+forall-body
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (f (foldr c a g a b) = foldr c b h b b) => (f (foldr c a g a ((:) c a b)) = foldr c b h b ((:) c a b))
+
+consequent
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- f (foldr c a g a ((:) c a b)) = foldr c b h b ((:) c a b)
+
+any-call (unfold 'foldr)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- f (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--              case ds of wild a
+--                [] -> a
+--                (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--    in go ((:) c a b))
+-- =
+-- let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--           case ds of wild b
+--             [] -> b
+--             (:) (y :: c) (ys :: [c]) -> h y (go ys)
+-- in go ((:) c a b)
+
+any-call (unfold 'go)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- f (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--              case ds of wild a
+--                [] -> a
+--                (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--    in case (:) c a b of wild a
+--         [] -> a
+--         (:) (y :: c) (ys :: [c]) -> g y (go ys))
+-- =
+-- let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--           case ds of wild b
+--             [] -> b
+--             (:) (y :: c) (ys :: [c]) -> h y (go ys)
+-- in case (:) c a b of wild b
+--      [] -> b
+--      (:) (y :: c) (ys :: [c]) -> h y (go ys)
+
+smash
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--           case ds of wild a
+--             [] -> a
+--             (:) (y :: c) (ys :: [c]) -> g y (go ys)
+-- in f (g a (go b))
+-- =
+-- let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--           case ds of wild b
+--             [] -> b
+--             (:) (y :: c) (ys :: [c]) -> h y (go ys)
+-- in h a (go b)
+
+lhs (replicate 2 (one-td let-float-in))
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- f (g a
+--      (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--                 case ds of wild a
+--                   [] -> a
+--                   (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--       in go b))
+-- =
+-- let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--           case ds of wild b
+--             [] -> b
+--             (:) (y :: c) (ys :: [c]) -> h y (go ys)
+-- in h a (go b)
+
+rhs (one-td let-float-in)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- f (g a
+--      (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--                 case ds of wild a
+--                   [] -> a
+--                   (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--       in go b))
+-- =
+-- h a
+--   (let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--              case ds of wild b
+--                [] -> b
+--                (:) (y :: c) (ys :: [c]) -> h y (go ys)
+--    in go b)
+
+any-td (fold 'Data.List.foldr)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- f (g a (foldr c a g a b)) = h a (foldr c b h b b)
+
+one-td (lemma-backward ind-hyp-0)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- f (g a (foldr c a g a b)) = h a (f (foldr c a g a b))
+
+lemma foldr-fusion-antecedent11
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- ind-hyp-0 (Built In)
+--   f (foldr c a g a b) = foldr c b h b b
+-- Goal:
+-- true
+
+ }
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (forall (c :: *). f (foldr c a g a (undefined [c])) = foldr c b h b (undefined [c]))
+-- ^
+-- ((forall (c :: *). f (foldr c a g a ([] c)) = foldr c b h b ([] c))
+--  ^
+--  (forall (c :: *) (a :: c) (b :: [c]). (f (foldr c a g a b) = foldr c b h b b) => (true)))
+
+simplify-lemma
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (forall (c :: *). f (foldr c a g a (undefined [c])) = foldr c b h b (undefined [c]))
+-- ^
+-- (forall (c :: *). f (foldr c a g a ([] c)) = foldr c b h b ([] c))
+
+any-call (unfold 'foldr)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (forall (c :: *).
+--  f (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--               case ds of wild a
+--                 [] -> a
+--                 (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--     in go (undefined [c]))
+--  =
+--  let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--            case ds of wild b
+--              [] -> b
+--              (:) (y :: c) (ys :: [c]) -> h y (go ys)
+--  in go (undefined [c]))
+-- ^
+-- (forall (c :: *).
+--  f (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--               case ds of wild a
+--                 [] -> a
+--                 (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--     in go ([] c))
+--  =
+--  let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--            case ds of wild b
+--              [] -> b
+--              (:) (y :: c) (ys :: [c]) -> h y (go ys)
+--  in go ([] c))
+
+any-call (unfold 'go)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (forall (c :: *).
+--  f (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--               case ds of wild a
+--                 [] -> a
+--                 (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--     in case undefined [c] of wild a
+--          [] -> a
+--          (:) (y :: c) (ys :: [c]) -> g y (go ys))
+--  =
+--  let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--            case ds of wild b
+--              [] -> b
+--              (:) (y :: c) (ys :: [c]) -> h y (go ys)
+--  in case undefined [c] of wild b
+--       [] -> b
+--       (:) (y :: c) (ys :: [c]) -> h y (go ys))
+-- ^
+-- (forall (c :: *).
+--  f (let rec (go :: [c] -> a) = \ (ds :: [c]) ->
+--               case ds of wild a
+--                 [] -> a
+--                 (:) (y :: c) (ys :: [c]) -> g y (go ys)
+--     in case [] c of wild a
+--          [] -> a
+--          (:) (y :: c) (ys :: [c]) -> g y (go ys))
+--  =
+--  let rec (go :: [c] -> b) = \ (ds :: [c]) ->
+--            case ds of wild b
+--              [] -> b
+--              (:) (y :: c) (ys :: [c]) -> h y (go ys)
+--  in case [] c of wild b
+--       [] -> b
+--       (:) (y :: c) (ys :: [c]) -> h y (go ys))
+
+smash
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (forall (c :: *). f (undefined a) = undefined b) ^ (forall (c :: *). f a = b)
+
+any-td (lemma foldr-fusion-antecedent0 <+ lemma foldr-fusion-antecedent10)
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- (true) ^ (true)
+
+simplify-lemma
+
+-- Assumed lemmas:
+-- foldr-fusion-antecedent0 (Built In)
+--   f (undefined a) = undefined b
+-- foldr-fusion-antecedent10 (Built In)
+--   f a = b
+-- foldr-fusion-antecedent11 (Built In)
+--   forall (x :: c) (y :: a). f (g x y) = h x (f y)
+-- Goal:
+-- true
+
+end-proof -- proven foldr-fusion

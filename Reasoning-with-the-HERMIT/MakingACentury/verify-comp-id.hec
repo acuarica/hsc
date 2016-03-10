@@ -1,0 +1,18 @@
+---------------------------
+-- Verify comp-id
+--
+--
+-- comp-id-L:  forall f.   id . f  =  f
+-- comp-id-R:  forall f.   f . id  =  f
+--
+---------------------------
+
+rule-to-lemma "comp-id-L"
+prove-lemma "comp-id-L"
+  lhs (unfold '. >>> smash)
+end-proof
+
+rule-to-lemma "comp-id-R"
+prove-lemma "comp-id-R"
+  lhs (unfold '. >>> smash)
+end-proof

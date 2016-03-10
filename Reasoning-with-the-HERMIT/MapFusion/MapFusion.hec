@@ -1,0 +1,99 @@
+set-pp-type Omit
+
+-- module main:MapFusion where map :: forall a b . (a -> b) -> [a] -> [b]
+
+binding-of 'map
+
+-- map = \ f ds ->
+--   case ds of wild
+--     [] -> []
+--     (:) a as -> (:) (f a) (map f as)
+
+top
+
+-- module main:MapFusion where map :: forall a b . (a -> b) -> [a] -> [b]
+
+rule-to-lemma map-fusion
+prove-lemma map-fusion
+
+-- Goal:
+-- forall f g. (.) (map f) (map g) = map ((.) f g)
+
+extensionality 'xs
+
+-- Goal:
+-- forall f g xs. (.) (map f) (map g) xs = map ((.) f g) xs
+
+lhs (unfold '.)
+
+-- Goal:
+-- forall f g xs. map f (map g xs) = map ((.) f g) xs
+
+induction 'xs
+
+-- Goal:
+-- forall f g.
+-- (map f (map g undefined) = map ((.) f g) undefined)
+-- ^
+-- ((map f (map g []) = map ((.) f g) [])
+--  ^
+--  (forall a b. (map f (map g b) = map ((.) f g) b) => (map f (map g ((:) a b)) = map ((.) f g) ((:) a b))))
+
+any-bu ((unfold 'map) >>> (undefined-case <+ case-reduce))
+
+-- Goal:
+-- forall f g.
+-- (undefined = undefined)
+-- ^
+-- (([] = [])
+--  ^
+--  (forall a b.
+--   (map f (map g b) = map ((.) f g) b)
+--   =>
+--   ((:) (f (g a)) (map f (map g b)) = (:) ((.) f g a) (map ((.) f g) b))))
+
+simplify-lemma
+
+-- Goal:
+-- forall f g a b.
+-- (map f (map g b) = map ((.) f g) b)
+-- =>
+-- ((:) (f (g a)) (map f (map g b)) = (:) ((.) f g a) (map ((.) f g) b))
+
+forall-body
+
+-- Goal:
+-- (map f (map g b) = map ((.) f g) b)
+-- =>
+-- ((:) (f (g a)) (map f (map g b)) = (:) ((.) f g a) (map ((.) f g) b))
+
+consequent
+
+-- Notice when we move past the antecedent, it comes into scope!
+
+-- Assumed lemmas:
+-- ind-hyp-0 (Built In)
+--   map f (map g b) = map ((.) f g) b
+-- Goal:
+-- (:) (f (g a)) (map f (map g b)) = (:) ((.) f g a) (map ((.) f g) b)
+
+one-td (lemma-forward ind-hyp-0)
+
+-- Assumed lemmas:
+-- ind-hyp-0 (Built In)
+--   map f (map g b) = map ((.) f g) b
+-- Goal:
+-- (:) (f (g a)) (map ((.) f g) b) = (:) ((.) f g a) (map ((.) f g) b)
+
+simplify
+
+-- Assumed lemmas:
+-- ind-hyp-0 (Built In)
+--   map f (map g b) = map ((.) f g) b
+-- Goal:
+-- (:) (f (g a)) (map ((.) f g) b) = (:) (f (g a)) (map ((.) f g) b)
+
+end-case -- proven map-fusion
+
+-- module main:MapFusion where map :: forall a b . (a -> b) -> [a] -> [b]
+
