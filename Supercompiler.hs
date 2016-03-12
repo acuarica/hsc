@@ -33,3 +33,4 @@ exps = [
 main = do
   putStrLn "Hola que tal"
   putStrLn (foldr (\s t -> s ++ "\n" ++ t) "" (map display exps))
+
