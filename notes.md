@@ -15,3 +15,5 @@ why map f.g xs is better than map f map g xs?
 http://c2.com/cgi/wiki?SuperCompiler
 
 Generalization of partial evaluation.
+
+Performance Haskell, cost measure function.
