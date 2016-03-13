@@ -27,7 +27,8 @@ exps = [
   Const 2,
   Plus (Const 0) (Const 3),
   Plus (Const 2) (Plus (Const 4) (Const 1)),
-  Plus (Plus (Plus (Const 0) (Const 1)) (Const 2)) (Plus (Const 3) (Const 4))
+  Plus (Plus (Plus (Const 0) (Const 1)) (Const 2)) (Plus (Const 3) (Const 4)),
+  Plus (Plus (Const 1) (Const 2)) (Const 5)
   ]
 
 main = do
