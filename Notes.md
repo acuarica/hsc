@@ -21,3 +21,10 @@ Performance Haskell, cost measure function.
 CTFE (Compile Time Function Evaluation) as part of Supercompilation?
 As in Rust?
 
+Another uses for Supercompilation?
+Only for optimization?
+What if we use a supercompiler with a functional language with no garbage collection?
+Would that make sense?
+
+* Supercompile a version of quicksort to more efficient one?
+

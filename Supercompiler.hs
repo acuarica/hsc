@@ -4,7 +4,8 @@ type Value = Int
 
 data Exp = Var Id |
            Const Int |
-           Plus Exp Exp
+           Plus Exp Exp |
+	   Let Id Exp Exp
            deriving Show
 
 eval :: Exp -> Value
@@ -18,8 +19,15 @@ e3 = Plus e0 e1
 e4 = Plus e2 e1
 e5 = Plus e4 e4
 e6 = Plus e5 e4
+e7 = Let "x" (Const 1) (Plus (Const 2) (Var "x"))
 
 display e = (show e) ++ " -->> " ++ (show (eval e))
+
+quicksort :: Ord a => [a] -> [a]
+quicksort [] = []
+quicksort (x:xs) = (quicksort [v | v <- xs, v < x])  ++ [x] ++
+                   (quicksort [v | v <- xs, v >= x])
+
 
 exps = [
   Const 0,
@@ -34,4 +42,3 @@ exps = [
 main = do
   putStrLn "Hola que tal"
   putStrLn (foldr (\s t -> s ++ "\n" ++ t) "" (map display exps))
-
