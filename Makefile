@@ -7,4 +7,7 @@ app: Append
 	./$<
 
 %: %.hs
-	ghc -o $@ $< 	
+	ghc -o $@ $<
+
+rs:
+	rustc test.rs && ./test
