@@ -1,14 +1,21 @@
 
 BUILD=build
 
-all: Supercompiler
-	./$<
+sup: $(BUILD)/Supercompiler.hs.bin
+	$<
 
-app: Append
-	./$<
+app: $(BUILD)/Append.hs.bin
+	$<
 
-%: %.hs
-	ghc -o $@ $<
+expr: $(BUILD)/Expr.rs.bin
+	$<
 
-rs:
-	rustc test.rs && ./test
+$(BUILD)/%.hs.bin: %.hs | $(BUILD)
+	ghc -odir $(BUILD) -o $@ $<
+
+$(BUILD)/%.rs.bin: %.rs | $(BUILD)
+	rustc -o $@ $<
+
+$(BUILD):
+	mkdir $@
+

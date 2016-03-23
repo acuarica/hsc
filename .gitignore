@@ -1,5 +1,1 @@
-*.hi
-*.o
-Supercompiler
-WordCount
-Append
+build/
