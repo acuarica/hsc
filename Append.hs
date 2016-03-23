@@ -1,6 +1,6 @@
 
 
-{-# OPTIONS_GHC -O -ddump-rule-firings #-}
+{-# OPTIONS_GHC -O -fno-enable-rewrite-rules -ddump-rule-firings #-}
 
 import Control.Exception
 import System.CPUTime
@@ -18,7 +18,9 @@ app3 [] ys zs = append ys zs
 app3 (x:xs) ys zs = x:app3 xs ys zs
 
 {-# RULES
-  "****APPEND/APP3****" forall xs ys zs.  append (append xs ys) zs = app3 xs ys zs
+--"****APPEND/APP3****" forall xs ys zs.  append (append xs ys) zs = app3 xs ys zs
+--"****APPEND/APPEND****" forall xs ys zs.  append (append xs ys) zs = append xs (append ys zs)
+  "****APPEND/++****" forall xs ys zs.  append (append xs ys) zs = (++) xs ((++) ys zs)
   #-}
 
 mapl :: (a -> b) -> [a] -> [b]
@@ -26,8 +28,8 @@ mapl f [] = []
 mapl f (x:xs) = f x : mapl f xs
 
 l1 = [1..10000]
-l2 = [1001..20000]
-l3 = [2001..30000]
+l2 = [10001..20000]
+l3 = [20001..30000]
 
 x1 = append [1,2,3] [1,2,3]
 
@@ -51,12 +53,12 @@ appmap xs 0 = 0
 appmap xs n = length (mapl (*3) (mapl (+2) xs) ) + appmap xs (n-1)
 
 {-# RULES
---    "****MAP/APPMAP***" forall f g xs . mapl f (mapl g xs) = mapl (f.g) xs
+    "****MAP/APPMAP***" forall f g xs . mapl f (mapl g xs) = mapl (f.g) xs
   #-}
 
 main = do
 	putStrLn "hola"
 	putStrLn $ show $ length x1
 --	time $ apply l1 l2 l3 50000 `seq` return ()
-	time $ appmap l1 20000 `seq` return ()
+        time $ appmap l1 20000 `seq` return ()
 
