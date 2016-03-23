@@ -1,4 +1,5 @@
 
+BUILD=build
 
 all: Supercompiler
 	./$<
