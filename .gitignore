@@ -1,2 +1,4 @@
 build/
 *.hi
+*.opt.hs
+
