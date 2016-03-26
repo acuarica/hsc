@@ -27,8 +27,11 @@ main = do
         let y = dropExtension x <.> "opt.hs"
         putStrLn y
         src <- readFile x
-        let res = fleshOut src $ prettyPrint $ toHSE $ supercompile $ env $ simplifyProg $ fromHSE $
-                        fromParseResult $ parseFileContents $ cpphs ["SUPERO"] src
+        putStrLn src
+        let z = fromHSE $ fromParseResult $ parseFileContents $ cpphs ["SUPERO"] src
+        putStrLn $ show z
+        let res = fleshOut src $ prettyPrint $ toHSE $ supercompile $ env $
+                        simplifyProg $ z
         when ("--only" `notElem` opts) $ do
             timer $ writeFile y res
         when ("--compile" `elem` opts) $ do

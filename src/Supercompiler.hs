@@ -1,4 +1,6 @@
 
+--import Language.Haskell.Exts
+
 type Id = String
 type Value = Int
 

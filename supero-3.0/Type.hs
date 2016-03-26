@@ -113,10 +113,12 @@ setNameNumber (Name a b _) c = Name a b c
 
 -- pretty print with names for the interesting bits
 prettyNames :: Exp -> String
-prettyNames x = prettyPrint $ Lambda sl (map (PVar . Ident) free) $ H.Let (BDecls $ map f bind) (H.Var $ UnQual $ Ident root)
+prettyNames x = prettyPrint $ Lambda sl (map (PVar . Ident) free) $ H.Let (BDecls $ map f bind)
+              (H.Var $ UnQual $ Ident root)
     where
         FlatExp free bind root = toFlat x
-        f (v,x) = PatBind sl (PVar $ Ident v) (UnGuardedRhs $ H.App (Lit (String $ show $ getName x)) (toExp x)) (Just (BDecls []))
+        f (v,x) = PatBind sl (PVar $ Ident v) (UnGuardedRhs $ H.App (Lit (String $ show $ getName x)) (toExp x))
+          (Just (BDecls []))
 
 getName :: Exp -> Name
 getName (Con n _ xs) = setNameNumber n $ length xs
@@ -163,8 +165,7 @@ fromHSE (Module _ _ _ _ _ _ xs) = assignArities [(f, assignNames f x) | (f,x) <-
 
 fromDecl :: Decl -> [(Var,Exp)]
 fromDecl (PatBind _ (PVar f) (UnGuardedRhs x) (Just (BDecls []))) = [(fromName f, fromExp x)]
---fromDecl d@(PatBind _ (PVar f) (UnGuardedRhs x) Nothing) = error $ "Unhandled fromDecl --PatBind Binds:Nothing--: " ++ show d
---fromDecl d@(PatBind _ (PVar f) (UnGuardedRhs x) Nothing) = [(fromName f, fromExp x)]
+fromDecl d@(PatBind _ (PVar f) (UnGuardedRhs x) Nothing) = [(fromName f, fromExp x)]
 
 fromDecl (FunBind [Match _ f vars Nothing (UnGuardedRhs x) (Just (BDecls [])) ]) = [(fromName f, fromExp $ Lambda sl vars x)]
 --fromDecl (FunBind [Match _ f vars Nothing (UnGuardedRhs x) (Nothing) ]) = [(fromName f, fromExp $ Lambda sl vars x)]
@@ -188,7 +189,8 @@ fromExp o@(H.Case x xs) = Let noname [(f1,fromExp x),(f2,Case noname f1 $ map fr
     where f1:f2:_ = freshNames o
 fromExp (List []) = Con noname "[]" []
 fromExp (List [x]) = fromExp $ InfixApp x (QConOp (Special Cons)) $ List []
-fromExp o@(InfixApp x (QConOp (Special Cons)) y) = Let noname [(f1,fromExp x),(f2,fromExp y),(f3,Con noname ":" [f1,f2])] f3
+fromExp o@(InfixApp x (QConOp (Special Cons)) y) = Let noname
+      [(f1,fromExp x),(f2,fromExp y),(f3,Con noname ":" [f1,f2])] f3
     where f1:f2:f3:_ = freshNames o
 fromExp o@(InfixApp a (QVarOp b) c) = fromExp $ H.App (H.App (H.Var b) a) c
 fromExp (Lit x) = Con noname (prettyPrint x) []
@@ -255,9 +257,9 @@ assignArities xs = checkPrims $ ("root",App noname (fromJust $ lookup "root" ren
 
 checkPrims :: [(Var,Exp)] -> [(Var,Exp)]
 checkPrims xs | null bad = xs
-              | otherwise = error $ "checkPrims failed: " ++ show bad
+              | otherwise = error $ "checkPrims failed: " ++ show bad ++ " on " ++ show xs
     where
-        bad = nub [v | (_,x) <- xs, v <- free x, Nothing <- [arity v]]
+        bad = [("*****",v,x) | (_,x) <- xs, v <- free x, Nothing <- [arity v]]
 
 
 ---------------------------------------------------------------------

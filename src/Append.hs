@@ -1,5 +1,4 @@
 
-
 {-# OPTIONS_GHC -O -fno-enable-rewrite-rules -ddump-rule-firings #-}
 
 import Control.Exception
@@ -20,8 +19,8 @@ app3 (x:xs) ys zs = x:app3 xs ys zs
 {-# RULES
 --"****APPEND/APP3****" forall xs ys zs.  append (append xs ys) zs = app3 xs ys zs
 --"****APPEND/APPEND****" forall xs ys zs.  append (append xs ys) zs = append xs (append ys zs)
-  "****APPEND/++****" forall xs ys zs.  append (append xs ys) zs = (++) xs ((++) ys zs)
-  #-}
+	"****APPEND/++****" forall xs ys zs.  append (append xs ys) zs = (++) xs ((++) ys zs)
+	#-}
 
 mapl :: (a -> b) -> [a] -> [b]
 mapl f [] = []
@@ -36,7 +35,7 @@ x1 = append [1,2,3] [1,2,3]
 
 a3 xs ys zs = append (append xs ys) zs
 
-apply xs ys zs n = case n of 
+apply xs ys zs n = case n of
 	0 -> 0
 	_ -> length (a3 xs ys zs) + apply xs ys zs (n-1)
 
@@ -61,4 +60,3 @@ main = do
 	putStrLn $ show $ length x1
 --	time $ apply l1 l2 l3 50000 `seq` return ()
         time $ appmap l1 20000 `seq` return ()
-
