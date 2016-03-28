@@ -1,5 +1,6 @@
 --module NanoParsec where
 
+import Data.Maybe
 import Data.Char
 import Control.Monad
 import Control.Applicative
@@ -122,7 +123,8 @@ number = do
 word :: Parser String
 word = do
   cs <- Main.some alpha
-  return $ read cs
+  spaces
+  return cs
 
 parens :: Parser a -> Parser a
 parens m = do
@@ -157,14 +159,20 @@ data Expr
   | Let String Expr Expr
   deriving Show
 
+type Env = [(String, Int)]
 eval :: Expr -> Int
-eval ex = case ex of
-  Add a b -> eval a + eval b
-  Mul a b -> eval a * eval b
-  Sub a b -> eval a - eval b
-  Div a b -> eval a `div` eval b
+eval = eval' []
+
+eval' :: Env -> Expr -> Int
+eval' env ex = case ex of
+  Add a b -> eval' env a + eval' env b
+  Mul a b -> eval' env a * eval' env b
+  Sub a b -> eval' env a - eval' env b
+  Div a b -> eval' env a `div` eval' env b
   Lit n   -> n
-  Var x   -> 0
+  Var x   -> fromJust (lookup x env)
+  Let x a b -> eval' ((x,resa):env) b
+    where resa = eval' env a
 
 int :: Parser Expr
 int = do
@@ -177,11 +185,7 @@ var = do
   return (Var x)
 
 expr :: Parser Expr
---expr = term `chainl1` addop
-expr = do
-  reserved "hola"
-  reserved "chau"
-  return (Lit 1000)
+expr = term `chainl1` addop
 
 term :: Parser Expr
 term = factor `chainl1` mulop
@@ -190,7 +194,7 @@ factor :: Parser Expr
 factor =
       int
       <|> letexpr
---      <|> var
+      <|> var
       <|> parens expr
 
 letexpr :: Parser Expr
@@ -198,9 +202,9 @@ letexpr = do
   reserved "let"
   var <- word
   reserved "="
-  valexpr <- parens expr
+  valexpr <- expr
   reserved "in"
-  inexpr <- parens expr
+  inexpr <- expr
   return (Let var valexpr inexpr)
 
 infixOp :: String -> (a -> a -> a) -> Parser (a -> a -> a)
@@ -214,8 +218,6 @@ mulop = infixOp "*" Mul <|> infixOp "/" Div
 
 main :: IO ()
 main = do
-  run "hola chau"
-  --run "{ let x = 4 in x*x+x}"
   run "4"
   run "4      "
   run "      4"
@@ -225,6 +227,9 @@ main = do
   run "  1*10/10"
   run "1*10/20"
   run "1* 10+ 0     "
---  run "1 * 10*hola"
-  run "10+   { let    var = 20 in var*var+var } "
+  run "1 * 10*0"
+  run "let lala = 3 in 4"
+  run "let lala = 3 in lala"
+  run "let x = 4 in x*x+x"
+  run "10+   let    var = 20 in var*var+var  "
   where run s = putStrLn $ str s ++ " > " ++ show (eval (parseWith expr s))
