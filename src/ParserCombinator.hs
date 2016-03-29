@@ -4,47 +4,57 @@ module ParserCombinator where
 import Data.Char
 import Control.Monad
 import Control.Applicative
+import Text.Printf
 
 str s = "``" ++ s ++ "''"
 
-newtype Parser a = Parser { parse :: String -> [(a, Int, String)] }
+data ParserResult a = Error String | Ok (a, Int, String)
 
-apply :: (a -> b) -> Int -> (a, Int, String) -> (b, Int, String)
-apply f m (a, n, b) = (f a, n + m, b)
+newtype Parser a = Parser { parse :: String -> ParserResult a }
 
 item :: Parser Char
 item = Parser (\s -> case s of
-    []     -> []
-    (c:cs) -> [(c, 1, cs)])
+    []     -> Error "Reached EOF"
+    (c:cs) -> Ok (c, 1, cs))
 
 instance Functor Parser where
-  fmap f (Parser cs) = Parser (map (apply f 0) . cs)
+  fmap f (Parser p) = Parser (\ s ->
+    case p s of
+      Error msg    -> Error msg
+      Ok (a, n, s) -> Ok (f a, n, s))
 
 instance Applicative Parser where
-  pure a = Parser (\s -> [(a, 0, s)])
-  (Parser cs1) <*> (Parser cs2) = Parser $ \s ->
-    [(f a, n1+n2, s2) | (f, n1, s1) <- cs1 s, (a, n2, s2) <- cs2 s1]
+  pure a = Parser (\s -> Ok (a, 0, s))
+  (Parser p1) <*> (Parser p2) = Parser ( \s ->
+    case p1 s of
+      Error msg -> Error msg
+      Ok (f, n1, s1) -> case p2 s1 of
+        Error msg -> Error msg
+        Ok (a, n2, s2) -> Ok (f a, n1+n2, s2) )
 
 instance Monad Parser where
   return = pure
-  (>>=) p f = Parser $ \s ->
-        concatMap (\(a, n, s') -> map (apply id n) (parse (f a) s') )
-                  (parse p s)
+  (>>=) p f = Parser ( \s ->
+        case parse p s of
+          Error msg -> Error msg
+          Ok (a, n, s) -> case parse (f a) s of
+              Error msg -> Error msg
+              Ok (a', n', s') -> Ok (a', n+n', s') )
 
 instance Alternative Parser where
-  empty = Parser (const [])
+  empty = Parser (const (Error "empty alternative parser"))
   (<|>) p q = Parser (\s -> case parse p s of
-      []     -> parse q s
-      res    -> res)
+      Error _ -> parse q s
+      res     -> res)
 
-satisfy :: (Char -> Bool) -> Parser Char
-satisfy pred = (>>=) item (\c -> if pred c then pure c else empty)
+satisfy :: String -> (Char -> Bool) -> Parser Char
+satisfy msg pred = (>>=) item (\c ->
+  if pred c
+    then pure c
+    else Parser (const (Error (printf "expecting %s got %c" msg c))) )
 
 oneOf :: String -> Parser Char
-oneOf s = satisfy (`elem` s)
-
-chainl :: Parser a -> Parser (a -> a -> a) -> a -> Parser a
-chainl p op a = (p `chainl1` op) <|> return a
+oneOf s = satisfy s (`elem` s)
 
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 p `chainl1` op = do {a <- p; rest a}
@@ -54,10 +64,10 @@ p `chainl1` op = do {a <- p; rest a}
                  <|> return a
 
 char :: Char -> Parser Char
-char c = satisfy (c ==)
+char c = satisfy [c] (c ==)
 
-natural :: Parser Integer
-natural = fmap read (some (satisfy isDigit))
+--natural :: Parser Integer
+--natural = fmap read (some (satisfy "isDigit" isDigit))
 
 string :: String -> Parser String
 string [] = return []
@@ -73,10 +83,10 @@ spaces :: Parser String
 spaces = many $ oneOf " \n\r"
 
 digit :: Parser Char
-digit = satisfy isDigit
+digit = satisfy "isdigit" isDigit
 
 alpha :: Parser Char
-alpha = satisfy isAlpha
+alpha = satisfy "isalpha" isAlpha
 
 number :: Parser Int
 number = do
@@ -100,9 +110,8 @@ braces m = do { reserved "{"; n <- m; reserved "}"; return n }
 parseWith :: Show a => Parser a -> String -> a
 parseWith p s =
   case parse (do { spaces; p }) s of
-    [(res, _, [])] -> res
-    [(res, n, rs)] -> error $ "Parser didn't consume entire stream: " ++
-                   str rs ++ " in " ++ str s ++ " at " ++ show n ++
+    Ok (res, _, []) -> res
+    Ok (res, n, rs) -> error $ "Parser didn't consume entire stream: "++
+      str rs ++ " in " ++ str s ++ " at " ++ show n ++
                    " with " ++ show res
-    res           -> error $ "Parser error " ++ show res ++
-                    " in " ++ str s
+    Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s

@@ -87,8 +87,8 @@ data Regex = Char
 --regexParser :: Regex
 main :: IO ()
 main = do
-  run "a*"
-  run "4"
+  --run "-"
+  run "44%"
   run "4      "
   run "      4"
   run "      4      "
@@ -99,7 +99,7 @@ main = do
   run "1* 10+ 0     "
   run "1 * 10*0"
   run "{\\ x  -> x+1}"
-  --run "1+1+1+1+1+2 + []"
+  run "1+1+1+1+1+2 + []"
   --run "-1 asdfasdf 1 ++ 2"
   --run "-"
   run "let lala = 3 in 4"
