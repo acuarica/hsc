@@ -5,21 +5,34 @@ import ParserCombinator
 import Data.Maybe
 import Control.Applicative
 
-data Expr
-  = Add Expr Expr
-  | Mul Expr Expr
-  | Sub Expr Expr
-  | Div Expr Expr
+type Id = String
+
+data Expr a
+  = Add (Expr a) (Expr a)
+  | Mul (Expr a) (Expr a)
+  | Sub (Expr a) (Expr a)
+  | Div (Expr a) (Expr a)
   | Lit Int
   | Var String
-  | Let String Expr Expr
+  | Let String (Expr a) (Expr a)
+  | Lam String (Expr a)
+  | App (Expr a) (Expr a)
   deriving Show
 
+instance Functor Expr where
+  fmap f (Add l r) = Add (fmap f l) (fmap f r)
+  fmap f (Mul l r) = Mul (fmap f l) (fmap f r)
+  fmap f (Sub l r) = Sub (fmap f l) (fmap f r)
+  fmap f (Div l r) = Div (fmap f l) (fmap f r)
+  fmap f (Lit n) = Lit n
+  fmap f (Var x) = Var x
+  fmap f (Let x a b) = Let x (fmap f a) (fmap f b)
+
 type Env = [(String, Int)]
-eval :: Expr -> Int
+eval :: Expr a -> Int
 eval = eval' []
 
-eval' :: Env -> Expr -> Int
+eval' :: Env -> Expr a -> Int
 eval' env ex = case ex of
   Add a b -> eval' env a + eval' env b
   Mul a b -> eval' env a * eval' env b
@@ -27,33 +40,33 @@ eval' env ex = case ex of
   Div a b -> eval' env a `div` eval' env b
   Lit n   -> n
   Var x   -> fromJust (lookup x env)
-  Let x a b -> eval' ((x,resa):env) b
-    where resa = eval' env a
+  Let x a b -> eval' ((x, eval' env a):env) b
+  Lam x a -> 10
 
-int :: Parser Expr
-int = do
-  n <- number
-  return (Lit n)
+infixOp :: String -> (a -> a -> a) -> Parser (a -> a -> a)
+infixOp x f = reserved x >> return f
 
-var :: Parser Expr
-var = do
-  x <- word
-  return (Var x)
+int = do { n <- number; return (Lit n) }
 
-expr :: Parser Expr
+var = do { x <- word; return (Var x) }
+
 expr = term `chainl1` addop
 
-term :: Parser Expr
 term = factor `chainl1` mulop
 
-factor :: Parser Expr
-factor =
-      int
-      <|> letexpr
-      <|> var
-      <|> parens expr
+factor = int
+     <|> letexpr
+     <|> braces lamexpr
+     <|> var
+     <|> parens expr
 
-letexpr :: Parser Expr
+lamexpr = do
+  reserved "\\"
+  var <- word
+  reserved "->"
+  valexpr <- expr
+  return (Lam var valexpr)
+
 letexpr = do
   reserved "let"
   var <- word
@@ -63,17 +76,18 @@ letexpr = do
   inexpr <- expr
   return (Let var valexpr inexpr)
 
-infixOp :: String -> (a -> a -> a) -> Parser (a -> a -> a)
-infixOp x f = reserved x >> return f
-
-addop :: Parser (Expr -> Expr -> Expr)
 addop = infixOp "+" Add <|> infixOp "-" Sub
 
-mulop :: Parser (Expr -> Expr -> Expr)
 mulop = infixOp "*" Mul <|> infixOp "/" Div
 
+
+data Regex = Char
+           | Star Regex
+
+--regexParser :: Regex
 main :: IO ()
 main = do
+  run "a*"
   run "4"
   run "4      "
   run "      4"
@@ -84,6 +98,10 @@ main = do
   run "1*10/20"
   run "1* 10+ 0     "
   run "1 * 10*0"
+  run "{\\ x  -> x+1}"
+  --run "1+1+1+1+1+2 + []"
+  --run "-1 asdfasdf 1 ++ 2"
+  --run "-"
   run "let lala = 3 in 4"
   run "let lala = 3 in lala"
   run "let x = 4 in x*x+x"
