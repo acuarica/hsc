@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs  #-}
 
 module ParserCombinator where
 
@@ -6,52 +7,71 @@ import Control.Monad
 import Control.Applicative
 import Text.Printf
 
-str s = "``" ++ s ++ "''"
+-- | Represents how many characters are consumed within the parsed string.
+type Chars = Int
 
-data ParserResult a = Error String | Ok (a, Int, String)
+-- | The result of parsing. It can be an Error or Done.
+-- | Done contains the value, line, column and the tail to be parsed.
+data ParserResult a = Error String | Done a Chars String
 
+-- | The Parser type
 newtype Parser a = Parser { parse :: String -> ParserResult a }
+
+instance Functor Parser where
+  fmap :: (a -> b) -> Parser a -> Parser b
+  fmap f (Parser parse) = Parser (\s ->
+    case parse s of
+      Error msg -> Error msg
+      Done a chars rest -> Done (f a) chars rest
+    )
+
+instance Applicative Parser where
+  pure :: a -> Parser a
+  pure a = Parser (Done a 0)
+
+  (<*>) :: Parser (a -> b) -> Parser a -> Parser b
+  (Parser pf) <*> (Parser p) = Parser (\s ->
+    case pf s of
+      Error msg -> Error msg
+      Done f chars rest -> case p rest of
+        Error msg' -> Error msg'
+        Done a chars' rest' -> Done (f a) (chars+chars') rest'
+    )
+
+instance Monad Parser where
+  return :: a -> Parser a
+  return = pure
+
+  (>>=) :: Parser a -> (a -> Parser b) -> Parser b
+  (>>=) (Parser p) f = Parser (\s ->
+    case p s of
+      Error msg -> Error msg
+      Done a chars rest -> case parse (f a) rest of
+        Error msg' -> Error msg'
+        Done b chars' rest' -> Done b (chars+chars') rest'
+    )
+
+instance Alternative Parser where
+  empty :: Parser a
+  empty = Parser (const (Error "Empty parser"))
+
+  (<|>) :: Parser a -> Parser a -> Parser a
+  (<|>) (Parser p) (Parser q) = Parser (\s ->
+      case p s of
+        Error msg -> q s
+        res -> res
+    )
 
 item :: Parser Char
 item = Parser (\s -> case s of
     []     -> Error "Reached EOF"
-    (c:cs) -> Ok (c, 1, cs))
-
-instance Functor Parser where
-  fmap f (Parser p) = Parser (\ s ->
-    case p s of
-      Error msg    -> Error msg
-      Ok (a, n, s) -> Ok (f a, n, s))
-
-instance Applicative Parser where
-  pure a = Parser (\s -> Ok (a, 0, s))
-  (Parser p1) <*> (Parser p2) = Parser ( \s ->
-    case p1 s of
-      Error msg -> Error msg
-      Ok (f, n1, s1) -> case p2 s1 of
-        Error msg -> Error msg
-        Ok (a, n2, s2) -> Ok (f a, n1+n2, s2) )
-
-instance Monad Parser where
-  return = pure
-  (>>=) p f = Parser ( \s ->
-        case parse p s of
-          Error msg -> Error msg
-          Ok (a, n, s) -> case parse (f a) s of
-              Error msg -> Error msg
-              Ok (a', n', s') -> Ok (a', n+n', s') )
-
-instance Alternative Parser where
-  empty = Parser (const (Error "empty alternative parser"))
-  (<|>) p q = Parser (\s -> case parse p s of
-      Error _ -> parse q s
-      res     -> res)
+    (c:cs) -> Done c 1 cs)
 
 satisfy :: String -> (Char -> Bool) -> Parser Char
 satisfy msg pred = (>>=) item (\c ->
   if pred c
     then pure c
-    else Parser (const (Error (printf "expecting %s got %c" msg c))) )
+    else Parser (const (Error (printf "expecting %s got %c" msg c))))
 
 oneOf :: String -> Parser Char
 oneOf s = satisfy s (`elem` s)
@@ -66,8 +86,8 @@ p `chainl1` op = do {a <- p; rest a}
 char :: Char -> Parser Char
 char c = satisfy [c] (c ==)
 
---natural :: Parser Integer
---natural = fmap read (some (satisfy "isDigit" isDigit))
+natural :: Parser Integer
+natural = fmap read (some (satisfy "isDigit" isDigit))
 
 string :: String -> Parser String
 string [] = return []
@@ -107,11 +127,13 @@ parens m = do { reserved "("; n <- m; reserved ")"; return n }
 braces :: Parser a -> Parser a
 braces m = do { reserved "{"; n <- m; reserved "}"; return n }
 
+str s = "``" ++ s ++ "''"
+
 parseWith :: Show a => Parser a -> String -> a
 parseWith p s =
   case parse (do { spaces; p }) s of
-    Ok (res, _, []) -> res
-    Ok (res, n, rs) -> error $ "Parser didn't consume entire stream: "++
-      str rs ++ " in " ++ str s ++ " at " ++ show n ++
-                   " with " ++ show res
+    Done a _ [] -> a
+    Done a chars rest -> error $ "Parser didn't consume entire stream: "++
+      str rest ++ " in " ++ str s ++ " at " ++ show chars ++
+                   " with " ++ show a
     Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s

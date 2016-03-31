@@ -44,13 +44,17 @@ eval' env ex = case ex of
   Lam x a -> 10
 
 infixOp :: String -> (a -> a -> a) -> Parser (a -> a -> a)
-infixOp x f = reserved x >> return f
+infixOp op cons = reserved op >> return cons
 
 int = do { n <- number; return (Lit n) }
 
 var = do { x <- word; return (Var x) }
 
-expr = term `chainl1` addop
+expr :: Parser (Expr a)
+expr = do
+  a <- term `chainl1` addop
+  --string "eol"
+  return a
 
 term = factor `chainl1` mulop
 
@@ -88,7 +92,7 @@ data Regex = Char
 main :: IO ()
 main = do
   --run "-"
-  run "44%"
+  --run "12+%34eol"
   run "4      "
   run "      4"
   run "      4      "

@@ -54,26 +54,20 @@ executable rewrite-rules
   -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
-  other-extensions:    OverloadedStrings, BangPatterns, CPP, MagicHash,
-                       Trustworthy, Rank2Types, Safe, DeriveDataTypeable,
-                       StandaloneDeriving, RoleAnnotations, FlexibleInstances,
-                       GeneralizedNewtypeDeriving, PatternGuards,
-                       FlexibleContexts
+  -- other-extensions:    OverloadedStrings, BangPatterns, CPP, MagicHash,
+  --                      Trustworthy, Rank2Types, Safe, DeriveDataTypeable,
+  --                      StandaloneDeriving, RoleAnnotations, FlexibleInstances,
+  --                      GeneralizedNewtypeDeriving, PatternGuards,
+  --                      FlexibleContexts
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9, deepseq >=1.4 && <1.5,
-                       mtl >=2.2 && <2.3, random >=1.1 && <1.2,
-                       ghc-prim >=0.4 && <0.5, array >=0.5 && <0.6,
-                       haskell-src-exts >=1.17 && <1.18,
-                       filepath >=1.4 && <1.5,
-                       process >=1.2 && <1.3, directory >=1.2 && <1.3,
-                       cpphs >=1.20 && <1.21, uniplate >=1.6 && <1.7
+  build-depends:       base >=4.8 && <4.9
 
   -- Directories containing source files.
   hs-source-dirs:      src
 
   -- Base language which the package is written in.
-  default-language:    Haskell2010
+  default-language:    Haskell98
 
 
 
