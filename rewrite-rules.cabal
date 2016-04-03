@@ -45,7 +45,6 @@ extra-source-files:  README.md
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
-
 executable rewrite-rules
   -- .hs or .lhs file containing the Main module.
   main-is:             Pc.hs
@@ -69,6 +68,10 @@ executable rewrite-rules
   -- Base language which the package is written in.
   default-language:    Haskell98
 
+executable cat
+  main-is:          Cat.hs
+  build-depends:    base >= 4.8
+  default-language: Haskell98
 
 
 Test-Suite test-bar
