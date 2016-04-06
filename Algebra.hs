@@ -29,13 +29,13 @@ h = Fx [Fx [Fx [], Fx []], Fx[Fx [], Fx[]]]
 
 main :: IO ()
 main = do
-  putStrLn $ show a
-  putStrLn $ show b
-  putStrLn $ show c
-  putStrLn $ show d
-  putStrLn $ show e
-  putStrLn $ show f
-  putStrLn $ show g
+  print a
+  print b
+  print c
+  print d
+  print e
+  print f
+  print g
   print h
   return ()
 
