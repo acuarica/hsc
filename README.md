@@ -33,3 +33,7 @@ What if we use a supercompiler with a functional language with no garbage collec
 Would that make sense?
 
 * Supercompile a version of quicksort to more efficient one?
+
+
+https://ghc.haskell.org/trac/ghc/wiki/Inlining
+Unfold and inline are the same thing.
