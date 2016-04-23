@@ -1,0 +1,2 @@
+# hsc
+Haskell Supercompiler Project
