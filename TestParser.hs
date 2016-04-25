@@ -1,36 +1,21 @@
 
 module Main where
 
+import Test.HUnit
+
 import Expr
 import Parser
 
-doExpr :: Expr -> String
-doExpr expr = pprint expr ++ " ~~> " ++ pprint (eval expr)
+testCase :: (String, String, Expr) -> Test
+testCase (message, code, expected) = TestCase (
+    do
+      putStrLn message
+      assertEqual message (parseWith expr code) expected
+  )
 
-main :: IO ()
-main = mapM_ (putStrLn . doExpr) [
-  --Var "x",
-  Con "True" [],
-  Con "[]" [],
-  Con ":" [],
-  Con "Z" [],
-  App (Con "S" []) (Con "Z" []),
-  App (App (Con ":" []) (Con "Z" [])) (Con "[]" []),
-  Lam "x" (Var "x"),
-  App (Lam "x" (Var "x")) (Con "Z" []),
-  Let "x" (Con "Z" []) (Var "x"),
-  Let "x" (Lam "a" (Var "a"))
-    (Let "y" (Con "[]" [])
-      (App (Var "x") (Var "y"))),
-  Let "x" (Con "True" [])
-    (Case (Var "x") [
-      (Con "False" [], Con "True" []),
-      (Con "True" [], Con "False" [])
-    ]),
-  Let "x" (Lam "a" (Case (Var "a") [
-    (Con "False" [], Con "True" []), (Con "True" [], Con "False" [])]
-    ))
-    (Let "y" (Con "True" [])
-      (App (Var "x") (Var "y"))
-    )
-  ]
+main :: IO Counts
+main = runTestTT (TestList (map testCase [
+    ("Var 1", "x", Var "x"),
+    ("Lambda1", "{\\x->x}", Lam "x" (Var "x")),
+    ("Let 1", "let x={\\y->y} in x", Let "x" (Lam "y" (Var "y")) (Var "x") )
+  ]))

@@ -16,7 +16,7 @@ data Expr
   | Lam  Var Expr
   | App  Expr Expr
   | Case Expr [(Pat, Expr)]
-  deriving Show
+  deriving (Eq, Show)
 
 -- | Represents patterns in case expressions.
 type Pat = Expr
@@ -35,7 +35,9 @@ type Stack = [Value]
 pprint :: Expr -> String
 pprint expr = case expr of
   (Var var) -> var
-  (Con con args) -> con ++ "(" ++ unwords (map pprint args) ++ ")"
+  (Con con args) -> con ++ if null args
+    then ""
+    else "(" ++ unwords (map pprint args) ++ ")"
   (Lam key expr) -> "(\\" ++ key ++ " -> " ++ pprint expr ++ ")"
   (Let key valexpr inexpr) -> "let " ++ key ++ "=" ++ pprint valexpr ++
     " in " ++ pprint inexpr

@@ -5,15 +5,17 @@ import Expr
 
 doExpr :: Expr -> String
 doExpr expr =  pprint expr ++ " ~~> " ++ pprint (eval expr)
-  ++ " | " ++ show expr ++ " ~~> " ++ show (eval expr)
+   ++ " | " ++ show expr ++ " ~~> " ++ show (eval expr)
 
 main :: IO [()]
 main = mapM (putStrLn . doExpr) [
   Var "x",
   Con "True" [],
-  Con "[]" [],
-  Con ":" [],
-  Con "Z" [],
+  Con "False" [],
+  Con "Nil" [],
+  Con "Zero" [],
+  Con "Cons" [],
+  App (Con "S" []) (Var "n"),
   App (Con "S" []) (Con "Z" []),
   App (Con "S" []) (App (Con "S" []) (Con "Z" [])),
   App (App (Con ":" []) (Con "Z" [])) (Con "[]" []),
