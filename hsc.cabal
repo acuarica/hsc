@@ -18,8 +18,16 @@ executable hsc
   hs-source-dirs:      .
   default-language:    Haskell98
 
-Test-Suite test-bar
-      type:       detailed-0.9
-      test-module: Bar
-      build-depends: base, Cabal >= 1.9.2
-      hs-source-dirs:      src-test
+executable test-expr
+-- type:                exitcode-stdio-1.0
+  main-is:             TestExpr.hs
+  build-depends:       base >= 4.8 && <4.9
+  hs-source-dirs:      .
+  default-language:    Haskell98
+
+Test-Suite test-parser
+  type:                exitcode-stdio-1.0
+  main-is:             TestParser.hs
+  build-depends:       base >= 4.8 && <4.9
+  hs-source-dirs:      .
+  default-language:    Haskell98
