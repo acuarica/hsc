@@ -35,7 +35,7 @@ type Stack = [Value]
 pprint :: Expr -> String
 pprint expr = case expr of
   (Var var) -> var
-  (Con con args) -> unwords (con : map pprint args)
+  (Con con args) -> con ++ "(" ++ unwords (map pprint args) ++ ")"
   (Lam key expr) -> "(\\" ++ key ++ " -> " ++ pprint expr ++ ")"
   (Let key valexpr inexpr) -> "let " ++ key ++ "=" ++ pprint valexpr ++
     " in " ++ pprint inexpr
@@ -57,7 +57,9 @@ evalPat (p, e) = (eval p, e)
 -- | Internal eval.
 eval' :: Env -> Stack -> Expr -> Value
 eval' env stack expr = case expr of
-  (Var var) -> eval' env stack (fromJust (lookup var env))
+  (Var var) -> case lookup var env of
+    Nothing -> Var var
+    (Just val) -> eval' env stack val
   (Con con s) -> Con con (stack ++ s)
   lam@(Lam key expr) -> case stack of
       [] -> lam
@@ -66,7 +68,7 @@ eval' env stack expr = case expr of
       eval' ( (key, eval' env stack valexpr) : env) stack inexpr
   (App aexpr vexpr) -> eval' env (eval' env stack vexpr : stack) aexpr
   (Case sexpr cases) -> case eval' env stack sexpr of
-    (Con con args) -> alt' con (map evalPat cases) cases
+    (Con con args) -> eval' env stack (alt' con (map evalPat cases) cases)
 
 -- | The eval function.
 eval :: Expr -> Value

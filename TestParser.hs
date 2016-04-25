@@ -4,7 +4,11 @@ module Main where
 import Expr
 import Parser
 
-es = [
+doExpr :: Expr -> String
+doExpr expr = pprint expr ++ " ~~> " ++ pprint (eval expr)
+
+main :: IO ()
+main = mapM_ (putStrLn . doExpr) [
   --Var "x",
   Con "True" [],
   Con "[]" [],
@@ -30,9 +34,3 @@ es = [
       (App (Var "x") (Var "y"))
     )
   ]
-
-doExpr :: Expr -> String
-doExpr expr = pprint expr ++ " ~~> " ++ pprint (eval expr)
-
-main :: IO ()
-main = mapM_ (putStrLn . doExpr) es

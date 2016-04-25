@@ -3,12 +3,19 @@ module Main where
 
 import Expr
 
-es = [
+doExpr :: Expr -> String
+doExpr expr =  pprint expr ++ " ~~> " ++ pprint (eval expr)
+  ++ " | " ++ show expr ++ " ~~> " ++ show (eval expr)
+
+main :: IO [()]
+main = mapM (putStrLn . doExpr) [
+  Var "x",
   Con "True" [],
   Con "[]" [],
   Con ":" [],
   Con "Z" [],
   App (Con "S" []) (Con "Z" []),
+  App (Con "S" []) (App (Con "S" []) (Con "Z" [])),
   App (App (Con ":" []) (Con "Z" [])) (Con "[]" []),
   Lam "x" (Var "x"),
   App (Lam "x" (Var "x")) (Con "Z" []),
@@ -42,11 +49,21 @@ es = [
     ))
     (Let "x" (Con "Z" [])
       (App (Var "iszero") (Var "x"))
+    ),
+  Let "plus1" (Lam "n" (Case (Var "n") [
+        (Con "Z" [], App (Con "S" []) (Con "Z" [])),
+        (App (Con "S" []) (Var "m"), Con "False" [])
+      ]
+    ))
+    (Let "x" (Con "Z" [])
+      (App (Var "plus1") (Var "x"))
+    ),
+  Let "plus1" (Lam "n" (Case (Var "n") [
+        (Con "Z" [], App (Con "S" []) (Con "Z" [])),
+        (App (Con "S" []) (Var "m"), Var "m")
+      ]
+    ))
+    (Let "x" (App (Con "S" []) (App (Con "S" []) (Con "Z" [])))
+      (App (Var "plus1") (Var "x"))
     )
   ]
-
-doExpr :: Expr -> String
-doExpr expr = pprint expr ++ " ~~> " ++ pprint (eval expr)
-
-main :: IO [()]
-main = mapM (putStrLn . doExpr) es
