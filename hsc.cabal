@@ -5,14 +5,8 @@ description:         The Haskell Supercompiler Project uses supercompilation
                      techniques to optimize Haskell applications.
                      Also uses supercompilation to prove properties
                      of Haskell programs.
-license:             BSD3
-license-file:        LICENSE
 author:              Luis Mastrangelo
 maintainer:          luis.mastrangelo@usi.ch
-
--- A copyright notice.
--- copyright:
-
 category:            Language
 build-type:          Simple
 extra-source-files:  README.md
@@ -20,8 +14,8 @@ cabal-version:       >=1.10
 
 executable hsc
   main-is:             Main.hs
-  build-depends:       base >=4.8 && <4.9, haskell-src-exts >= 1.17
-  hs-source-dirs:      src
+  build-depends:       base >=4.8 && <4.9
+  hs-source-dirs:      .
   default-language:    Haskell98
 
 Test-Suite test-bar
