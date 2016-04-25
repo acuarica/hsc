@@ -2,50 +2,62 @@
 import Data.Maybe (fromJust)
 
 -- | Represents identifier variable.
-type Key = String
+type Var = String
 
 -- | Represents constructor name.
 type Con = String
 
 -- | The expression type.
 data Expr
-  = Var  Key
-  | Val  Int
-  | Con  Con
-  | Let  Key Expr Expr
-  | Lam  Key Expr
+  = Var  Var
+  | Con  Con [Value]
+  | Let  Var Expr Expr
+  | Lam  Var Expr
   | App  Expr Expr
   | Case Expr [(Pat, Expr)]
   deriving Show
 
+-- | Represents patterns in case expressions.
 type Pat = Expr
 
-type Env = [(Key, Int)]
+-- | The Value type represents the result of a computation.
+-- | For now, let's use Expr.
+type Value = Expr
 
-eval' :: Env -> Expr -> Int
-eval' env expr = case expr of
+-- | Environment that binds variables to values.
+type Env = [(Var, Value)]
+
+-- | Stack for Lam calls.
+type Stack = [Value]
+
+eval' :: Env -> Stack -> Expr -> Value
+eval' env stack expr = case expr of
   (Var var) -> fromJust (lookup var env)
-  (Val val) -> val
-  --(Lam key expr) -> eval' ((key, fromJust (lookup key env)):env) expr
-  (Let key valexpr inexpr) -> eval' ( (key, eval' env valexpr) : env) inexpr
-  (App lam vexpr) -> case lam of
-    (Lam key expr) -> eval' ((key, eval' env vexpr):env) expr
-  (Case sexpr cs) -> (eval' env sexpr)
+  (Con con s) -> Con con (stack ++ s)
+  (Lam key expr) -> eval' ((key, head stack):env) (tail stack) expr
+  (Let key valexpr inexpr) -> eval' ( (key, eval' env stack valexpr) : env) stack inexpr
+  (App aexpr vexpr) -> eval' env (eval' env stack vexpr :stack) aexpr
+  (Case sexpr cs) -> eval' env stack sexpr
 
-eval :: Expr -> Int
-eval = eval' []
+eval :: Expr -> Value
+eval = eval' [] []
 
 es = [
-  Val 9,
+  --Var "x",
+  Con "True" [],
+  Con "[]" [],
+  Con ":" [],
+  Con "Z" [],
+  App (Con "S" []) (Con "Z" []),
+  App (App (Con ":" []) (Con "Z" [])) (Con "[]" []),
   --Lam "x" (Var "x"),
-  App (Lam "x" (Var "x")) (Val 5),
-  App (Lam "x" (Var "x")) (Val 5),
-  Let "x" (Val 5) (Var "x")
+  App (Lam "x" (Var "x")) (Con "Z" [])
+  -- App (Lam "x" (Var "x")) (Con "Z"),
+  -- Let "x" (Con "Z") (Var "x")
   ]
 
 --supercompile :: Expr -> Expr
 --supercompile
 
-
 main :: IO ()
-main = print (map eval es)
+main = print (map (\e -> (e, eval e)) es)
