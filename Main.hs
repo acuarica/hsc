@@ -27,17 +27,37 @@ type Value = Expr
 -- | Environment that binds variables to values.
 type Env = [(Var, Value)]
 
--- | Stack for Lam calls.
+-- | Stack for application calls.
 type Stack = [Value]
+
+-- | Pretty print an expression.
+pprint :: Expr -> String
+pprint expr = case expr of
+  (Var var) ->
+    var
+  (Con con args) ->
+    con ++ " " ++ foldr (\ arg s -> pprint arg ++ " " ++ s) "" args
+  (Lam key expr) ->
+    "(\\" ++ key ++ " -> " ++ pprint expr ++ ")"
+  (Let key valexpr inexpr) ->
+    "let " ++ key ++ "=" ++ pprint valexpr ++ " in " ++ pprint inexpr
+  (App aexpr vexpr) ->
+    "@(" ++ pprint aexpr ++ ") (" ++ pprint vexpr ++ ")"
+  (Case sexpr cs) -> "case " ++ pprint sexpr ++ " of " ++
+    foldr (\ (p, e) s -> pprint p ++ " -> " ++ pprint e ++ ";" ++ s) "" cs
 
 eval' :: Env -> Stack -> Expr -> Value
 eval' env stack expr = case expr of
-  (Var var) -> fromJust (lookup var env)
+  (Var var) -> eval' env stack (fromJust (lookup var env))
   (Con con s) -> Con con (stack ++ s)
-  (Lam key expr) -> eval' ((key, head stack):env) (tail stack) expr
-  (Let key valexpr inexpr) -> eval' ( (key, eval' env stack valexpr) : env) stack inexpr
-  (App aexpr vexpr) -> eval' env (eval' env stack vexpr :stack) aexpr
-  (Case sexpr cs) -> eval' env stack sexpr
+  lam@(Lam key expr) -> case stack of
+      [] -> lam
+      (top:rest) -> eval' ((key, top):env) rest expr
+  (Let key valexpr inexpr) ->
+      eval' ( (key, eval' env stack valexpr) : env) stack inexpr
+  (App aexpr vexpr) -> eval' env (eval' env stack vexpr : stack) aexpr
+  (Case sexpr cases) -> case eval' env stack sexpr of
+    (Con con args) -> sexpr
 
 eval :: Expr -> Value
 eval = eval' [] []
@@ -50,14 +70,18 @@ es = [
   Con "Z" [],
   App (Con "S" []) (Con "Z" []),
   App (App (Con ":" []) (Con "Z" [])) (Con "[]" []),
-  --Lam "x" (Var "x"),
-  App (Lam "x" (Var "x")) (Con "Z" [])
-  -- App (Lam "x" (Var "x")) (Con "Z"),
-  -- Let "x" (Con "Z") (Var "x")
+  Lam "x" (Var "x"),
+  App (Lam "x" (Var "x")) (Con "Z" []),
+  Let "x" (Con "Z" []) (Var "x"),
+  Let "x" (Lam "a" (Var "a")) (Let "y" (Con "[]" []) (App (Var "x") (Var "y"))),
+  Let "x" (Con "Z" []) (Case (Var "x") [(Con "Z" [], Con "[]" []), (Con "Z" [], Con "[]" [])])
   ]
 
 --supercompile :: Expr -> Expr
 --supercompile
 
+doExpr :: Expr -> String
+doExpr expr = show expr ++ " | " ++ pprint expr ++ " ~~>> " ++ pprint (eval expr) ++ " | " ++ show (eval expr)
+
 main :: IO ()
-main = print (map (\e -> (e, eval e)) es)
+main = mapM_ (putStrLn . doExpr) es
