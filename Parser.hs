@@ -1,4 +1,3 @@
-{-# LANGUAGE InstanceSigs  #-}
 
 module Parser where
 
@@ -15,11 +14,11 @@ type Chars = Int
 -- | Done contains the value, line, column and the tail to be parsed.
 data ParserResult a = Error String | Done a Chars String
 
--- | The Parser type
+-- | The Parser type. A parser takes a String, process the appropiate
+-- | parser, and returns a ParserResult.
 newtype Parser a = Parser { parse :: String -> ParserResult a }
 
 instance Functor Parser where
-  fmap :: (a -> b) -> Parser a -> Parser b
   fmap f (Parser parse) = Parser (\s ->
     case parse s of
       Error msg -> Error msg
@@ -27,10 +26,8 @@ instance Functor Parser where
     )
 
 instance Applicative Parser where
-  pure :: a -> Parser a
   pure a = Parser (Done a 0)
 
-  (<*>) :: Parser (a -> b) -> Parser a -> Parser b
   (Parser pf) <*> (Parser p) = Parser (\s ->
     case pf s of
       Error msg -> Error msg
@@ -40,10 +37,8 @@ instance Applicative Parser where
     )
 
 instance Monad Parser where
-  return :: a -> Parser a
   return = pure
 
-  (>>=) :: Parser a -> (a -> Parser b) -> Parser b
   (>>=) (Parser p) f = Parser (\s ->
     case p s of
       Error msg -> Error msg
@@ -53,16 +48,15 @@ instance Monad Parser where
     )
 
 instance Alternative Parser where
-  empty :: Parser a
   empty = Parser (const (Error "Empty parser"))
 
-  (<|>) :: Parser a -> Parser a -> Parser a
   (<|>) (Parser p) (Parser q) = Parser (\s ->
       case p s of
         Error msg -> q s
         res -> res
     )
 
+-- | Parses a char
 item :: Parser Char
 item = Parser (\s -> case s of
     []     -> Error "Reached EOF"
@@ -71,18 +65,11 @@ item = Parser (\s -> case s of
 satisfy :: String -> (Char -> Bool) -> Parser Char
 satisfy msg pred = (>>=) item (\c ->
   if pred c
-    then pure c
+    then return c
     else Parser (const (Error (printf "expecting %s got %c" msg c))))
 
 oneOf :: String -> Parser Char
 oneOf s = satisfy s (`elem` s)
-
-chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-p `chainl1` op = do {a <- p; rest a}
-  where rest a = (do f <- op
-                     b <- p
-                     rest (f a b))
-                 <|> return a
 
 char :: Char -> Parser Char
 char c = satisfy [c] (c ==)
@@ -109,18 +96,50 @@ digit = satisfy "isdigit" isDigit
 alpha :: Parser Char
 alpha = satisfy "isalpha" isAlpha
 
+loweralpha :: Parser Char
+loweralpha = satisfy "loweralpha" (\c -> isAlpha c && isLower c)
+
+upperalpha :: Parser Char
+upperalpha = satisfy "upperalpha" (\c -> isAlpha c && isUpper c)
+
 number :: Parser Int
 number = do
   s <- string "-" <|> return []
   cs <- some digit
   spaces
-  return $ read (s ++ cs)
+  return (read (s ++ cs))
 
 word :: Parser String
 word = do
   cs <- some alpha
   spaces
   return cs
+
+lowerword :: Parser String
+lowerword = do
+  c  <- loweralpha
+  cs <- many alpha
+  spaces
+  return (c:cs)
+
+upperword :: Parser String
+upperword = do
+  c  <- upperalpha
+  cs <- many alpha
+  spaces
+  return (c:cs)
+
+dollarword :: Parser String
+dollarword = do
+  d <- char '$'
+  w <- lowerword
+  return (d:w)
+
+sat :: Parser String -> (String -> Bool) -> Parser String
+sat p pred = (>>=) p (\s ->
+  if pred s
+    then return s
+    else Parser (const (Error (printf "expecting got %s" s))))
 
 parens :: Parser a -> Parser a
 parens m = do { reserved "("; n <- m; reserved ")"; return n }
@@ -139,45 +158,67 @@ parseWith p s =
                    " with " ++ show a
     Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s
 
+chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
+p `chainl1` op = do {a <- p; rest a}
+  where rest a = (do f <- op
+                     b <- p
+                     rest (f a b))
+                 <|> return a
 
-infixOp :: String -> (a -> a -> a) -> Parser (a -> a -> a)
-infixOp op cons = reserved op >> return cons
+exprp :: Parser Expr
+exprp = termp `chainl1` return App
 
---int = do { n <- number; return (Lit n) }
+termp :: Parser Expr
+termp = litintp
+    <|> letp
+    <|> casep
+    <|> varp
+    <|> conp
+    <|> braces lamp
+    <|> parens exprp
 
-var = do { x <- word; return (Var x) }
+litintp :: Parser Expr
+litintp = do { n <- number; return (f n) }
+  where f n = if n == 0 then Con "Zero" [] else Con "Succ" [f (n-1)]
 
-expr :: Parser Expr
-expr = do
-  a <- term -- `chainl1` addop
-  --string "eol"
-  return a
+varp :: Parser Expr
+varp = do { v <- dollarword; return (Var v) }
 
-term = factor -- `chainl1` mulop
+conp :: Parser Expr
+conp = do { x <- upperword; return (Con x []) }
 
-factor = --int
-     -- <|>
-     letexpr
-     <|> braces lamexpr
-     <|> var
-     <|> parens expr
-
-lamexpr = do
+lamp :: Parser Expr
+lamp = do
   reserved "\\"
-  var <- word
+  var <- dollarword
   reserved "->"
-  valexpr <- expr
+  valexpr <- exprp
   return (Lam var valexpr)
 
-letexpr = do
+letp :: Parser Expr
+letp = do
   reserved "let"
-  var <- word
+  var <- dollarword
   reserved "="
-  valexpr <- expr
+  valexpr <- exprp
   reserved "in"
-  inexpr <- expr
+  inexpr <- exprp
   return (Let var valexpr inexpr)
 
---addop = infixOp "+" Add <|> infixOp "-" Sub
+casep :: Parser Expr
+casep = do
+  reserved "case"
+  sc <- exprp
+  reserved "of"
+  reserved "{"
+  alts <- some altp
+  reserved "}"
+  return (Case sc alts)
 
---mulop = infixOp "*" Mul <|> infixOp "/" Div
+altp :: Parser (Pat, Expr)
+altp = do
+    alt <- exprp
+    reserved "->"
+    res <- exprp
+    reserved ";"
+    return (alt, res)
