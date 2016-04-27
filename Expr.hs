@@ -62,13 +62,13 @@ eval' env stack expr = case expr of
   (Var var) -> case lookup var env of
     Nothing -> Var var
     (Just val) -> eval' env stack val
-  (Con con s) -> Con con (stack ++ s)
+  (Con con s) -> Con con (s ++ stack)
   lam@(Lam key expr) -> case stack of
       [] -> lam
       (top:rest) -> eval' ((key, top):env) rest expr
   (Let key valexpr inexpr) ->
       eval' ( (key, eval' env stack valexpr) : env) stack inexpr
-  (App aexpr vexpr) -> eval' env (eval' env stack vexpr : stack) aexpr
+  (App aexpr vexpr) -> eval' env (eval' env [] vexpr : stack) aexpr
   (Case sexpr cases) -> case eval' env stack sexpr of
     (Con con args) -> eval' env stack (alt' con (map evalPat cases) cases)
 

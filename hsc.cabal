@@ -21,7 +21,7 @@ executable hsc
 executable test-expr
 -- type:                exitcode-stdio-1.0
   main-is:             TestExpr.hs
-  build-depends:       base >= 4.8 && <4.9
+  build-depends:       base >= 4.8 && <4.9, HUnit
   hs-source-dirs:      .
   default-language:    Haskell98
 

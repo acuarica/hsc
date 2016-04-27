@@ -33,6 +33,7 @@ main = runTestTT (TestList (map testCase [
     ("Cons False (Cons True Nil)",
       App (App (Con "Cons" []) (Con "False" []))
           (App (App (Con "Cons" []) (Con "True" [])) (Con "Nil" []))),
+    ("Succ $n", App (Con "Succ" []) (Var "$n")),
     ("{\\$x->$x}", Lam "$x" (Var "$x")),
     ("{\\$var->$var}", Lam "$var" (Var "$var")),
     ("{\\$x->True}", Lam "$x" (Con "True" [])),
