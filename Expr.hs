@@ -6,12 +6,13 @@ import Data.Maybe (fromJust)
 type Var = String
 
 -- | Represents constructor name.
-type Con = String
+-- | Also called tag to be matched in case expressions.
+type Tag = String
 
 -- | The expression type.
 data Expr
   = Var  Var
-  | Con  Con [Value]
+  | Con  Tag [Value]
   | Let  Var Expr Expr
   | Lam  Var Expr
   | App  Expr Expr
@@ -46,31 +47,38 @@ pprint expr = case expr of
   (Case sexpr cs) -> "case " ++ pprint sexpr ++ " of " ++
     foldr (\ (p, e) s -> pprint p ++ " -> " ++ pprint e ++ ";" ++ s) "" cs
 
--- | Gets the right case alternative.
-alt' :: String -> [(Pat, Expr)] -> [(Pat, Expr)] -> Expr
-alt' s ps cases = case ps of
-  [] -> error ("Con tag not found: " ++ s ++ ": " ++ show cases)
-  ((Con s' args, e):ps') -> if s == s' then e else alt' s ps' cases
-  ((p, e):ps') -> alt' s ps' cases
-
-evalPat :: (Pat, Expr) -> (Pat, Expr)
-evalPat (p, e) = (eval p, e)
-
 -- | Internal eval.
 eval' :: Env -> Stack -> Expr -> Value
 eval' env stack expr = case expr of
   (Var var) -> case lookup var env of
     Nothing -> Var var
     (Just val) -> eval' env stack val
-  (Con con s) -> Con con (s ++ stack)
-  lam@(Lam key expr) -> case stack of
-      [] -> lam
-      (top:rest) -> eval' ((key, top):env) rest expr
-  (Let key valexpr inexpr) ->
-      eval' ( (key, eval' env stack valexpr) : env) stack inexpr
-  (App aexpr vexpr) -> eval' env (eval' env [] vexpr : stack) aexpr
+  (Con tag s) -> Con tag (s ++ stack)
+  (Lam var expr') -> case stack of
+      --[] -> Lam var expr'
+      (top:rest) -> eval' ((var, top):env) rest expr'
+  (Let var valexpr inexpr) -> eval' ((var, valexpr):env) stack inexpr
+  (App funexpr valexpr) -> eval' env (eval' env [] valexpr:stack) funexpr
   (Case sexpr cases) -> case eval' env stack sexpr of
-    (Con con args) -> eval' env stack (alt' con (map evalPat cases) cases)
+    (Con tag args) -> evalAlt env tag args cases
+
+-- | Gets the right case alternative.
+evalAlt :: Env -> Tag -> [Value] -> [(Pat, Expr)] -> Expr
+evalAlt env sctag scargs pats = case pats of
+  [] -> error ("Constructor tag not found: " ++ sctag)
+  ((patexpr, altexpr):pats') -> case eval patexpr of
+    (Con pattag patargs) -> if pattag == sctag
+      then eval' (buildAltEnv scargs patargs env) [] altexpr
+      else evalAlt env sctag scargs pats'
+    _ -> evalAlt env sctag scargs pats'
+
+buildAltEnv :: [Value] -> [Value] -> Env -> Env
+buildAltEnv scargs patargs env = case (scargs, patargs) of
+  ([], []) -> env
+  (scarg':scargs', patarg':patargs') -> case patarg' of
+    Var var -> buildAltEnv scargs' patargs' ((var, scarg'):env)
+    _ -> buildAltEnv scargs' patargs' env
+  _ -> error "Incorrect matching case"
 
 -- | The eval function.
 eval :: Expr -> Value
