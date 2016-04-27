@@ -80,7 +80,9 @@ main = (doTests . map doEval) [
         (zero, m),
         (App suc n', App (App plus n') (App suc m))
       ]))) (App (App plus three) two),
-      five)
+      five),
+    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (Var "x")),
+      Con "Succ" [Con "Zero" []])
   ]
   where
     x = Var "x"

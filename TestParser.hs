@@ -8,7 +8,7 @@ import Parser
 
 testCase :: (String, Expr) -> Test
 testCase (code, expected) = TestCase (
-    assertEqual ("For " ++ code) expected (parseWith exprp code)
+    assertEqual ("For " ++ code) expected (parseExpr code)
   )
 
 main :: IO Counts
@@ -25,8 +25,8 @@ main = runTestTT (TestList (map testCase [
     ("Succ Zero", App (Con "Succ" []) (Con "Zero" [])),
     ("(Succ Zero)", App (Con "Succ" []) (Con "Zero" [])),
     ("((Succ) (Zero))", App (Con "Succ" []) (Con "Zero" [])),
-    ("Succ Succ Zero",
-      App (App (Con "Succ" []) (Con "Succ" [])) (Con "Zero" [])),
+    ("Succ (Succ Zero)",
+      App (Con "Succ" []) (App (Con "Succ" []) (Con "Zero" [])) ),
     ("Nil", Con "Nil" []),
     ("Cons True Nil",
       App (App (Con "Cons" []) (Con "True" [])) (Con "Nil" [])),
@@ -59,5 +59,36 @@ main = runTestTT (TestList (map testCase [
         (Con "True" [], Con "False" []),
         (Con "False" [], Con "True" []),
         (Var "$n", Var "$m")
-      ])
+      ]),
+    ("[]", Con "Nil" []),
+    ("  [  ]  ", Con "Nil" []),
+    ("[True]", Con "Cons" [Con "True" [], Con "Nil" []]),
+    ("[False, True]",
+      Con "Cons" [Con "False" [],
+        Con "Cons" [Con "True" [],
+          Con "Nil" []]]),
+    ("[False, True, False]",
+      Con "Cons" [Con "False" [],
+        Con "Cons" [Con "True" [],
+          Con "Cons" [Con "False" [],
+            Con "Nil" []]]]),
+    ("[False, True, False, True]",
+      Con "Cons" [Con "False" [],
+        Con "Cons" [Con "True" [],
+          Con "Cons" [Con "False" [],
+            Con "Cons" [Con "True" [],
+          Con "Nil" []]]]]),
+    ("[$x]", Con "Cons" [Var "$x", Con "Nil" []]),
+    ("[$x,$y]",
+      Con "Cons" [Var "$x",
+        Con "Cons" [Var "$y",
+          Con "Nil" []]]),
+    ("[$x,One,$y,Two]",
+      Con "Cons" [Var "$x",
+        Con "Cons" [Con "One" [],
+          Con "Cons" [Var "$y",
+            Con "Cons" [Con "Two" [],
+              Con "Nil" []]]]]),
+    ("let $x=0 in Succ $x",
+      Let "$x" (Con "Zero" []) (App (Con "Succ" []) (Var "$x")))
   ]))

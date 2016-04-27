@@ -147,6 +147,9 @@ parens m = do { reserved "("; n <- m; reserved ")"; return n }
 braces :: Parser a -> Parser a
 braces m = do { reserved "{"; n <- m; reserved "}"; return n }
 
+brackets :: Parser a -> Parser a
+brackets m = do { reserved "["; n <- m; reserved "]"; return n }
+
 str s = "``" ++ s ++ "''"
 
 parseWith :: Show a => Parser a -> String -> a
@@ -160,10 +163,7 @@ parseWith p s =
 
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 p `chainl1` op = do {a <- p; rest a}
-  where rest a = (do f <- op
-                     b <- p
-                     rest (f a b))
-                 <|> return a
+  where rest a = (do {f <- op; b <- p; rest (f a b)}) <|> return a
 
 exprp :: Parser Expr
 exprp = termp `chainl1` return App
@@ -176,10 +176,25 @@ termp = litintp
     <|> conp
     <|> braces lamp
     <|> parens exprp
+    <|> brackets listp
 
 litintp :: Parser Expr
 litintp = do { n <- number; return (f n) }
-  where f n = if n == 0 then Con "Zero" [] else Con "Succ" [f (n-1)]
+  where f n   = if n == 0 then zero else suc (f (n-1))
+        zero  = Con "Zero" []
+        suc n = Con "Succ" [n]
+
+listp :: Parser Expr
+listp = (do
+      item <- exprp
+      (do
+        reserved ","
+        rest <- listp
+        return (cons item rest)) <|> return (singleton item)
+    ) <|> return nil
+  where cons item rest = Con "Cons" [item, rest]
+        nil = Con "Nil" []
+        singleton item = cons item nil
 
 varp :: Parser Expr
 varp = do { v <- dollarword; return (Var v) }
@@ -222,3 +237,6 @@ altp = do
     res <- exprp
     reserved ";"
     return (alt, res)
+
+parseExpr :: String -> Expr
+parseExpr = parseWith exprp

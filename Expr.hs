@@ -53,7 +53,7 @@ eval' env stack expr = case expr of
   (Var var) -> case lookup var env of
     Nothing -> Var var
     (Just val) -> eval' env stack val
-  (Con tag s) -> Con tag (s ++ stack)
+  (Con tag s) -> Con tag (map (eval' env []) s ++ stack)
   (Lam var expr') -> case stack of
       --[] -> Lam var expr'
       (top:rest) -> eval' ((var, top):env) rest expr'

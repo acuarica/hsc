@@ -26,8 +26,13 @@ executable test-expr
   default-language:    Haskell98
 
 executable test-parser
-  -- type:                exitcode-stdio-1.0
   main-is:             TestParser.hs
+  build-depends:       base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:      .
+  default-language:    Haskell98
+
+executable test-rec
+  main-is:             TestRec.hs
   build-depends:       base >= 4.8 && <4.9, HUnit
   hs-source-dirs:      .
   default-language:    Haskell98
