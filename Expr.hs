@@ -55,7 +55,7 @@ eval' env stack expr = case expr of
     (Just val) -> eval' env stack val
   (Con tag s) -> Con tag (map (eval' env []) s ++ stack)
   (Lam var expr') -> case stack of
-      --[] -> Lam var expr'
+      [] -> Lam var expr'
       (top:rest) -> eval' ((var, top):env) rest expr'
   (Let var valexpr inexpr) -> eval' ((var, valexpr):env) stack inexpr
   (App funexpr valexpr) -> eval' env (eval' env [] valexpr:stack) funexpr
