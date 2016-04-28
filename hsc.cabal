@@ -36,3 +36,9 @@ executable test-rec
   build-depends:       base >= 4.8 && <4.9, HUnit
   hs-source-dirs:      .
   default-language:    Haskell98
+
+executable test-super
+  main-is:             TestSuper.hs
+  build-depends:       base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:      .
+  default-language:    Haskell98

@@ -4,25 +4,9 @@ module Main where
 import System.Exit
 import Test.HUnit
 
+import Util
 import Expr
 import Parser
-
-doPrint :: (Expr, Expr, Expr) -> String
-doPrint (expr, expexpr, actexpr) =
-  pprint expr ++ " ~~> " ++ pprint actexpr
-
-doTest :: (String, Expr, Expr) -> Test
-doTest (expr, expexpr, actexpr) = TestCase (
-    assertEqual expr expexpr actexpr
-  )
-
-doTests :: [(String, Expr, Expr)] -> IO ()
-doTests tests = do
-  --mapM_ (putStrLn . doPrint) tests
-  counts <- runTestTT (TestList (map doTest tests))
-  exitWith (if errors counts > 0 || failures counts > 0
-    then ExitFailure (errors counts + failures counts)
-    else ExitSuccess)
 
 doEval :: (String, Expr, Expr) -> (String, Expr, Expr)
 doEval (s, expr, expexpr) = (s, expexpr, eval expr)
@@ -31,10 +15,32 @@ doParse :: (String, String) -> (String, Expr, Expr)
 doParse (e, expexpr) = (e, parseExpr e, parseExpr expexpr)
 
 main :: IO ()
-main = (doTests . map (doEval . doParse)) [
+main = (doTests doTest . map (doEval . doParse)) [
     ("let $x=0 in Succ $x", "1"),
     ("let $x=True in [$x]", "[True]"),
     ("let $id={\\$a-> $a} in $id [1,2,3,4,5]", "[1,2,3,4,5]"),
+    ("let $two={\\$a->{\\$b->$a}} in $two True False", "True"),
+    ("{\\$a->{\\$b->$a}}", "{\\$a->{\\$b->$a}}"),
+    ("{\\$b->{\\$a->$b} A} B", "B"),
+    ("{\\$a->{\\$a->$a} A} B", "A"),
+    ("{\\$a->$a} {\\$a->{\\$b->$a}}", "{\\$a->{\\$b->$a}}"),
+    (
+    "   let $two = {\\$a->{\\$b->$a}} \
+    \in let $id  = {\\$c->$c} \
+    \in $id $two", "{\\$a->{\\$b->$a}}"),
+    (
+    "   let $two = {\\$a->{\\$b->$a}} \
+    \in let $id  = {\\$b->$b} \
+    \in $id $two", "{\\$a->{\\$b->$a}}"),
+    (
+    "   let $two = {\\$a->{\\$b->$a}} \
+    \in let $id  = {\\$a->$a} \
+    \in $id $two", "{\\$a->{\\$b->$a}}"),
+    (
+    "let $two={\\$a->{\\$b->$a}} \
+    \in let $p=$two True \
+    \in let $app={\\$a->{\\$b->$a $b}}\
+    \in $app $p False", "True"),
     (
     "let $id={\\$a-> $a}\
     \in let $app={\\$f->{\\$a->$f $a}}\
@@ -116,5 +122,35 @@ main = (doTests . map (doEval . doParse)) [
     \in let $map={\\$f->{\\$xs-> case $xs of {\
     \  Nil->Nil;\
     \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
-    \in $rev ($map $rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]")
+    \in $rev ($map $rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
+    (
+    "let $mult={\\$n->{\\$m->case $n of {\
+    \  0->0;\
+    \  Succ $nn -> $plus ($mult $nn $m) $m;}}}\
+    \in let $multten={\\$n -> $plus 2 $n}\
+    \in let $plus={\\$n->{\\$m->case $n of {\
+    \  0->$m;\
+    \  Succ $nn -> $plus $nn (Succ $m); }}}\
+    \in let $map={\\$f->{\\$xs-> case $xs of {\
+    \  Nil->Nil;\
+    \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
+    \in $multten 1", "3")--,
+    -- (
+    -- "let $mult={\\$n->{\\$m->case $n of {\
+    -- \  0->0;\
+    -- \  Succ $nn -> $plus ($mult $nn $m) $m;}}}\
+    -- \in let $multten=$mult 10 \
+    -- \in let $plus={\\$n->{\\$m->case $n of {\
+    -- \  0->$m;\
+    -- \  Succ $nn -> $plus $nn (Succ $m); }}}\
+    -- \in let $append={\\$xs->{\\$ys->case $xs of {\
+    -- \  Nil->$ys;\
+    -- \  Cons $z $zs -> Cons $z ($append $zs $ys) ; }}}\
+    -- \in let $rev={\\$rs-> case $rs of {\
+    -- \  Nil->Nil;\
+    -- \  Cons $s $ss -> $append ($rev $ss) [$s] ; }}\
+    -- \in let $map={\\$f->{\\$xs-> case $xs of {\
+    -- \  Nil->Nil;\
+    -- \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
+    -- \in $map ($multten) [1]", "[]")
   ]

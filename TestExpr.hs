@@ -6,29 +6,17 @@ import Test.HUnit
 
 import Expr
 import Parser
+import Util
 
 doPrint :: (Expr, Expr, Expr) -> String
 doPrint (expr, expexpr, actexpr) =
   pprint expr ++ " ~~> " ++ pprint actexpr
 
-doTest :: (Expr, Expr, Expr) -> Test
-doTest (expr, expexpr, actexpr) = TestCase (
-    assertEqual (show expr) expexpr actexpr
-  )
-
-doTests :: [(Expr, Expr, Expr)] -> IO ()
-doTests tests = do
-  mapM_ (putStrLn . doPrint) tests
-  counts <- runTestTT (TestList (map doTest tests))
-  exitWith (if errors counts > 0 || failures counts > 0
-    then ExitFailure (errors counts + failures counts)
-    else ExitSuccess)
-
 doEval :: (Expr, Expr) -> (Expr, Expr, Expr)
 doEval (expr, expexpr) = (expr, expexpr, eval expr)
 
 main :: IO ()
-main = (doTests . map doEval) [
+main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (x, x),
     (var, var),
     (true, true),

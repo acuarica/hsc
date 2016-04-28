@@ -5,14 +5,13 @@ import Test.HUnit
 
 import Expr
 import Parser
+import Util
 
-testCase :: (String, Expr) -> Test
-testCase (code, expected) = TestCase (
-    assertEqual ("For " ++ code) expected (parseExpr code)
-  )
+doParse :: (String, Expr) -> (String, Expr, Expr)
+doParse (code, expected) = (code, expected, parseExpr code)
 
-main :: IO Counts
-main = runTestTT (TestList (map testCase [
+main :: IO ()
+main = doTests (doTest . doParse)  [
     ("$x", Var "$x"),
     ("$var", Var "$var"),
     ("0", Con "Zero" []),
@@ -91,4 +90,4 @@ main = runTestTT (TestList (map testCase [
               Con "Nil" []]]]]),
     ("let $x=0 in Succ $x",
       Let "$x" (Con "Zero" []) (App (Con "Succ" []) (Var "$x")))
-  ]))
+  ]

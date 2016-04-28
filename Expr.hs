@@ -55,12 +55,21 @@ eval' env stack expr = case expr of
     (Just val) -> eval' env stack val
   (Con tag s) -> Con tag (map (eval' env []) s ++ stack)
   (Lam var expr') -> case stack of
-      [] -> Lam var expr'
+      [] -> Lam var (eval' (deleteVar var env) [] expr')
       (top:rest) -> eval' ((var, top):env) rest expr'
   (Let var valexpr inexpr) -> eval' ((var, valexpr):env) stack inexpr
   (App funexpr valexpr) -> eval' env (eval' env [] valexpr:stack) funexpr
-  (Case sexpr cases) -> case eval' env stack sexpr of
+  c@(Case sexpr cases) -> case eval' env stack sexpr of
     (Con tag args) -> evalAlt env tag args cases
+    _ -> c
+
+deleteVar :: Var -> Env -> Env
+deleteVar var env = case env of
+  [] -> []
+  ((var', expr'):env') -> if var' == var
+    then deleteVar var env'
+    else (var', expr'):deleteVar var env'
+
 
 -- | Gets the right case alternative.
 evalAlt :: Env -> Tag -> [Value] -> [(Pat, Expr)] -> Expr
@@ -83,3 +92,23 @@ buildAltEnv scargs patargs env = case (scargs, patargs) of
 -- | The eval function.
 eval :: Expr -> Value
 eval = eval' [] []
+
+
+
+-- | Internal eval.
+supercompile' :: Env -> Stack -> Expr -> Expr
+supercompile' env stack expr = case expr of
+  (Var var) -> case lookup var env of
+    Nothing -> Var var
+    (Just val) -> eval' env stack val
+  (Con tag s) -> Con tag (map (eval' env []) s ++ stack)
+  (Lam var expr') -> case stack of
+      [] -> Lam var expr'
+      (top:rest) -> eval' ((var, top):env) rest expr'
+  (Let var valexpr inexpr) -> eval' ((var, valexpr):env) stack inexpr
+  (App funexpr valexpr) -> eval' env (eval' env [] valexpr:stack) funexpr
+  (Case sexpr cases) -> case eval' env stack sexpr of
+    (Con tag args) -> evalAlt env tag args cases
+
+supercompile :: Expr -> Expr
+supercompile = supercompile' [] []
