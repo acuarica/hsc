@@ -9,7 +9,7 @@ import Expr
 import Parser
 
 doEval :: (String, Expr, Expr) -> (String, Expr, Expr)
-doEval (s, expr, expexpr) = (s, expexpr, eval expr)
+doEval (s, expr, expexpr) = (s, eval expexpr, eval expr)
 
 doParse :: (String, String) -> (String, Expr, Expr)
 doParse (e, expexpr) = (e, parseExpr e, parseExpr expexpr)
@@ -37,18 +37,38 @@ main = (doTests doTest . map (doEval . doParse)) [
     \in let $id  = {\\$a->$a} \
     \in $id $two", "{\\$a->{\\$b->$a}}"),
     (
-    "let $two={\\$a->{\\$b->$a}} \
-    \in let $p=$two True \
-    \in let $app={\\$a->{\\$b->$a $b}}\
+    "   let $two = {\\$a->{\\$b->$a}} \
+    \in let $p   = $two True \
+    \in let $app = {\\$f->{\\$x->$f $x}}\
     \in $app $p False", "True"),
     (
     "let $id={\\$a-> $a}\
-    \in let $app={\\$f->{\\$a->$f $a}}\
+    \in let $app={\\$f->{\\$x->$f $x}}\
     \in $app $id [1,2,3,4,5]", "[1,2,3,4,5]"),
+    (
+    "let $copy={\\$a->case $a of {\
+    \  0->0;\
+    \  Succ $aa -> Succ ($copy $aa); }}\
+    \in $copy 4", "4"),
+    (
+    "let $copy={\\$a->case $a of {\
+    \  0->0;\
+    \  Succ $aa -> Succ ($copy $aa); }}\
+    \in {\\$x->$x} ($copy 5) ", "5"),
     (
     "let $len={\\$xs->case $xs of {\
     \  Nil->0;\
-    \  Cons $y $ys -> $plus 1 ($len $ys);}}\
+    \  Cons $y $ys -> Succ ($len $ys);}}\
+    \in $len [1,2,3,4,5,6,7]", "7"),
+    (
+    "let $plus={\\$n->{\\$m->case $n of {\
+    \  0->$m;\
+    \  Succ $l -> $plus $l (Succ $m); }}}\
+    \in $plus 2 3", "5"),
+    (
+    "let $len={\\$xs->case $xs of {\
+    \  Nil->0;\
+    \  Cons $y $ys -> Succ ($len $ys);}}\
     \in let $plus={\\$n->{\\$m->case $n of {\
     \  0->$m;\
     \  Succ $l -> $plus $l (Succ $m); }}}\
@@ -134,7 +154,101 @@ main = (doTests doTest . map (doEval . doParse)) [
     \in let $map={\\$f->{\\$xs-> case $xs of {\
     \  Nil->Nil;\
     \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
-    \in $multten 1", "3")--,
+    \in $multten 1", "3"),
+    (
+    "let $mult={\\$n->{\\$m->case $n of {\
+    \  0->0;\
+    \  Succ $nn -> $plus ($mult $nn $m) $m;}}}\
+    \in let $multten=$mult 10 \
+    \in let $plus={\\$n->{\\$m->case $n of {\
+    \  0->$m;\
+    \  Succ $nn -> $plus $nn (Succ $m); }}}\
+    \in $multten 1", "10"),
+    (
+    "let $map={\\$f->{\\$xs-> case $xs of {\
+    \  Nil->Nil;\
+    \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
+    \in $map {\\$a->A} [1,2,3,4,5]", "[A,A,A,A,A]"),
+    (
+    "let $map={\\$f->{\\$xs-> case $xs of {\
+    \  Nil->Nil;\
+    \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
+    \in $map {\\$a->$a} [1,2,3,4,5]", "[1,2,3,4,5]"),
+    (
+    "let $map={\\$f->{\\$xs-> case $xs of {\
+    \  Nil->Nil;\
+    \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
+    \in $map {\\$a->Succ (Succ $a)} [1]", "[3]"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $a of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> $plus $aa (Succ $b); }}}\
+    -- \in let $map={\\$f->{\\$xs-> case $xs of {\
+    -- \  Nil->Nil;\
+    -- \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
+    -- \in $map {\\$q->$plus 10 $q} [1,2,3,4,5]", "[11,12,13,14,15]"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $a of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> $plus $aa (Succ $b); }}}\
+    -- \in let $plusten={\\$q->$plus 10 $q}\
+    -- \in let $map={\\$f->{\\$xs-> case $xs of {\
+    -- \  Nil->Nil;\
+    -- \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
+    -- \in $map $plusten [1,2,3,4,5]", "[11,12,13,14,15]"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $a of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> $plus $aa (Succ $b); }}}\
+    -- \in let $two={\\$a->{\\$b->$a}}\
+    -- \in let $plusten=$two 10 \
+    -- \in let $app={\\$p->{\\$q->$p $q}}\
+    -- \in $app $plusten 10", "10"),
+    -- (
+    -- "let $two={\\$a->{\\$b->$a}}\
+    -- \in {\\$x->$x} ($two A) ", "{\\$b->A}"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $a of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> (Succ $b); }}}\
+    -- \in {\\$x->$x} ($plus 1) 1", "2"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $a of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> (Succ $b); }}}\
+    -- \in {\\$x->{\\$y->$x $y}} ($plus 1) 1", "2"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $a of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> $plus $aa (Succ $b); }}}\
+    -- \in $plus 0", "{\\$b->$b}"),
+    -- (
+    -- "let $f={\\$a->{\\$b->case $a of {\
+    -- \  False -> $a ;\
+    -- \  True  -> Succ $b; }}}\
+    -- \in $f False", "{\\$b->False}"),
+    -- (
+    -- "let $f={\\$a->{\\$b->case $a of {\
+    -- \  0 -> $a ;\
+    -- \  Succ $aa  -> $aa ; }}}\
+    -- \in $f 4", "{\\$b->3}"),
+    (
+    "let $plus={\\$a->{\\$b->case $a of {\
+    \  0->$b;\
+    \  Succ $aa -> $plus $aa (Succ $b); }}}\
+    \in $plus 4", "{\\$b->Succ (Succ (Succ (Succ $b)))}"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $b of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> ($plus 0) (Succ $b); }}}\
+    -- \in $plus 2", "{\\$b->$b}")
+
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $a of {\
+    -- \  0->$b;\
+    -- \  Succ $aa -> $plus $aa (Succ $b); }}}\
+    -- \in ({\\$x->{\\$y->$x $y}} ($plus 1)) 1", "2")
+
     -- (
     -- "let $mult={\\$n->{\\$m->case $n of {\
     -- \  0->0;\
@@ -153,4 +267,6 @@ main = (doTests doTest . map (doEval . doParse)) [
     -- \  Nil->Nil;\
     -- \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
     -- \in $map ($multten) [1]", "[]")
+
+    ("$x", "$x")
   ]

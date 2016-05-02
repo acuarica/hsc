@@ -1,6 +1,8 @@
 module Expr where
 
-import Data.Maybe (fromJust)
+--import Data.Maybe (fromJust)
+
+import Debug.Trace
 
 -- | Represents identifier variable.
 type Var = String
@@ -11,7 +13,7 @@ type Tag = String
 
 -- | The expression type.
 data Expr
-  = Var  Var
+  = Var  Var Bool
   | Con  Tag [Value]
   | Let  Var Expr Expr
   | Lam  Var Expr
@@ -26,89 +28,83 @@ type Pat = Expr
 -- | For now, let's use Expr.
 type Value = Expr
 
--- | Environment that binds variables to values.
-type Env = [(Var, Value)]
-
 -- | Stack for application calls.
-type Stack = [Value]
-
--- | Pretty prints an expression.
-pprint :: Expr -> String
-pprint expr = case expr of
-  (Var var) -> var
-  (Con con args) -> con ++ if null args
-    then ""
-    else "(" ++ unwords (map pprint args) ++ ")"
-  (Lam key expr) -> "(\\" ++ key ++ " -> " ++ pprint expr ++ ")"
-  (Let key valexpr inexpr) -> "let " ++ key ++ "=" ++ pprint valexpr ++
-    " in " ++ pprint inexpr
-  (App aexpr vexpr) ->
-    "@(" ++ pprint aexpr ++ ") (" ++ pprint vexpr ++ ")"
-  (Case sexpr cs) -> "case " ++ pprint sexpr ++ " of " ++
-    foldr (\ (p, e) s -> pprint p ++ " -> " ++ pprint e ++ ";" ++ s) "" cs
+type Stack = [() -> Value]
 
 -- | Internal eval.
-eval' :: Env -> Stack -> Expr -> Value
-eval' env stack expr = case expr of
-  (Var var) -> case lookup var env of
-    Nothing -> Var var
-    (Just val) -> eval' env stack val
-  (Con tag s) -> Con tag (map (eval' env []) s ++ stack)
-  (Lam var expr') -> case stack of
-      [] -> Lam var (eval' (deleteVar var env) [] expr')
-      (top:rest) -> eval' ((var, top):env) rest expr'
-  (Let var valexpr inexpr) -> eval' ((var, valexpr):env) stack inexpr
-  (App funexpr valexpr) -> eval' env (eval' env [] valexpr:stack) funexpr
-  c@(Case sexpr cases) -> case eval' env stack sexpr of
-    (Con tag args) -> evalAlt env tag args cases
+eval' :: Env -> Stack -> Int -> Expr -> Value
+eval' env stack t expr =
+  --trace (show t ++ " -- " ++ show (map (\(x,y)->(x,pprint y)) env) ++
+    --show (map pprint stack) ++ pprint expr) $
+ --if t > 20 then expr else
+   case expr of
+  Var var tainted -> --if tainted
+    --then Var var False
+    --else case
+    case fetch var env of
+      Nothing -> Var var True
+      Just val -> eval' env stack nt val
+  Con tag args -> Con tag (--map (eval' env [] nt) args ++
+                           args ++ map (\v -> v () ) stack)
+  Lam var lamexpr -> case stack of
+      [] -> Lam var (eval' (taintVar var env) [] nt lamexpr)
+      valexpr:rest ->
+        eval' (put var (\()->Just (valexpr () )) env) rest nt lamexpr
+  Let var valexpr inexpr ->
+    eval' (put var (\()->Just valexpr) env) stack nt inexpr
+  App funexpr valexpr ->
+    --eval' env ((eval' env [] nt valexpr, env) :stack) nt funexpr
+    eval' env ((\()->eval' env [] nt valexpr) :stack) nt funexpr
+  c@(Case sexpr cases) -> case eval' env stack nt sexpr of
+    Con tag args -> evalAlt env tag args cases nt
     _ -> c
+  where nt = t + 1
 
-deleteVar :: Var -> Env -> Env
-deleteVar var env = case env of
-  [] -> []
-  ((var', expr'):env') -> if var' == var
-    then deleteVar var env'
-    else (var', expr'):deleteVar var env'
+-- | Environment that binds variables to values.
+type Env = Var -> (() -> Maybe Expr)
 
+put :: Var -> (() -> Maybe Expr) -> Env -> Env
+put var expr env = \v -> if v == var then expr else env v
+-- put var expr env = \v-> case env v of
+--   Nothing -> if v==var then Just expr else Nothing
+--   Just expr' -> Just expr'
+
+-- merge :: Env -> Env -> Env
+-- merge a b = \v -> case a v of
+--   Nothing -> b v
+--   res -> res
+
+-- | Removes the variable var binding from the environment.
+taintVar :: Var -> Env -> Env
+taintVar var env = --trace ("Taiting " ++ var) $
+  (\v -> --trace (var ++ " tainted while looking for " ++ v) $
+    if v == var then (\_->Nothing) else env v)
+
+newenv :: Env
+newenv = \v -> const Nothing
+
+fetch :: Var -> Env -> Maybe Expr
+fetch var env = --trace ("Fetching " ++ var) $
+  env var ()
 
 -- | Gets the right case alternative.
-evalAlt :: Env -> Tag -> [Value] -> [(Pat, Expr)] -> Expr
-evalAlt env sctag scargs pats = case pats of
+evalAlt :: Env -> Tag -> [Value] -> [(Pat, Expr)] -> Int -> Expr
+evalAlt env sctag scargs pats times = case pats of
   [] -> error ("Constructor tag not found: " ++ sctag)
   ((patexpr, altexpr):pats') -> case eval patexpr of
-    (Con pattag patargs) -> if pattag == sctag
-      then eval' (buildAltEnv scargs patargs env) [] altexpr
-      else evalAlt env sctag scargs pats'
-    _ -> evalAlt env sctag scargs pats'
+    Con pattag patargs -> if pattag == sctag
+      then eval' (buildAltEnv scargs patargs env) [] times altexpr
+      else evalAlt env sctag scargs pats' times
+    _ -> evalAlt env sctag scargs pats' times
 
 buildAltEnv :: [Value] -> [Value] -> Env -> Env
 buildAltEnv scargs patargs env = case (scargs, patargs) of
   ([], []) -> env
   (scarg':scargs', patarg':patargs') -> case patarg' of
-    Var var -> buildAltEnv scargs' patargs' ((var, scarg'):env)
+    Var var _ -> buildAltEnv scargs' patargs' (put var (\_->Just scarg') env)
     _ -> buildAltEnv scargs' patargs' env
   _ -> error "Incorrect matching case"
 
 -- | The eval function.
 eval :: Expr -> Value
-eval = eval' [] []
-
-
-
--- | Internal eval.
-supercompile' :: Env -> Stack -> Expr -> Expr
-supercompile' env stack expr = case expr of
-  (Var var) -> case lookup var env of
-    Nothing -> Var var
-    (Just val) -> eval' env stack val
-  (Con tag s) -> Con tag (map (eval' env []) s ++ stack)
-  (Lam var expr') -> case stack of
-      [] -> Lam var expr'
-      (top:rest) -> eval' ((var, top):env) rest expr'
-  (Let var valexpr inexpr) -> eval' ((var, valexpr):env) stack inexpr
-  (App funexpr valexpr) -> eval' env (eval' env [] valexpr:stack) funexpr
-  (Case sexpr cases) -> case eval' env stack sexpr of
-    (Con tag args) -> evalAlt env tag args cases
-
-supercompile :: Expr -> Expr
-supercompile = supercompile' [] []
+eval = eval' newenv [] 0

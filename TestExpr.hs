@@ -6,6 +6,7 @@ import Test.HUnit
 
 import Expr
 import Parser
+import Pretty
 import Util
 
 doPrint :: (Expr, Expr, Expr) -> String
@@ -17,8 +18,8 @@ doEval (expr, expexpr) = (expr, expexpr, eval expr)
 
 main :: IO ()
 main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
-    (x, x),
-    (var, var),
+    (x, Var "x" True),
+    (var, Var "var" True),
     (true, true),
     (false, false),
     (zero, zero),
@@ -26,7 +27,7 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (nil, nil),
     (cons, cons),
     (App suc zero, one),
-    (App suc n, Con "Succ" [n]),
+    (App suc n, Con "Succ" [Var "n" True]),
     (App suc (App suc zero), two),
     (App cons zero, Con "Cons" [zero]),
     (App (Con "Cons" [zero]) nil, Con "Cons" [zero, nil]),
@@ -52,46 +53,40 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (Let "and" (Lam "n" (Lam "m" (Case n [
         (false, false),
         (true, m)
-      ]))) (App (App (Var "and") true) true),
+      ]))) (App (App (newvar "and") true) true),
       true),
     (Let "pred" (Lam "n" (Case n [
         (zero, zero),
         (App suc n', n')
-      ])) (App (Var "pred") zero),
+      ])) (App (newvar "pred") zero),
       zero),
     (Let "pred" (Lam "n" (Case n [
         (zero, zero),
         (App suc n', n')
-      ])) (App (Var "pred") two),
+      ])) (App (newvar "pred") two),
       one),
     (Let "plus" (Lam "n" (Lam "m" (Case n [
         (zero, m),
         (App suc n', App (App plus n') (App suc m))
       ]))) (App (App plus three) two),
       five),
-    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (Var "x")),
+    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (newvar "x")),
       Con "Succ" [Con "Zero" []])
   ]
   where
-    x = Var "x"
-    y = Var "y"
-    z = Var "z"
-    var = Var "var"
-    n = Var "n"
-    n' = Var "n'"
-    m = Var "m"
-    m' = Var "m'"
-    iszero = Var "iszero"
-    plus1 = Var "plus1"
-    plus = Var "plus"
-    true = Con "True" []
-    false = Con "False" []
-    zero = Con "Zero" []
-    suc = Con "Succ" []
+    x = newvar "x"
+    y = newvar "y"
+    z = newvar "z"
+    var = newvar "var"
+    n = newvar "n"
+    n' = newvar "n'"
+    m = newvar "m"
+    m' = newvar "m'"
+    iszero = newvar "iszero"
+    plus1 = newvar "plus1"
+    plus = newvar "plus"
     one = Con "Succ" [zero]
     two = Con "Succ" [one]
     three = Con "Succ" [two]
     four = Con "Succ" [three]
     five = Con "Succ" [four]
-    nil = Con "Nil" []
-    cons = Con "Cons" []

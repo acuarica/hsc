@@ -180,9 +180,7 @@ termp = litintp
 
 litintp :: Parser Expr
 litintp = do { n <- number; return (f n) }
-  where f n   = if n == 0 then zero else suc (f (n-1))
-        zero  = Con "Zero" []
-        suc n = Con "Succ" [n]
+  where f n = if n == 0 then zero else App suc (f (n-1))
 
 listp :: Parser Expr
 listp = (do
@@ -190,14 +188,12 @@ listp = (do
       (do
         reserved ","
         rest <- listp
-        return (cons item rest)) <|> return (singleton item)
+        return (App (App cons item) rest)) <|>
+        return (App (App cons item) nil)
     ) <|> return nil
-  where cons item rest = Con "Cons" [item, rest]
-        nil = Con "Nil" []
-        singleton item = cons item nil
 
 varp :: Parser Expr
-varp = do { v <- dollarword; return (Var v) }
+varp = do { v <- dollarword; return (newvar v) }
 
 conp :: Parser Expr
 conp = do { x <- upperword; return (Con x []) }
@@ -240,3 +236,14 @@ altp = do
 
 parseExpr :: String -> Expr
 parseExpr = parseWith exprp
+
+newvar :: Var -> Expr
+newvar var = Var var False
+
+true, false, zero, suc, nil, cons :: Expr
+true = Con "True" []
+false = Con "False" []
+zero = Con "Zero" []
+suc = Con "Succ" []
+nil = Con "Nil" []
+cons = Con "Cons" []
