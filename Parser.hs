@@ -193,7 +193,7 @@ listp = (do
     ) <|> return nil
 
 varp :: Parser Expr
-varp = do { v <- dollarword; return (newvar v) }
+varp = do { v <- dollarword; return (usevar v) }
 
 conp :: Parser Expr
 conp = do { x <- upperword; return (Con x []) }
@@ -237,8 +237,8 @@ altp = do
 parseExpr :: String -> Expr
 parseExpr = parseWith exprp
 
-newvar :: Var -> Expr
-newvar var = Var var False
+usevar :: Var -> Expr
+usevar var = Var var False
 
 true, false, zero, suc, nil, cons :: Expr
 true = Con "True" []

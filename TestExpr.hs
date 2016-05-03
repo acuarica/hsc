@@ -10,8 +10,7 @@ import Pretty
 import Util
 
 doPrint :: (Expr, Expr, Expr) -> String
-doPrint (expr, expexpr, actexpr) =
-  pprint expr ++ " ~~> " ++ pprint actexpr
+doPrint (expr, expexpr, actexpr) = pretty expr ++ " ~~> " ++ pretty actexpr
 
 doEval :: (Expr, Expr) -> (Expr, Expr, Expr)
 doEval (expr, expexpr) = (expr, expexpr, eval expr)
@@ -27,8 +26,8 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (nil, nil),
     (cons, cons),
     (App suc zero, one),
-    (App suc n, Con "Succ" [Var "n" True]),
     (App suc (App suc zero), two),
+    (App suc n, Con "Succ" [Var "n" True]),
     (App cons zero, Con "Cons" [zero]),
     (App (Con "Cons" [zero]) nil, Con "Cons" [zero, nil]),
     (App (App cons zero) nil, Con "Cons" [zero, nil]),
@@ -53,38 +52,38 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (Let "and" (Lam "n" (Lam "m" (Case n [
         (false, false),
         (true, m)
-      ]))) (App (App (newvar "and") true) true),
+      ]))) (App (App (usevar "and") true) true),
       true),
     (Let "pred" (Lam "n" (Case n [
         (zero, zero),
         (App suc n', n')
-      ])) (App (newvar "pred") zero),
+      ])) (App (usevar "pred") zero),
       zero),
     (Let "pred" (Lam "n" (Case n [
         (zero, zero),
         (App suc n', n')
-      ])) (App (newvar "pred") two),
+      ])) (App (usevar "pred") two),
       one),
     (Let "plus" (Lam "n" (Lam "m" (Case n [
         (zero, m),
         (App suc n', App (App plus n') (App suc m))
       ]))) (App (App plus three) two),
       five),
-    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (newvar "x")),
+    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (usevar "x")),
       Con "Succ" [Con "Zero" []])
   ]
   where
-    x = newvar "x"
-    y = newvar "y"
-    z = newvar "z"
-    var = newvar "var"
-    n = newvar "n"
-    n' = newvar "n'"
-    m = newvar "m"
-    m' = newvar "m'"
-    iszero = newvar "iszero"
-    plus1 = newvar "plus1"
-    plus = newvar "plus"
+    x = usevar "x"
+    y = usevar "y"
+    z = usevar "z"
+    var = usevar "var"
+    n = usevar "n"
+    n' = usevar "n'"
+    m = usevar "m"
+    m' = usevar "m'"
+    iszero = usevar "iszero"
+    plus1 = usevar "plus1"
+    plus = usevar "plus"
     one = Con "Succ" [zero]
     two = Con "Succ" [one]
     three = Con "Succ" [two]

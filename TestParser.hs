@@ -12,8 +12,8 @@ doParse (code, expected) = (code, expected, parseExpr code)
 
 main :: IO ()
 main = doTests (doTest . doParse)  [
-    ("$x", newvar "$x"),
-    ("$var", newvar "$var"),
+    ("$x", usevar "$x"),
+    ("$var", usevar "$var"),
     ("0", zero),
     ("Zero", zero),
     ("1", App suc zero),
@@ -29,33 +29,35 @@ main = doTests (doTest . doParse)  [
     ("Cons False (Cons True Nil)",
       App (App (Con "Cons" []) (Con "False" []))
           (App (App (Con "Cons" []) (Con "True" [])) (Con "Nil" []))),
-    ("Succ $n", App (Con "Succ" []) (newvar "$n")),
-    ("{\\$x->$x}", Lam "$x" (newvar "$x")),
-    ("{\\$var->$var}", Lam "$var" (newvar "$var")),
+    ("Succ $n", App (Con "Succ" []) (usevar "$n")),
+    ("{\\$x->$x}", Lam "$x" (usevar "$x")),
+    ("{\\$var->$var}", Lam "$var" (usevar "$var")),
     ("{\\$x->True}", Lam "$x" (Con "True" [])),
     ("{\\$x->2}", Lam "$x" (App suc (App suc zero))),
+    ("{\\$f->{\\$x->$f $x}}",
+      Lam "$f" (Lam "$x" (App (usevar "$f") (usevar "$x")))),
     ("let $x={\\$y->$y} in $x",
-      Let "$x" (Lam "$y" (newvar "$y")) (newvar "$x")),
+      Let "$x" (Lam "$y" (usevar "$y")) (usevar "$x")),
     ("let $var={\\$y->$y} in $var",
-      Let "$var" (Lam "$y" (newvar "$y")) (newvar "$var")),
+      Let "$var" (Lam "$y" (usevar "$y")) (usevar "$var")),
     ("case $x of { True -> False; }",
-      Case (newvar "$x") [
+      Case (usevar "$x") [
         (Con "True" [], Con "False" [])
       ]),
     ("case $var of { True -> False; }",
-      Case (newvar "$var") [
+      Case (usevar "$var") [
         (Con "True" [], Con "False" [])
       ]),
     ("case $var of { True -> False; False -> True; }",
-      Case (newvar "$var") [
+      Case (usevar "$var") [
         (Con "True" [], Con "False" []),
         (Con "False" [], Con "True" [])
       ]),
     ("case $var of { True -> False; False -> True; $n -> $m; }",
-      Case (newvar "$var") [
+      Case (usevar "$var") [
         (Con "True" [], Con "False" []),
         (Con "False" [], Con "True" []),
-        (newvar "$n", newvar "$m")
+        (usevar "$n", usevar "$m")
       ]),
     ("[]", nil),
     ("  [  ]  ", nil),
@@ -70,13 +72,13 @@ main = doTests (doTest . doParse)  [
         App (App cons true) (
           App (App cons false) (
             App (App cons true) nil))) ),
-    ("[$x]", App (App cons (newvar "$x")) nil),
+    ("[$x]", App (App cons (usevar "$x")) nil),
     ("[$x,$y]",
-      App (App cons (newvar "$x")) (App (App cons (newvar "$y")) nil)),
+      App (App cons (usevar "$x")) (App (App cons (usevar "$y")) nil)),
     ("[$x,One,$y,Two]",
-      App (App cons (newvar "$x")) (
+      App (App cons (usevar "$x")) (
         App (App cons (Con "One" [])) (
-          App (App cons (newvar "$y")) (
+          App (App cons (usevar "$y")) (
             App (App cons (Con "Two" [])) nil))) ),
-    ("let $x=0 in Succ $x", Let "$x" zero (App suc (newvar "$x")))
+    ("let $x=0 in Succ $x", Let "$x" zero (App suc (usevar "$x")))
   ]
