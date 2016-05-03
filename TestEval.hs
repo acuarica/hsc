@@ -5,12 +5,13 @@ import System.Exit
 import Test.HUnit
 
 import Expr
-import Parser
+import Eval
 import Pretty
 import Util
 
 doPrint :: (Expr, Expr, Expr) -> String
-doPrint (expr, expexpr, actexpr) = pretty expr ++ " ~~> " ++ pretty actexpr
+doPrint (expr, expexpr, actexpr) =
+  pretty expr ++ " ~~> " ++ pretty actexpr
 
 doEval :: (Expr, Expr) -> (Expr, Expr, Expr)
 doEval (expr, expexpr) = (expr, expexpr, eval expr)
@@ -27,7 +28,9 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (cons, cons),
     (App suc zero, one),
     (App suc (App suc zero), two),
+    (App suc (App suc (App suc zero)), three),
     (App suc n, Con "Succ" [Var "n" True]),
+    (App suc (App suc n), Con "Succ" [Con "Succ" [Var "n" True]]),
     (App cons zero, Con "Cons" [zero]),
     (App (Con "Cons" [zero]) nil, Con "Cons" [zero, nil]),
     (App (App cons zero) nil, Con "Cons" [zero, nil]),
@@ -35,6 +38,11 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
       Con "Cons" [false, Con "Cons" [true, nil]]),
     (App (App cons two) (App (App cons one) (App (App cons zero) nil)),
       Con "Cons" [two, Con "Cons" [one, Con "Cons" [zero, nil]]]),
+    (App (App cons five) (App (App cons one) (App (App cons zero) xs)),
+      Con "Cons" [five,
+        Con "Cons" [one,
+          Con "Cons" [zero,
+            Var "xs" True]]]),
     (App (Lam "x" x) zero, zero),
     (Let "x" zero x, zero),
     (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
@@ -81,11 +89,12 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     n' = usevar "n'"
     m = usevar "m"
     m' = usevar "m'"
+    xs = usevar "xs"
     iszero = usevar "iszero"
     plus1 = usevar "plus1"
     plus = usevar "plus"
     one = Con "Succ" [zero]
     two = Con "Succ" [one]
     three = Con "Succ" [two]
-    four = Con "Succ" [three]
-    five = Con "Succ" [four]
+    four  = Con "Succ" [three]
+    five  = Con "Succ" [four]

@@ -1,33 +1,30 @@
 
 module Main where
 
+import System.Exit
+import Test.HUnit
+
 import Util
 import Expr
 import Parser
 
-doSuper :: (String, String) -> (String, Expr, Expr)
-doSuper (act, exp) = (act, parseExpr exp, (supercompile . parseExpr) act)
+doSuper :: (String, Expr, Expr) -> (String, Expr, Expr)
+doSuper (s, expr, expexpr) = (s, eval expexpr, eval expr)
+
+doParse :: (String, String) -> (String, Expr, Expr)
+doParse (e, expexpr) = (e, parseExpr e, parseExpr expexpr)
 
 main :: IO ()
-main = mapM_ (print . supercompile . parseExpr . fst) [
-    ("$x", "$x"),
-    ("$var", "$var"),
-    ("{\\$x->$x $x}", ""),
+main = (doTests doTest . map (doSuper . doParse)) [
     (
-    "let $mult={\\$n->{\\$m->case $n of {\
-    \  0->0;\
-    \  Succ $nn -> $plus ($mult $nn $m) $m;}}}\
-    \in let $plus={\\$n->{\\$m->case $n of {\
-    \  0->$m;\
-    \  Succ $nn -> $plus $nn (Succ $m); }}}\
-    \in let $append={\\$xs->{\\$ys->case $xs of {\
-    \  Nil->$ys;\
-    \  Cons $z $zs -> Cons $z ($append $zs $ys) ; }}}\
-    \in let $rev={\\$rs-> case $rs of {\
-    \  Nil->Nil;\
-    \  Cons $s $ss -> $append ($rev $ss) [$s] ; }}\
+    "let $plus={\\$a->{\\$b->case $a of {\
+    \  0->$b;\
+    \  Succ $aa -> $plus $aa (Succ $b); }}}\
+    \in let $plusten={\\$q->$plus 10 $q}\
     \in let $map={\\$f->{\\$xs-> case $xs of {\
     \  Nil->Nil;\
     \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
-    \in $map ($ $rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]")
+    \in $map $plusten", "A"),
+
+    ("$x", "$x")
   ]

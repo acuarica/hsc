@@ -236,14 +236,3 @@ altp = do
 
 parseExpr :: String -> Expr
 parseExpr = parseWith exprp
-
-usevar :: Var -> Expr
-usevar var = Var var False
-
-true, false, zero, suc, nil, cons :: Expr
-true = Con "True" []
-false = Con "False" []
-zero = Con "Zero" []
-suc = Con "Succ" []
-nil = Con "Nil" []
-cons = Con "Cons" []

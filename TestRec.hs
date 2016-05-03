@@ -254,6 +254,24 @@ main = (doTests doTest . map (doEval . doParse)) [
     \  Succ $aa -> $plus $aa (Succ $b); }}}\
     \in $plus 4", "{\\$b->Succ (Succ (Succ (Succ $b)))}"),
     (
+    "let $plus={\\$a->{\\$b->case $b of {\
+    \  0->$a;\
+    \  Succ $bb -> $plus (Succ $a) $bb; }}}\
+    \in $plus 4 3", "7"),
+    -- (
+    -- "let $plus={\\$a->{\\$b->case $b of {\
+    -- \  0->$a;\
+    -- \  Succ $bb -> $plus (Succ $a) $bb; }}}\
+    -- \in $plus", "7"),
+    -- (
+    -- "{\\$b-> let $a=4 in case $b of {\
+    -- \  0->$a;\
+    -- \  Succ $bb -> $plus (Succ $a) $bb; }} 3", "7"),
+    -- (
+    -- "{\\$b-> let $a=4 in case $b of {\
+    -- \  0->$a;\
+    -- \  Succ $bb -> $plus (Succ $a) $bb; }} 3", "7"),
+    (
     "let $plus={\\$a->{\\$b->case $a of {\
     \  0->$b;\
     \  Succ $aa -> $plus $aa (Succ $b); }}}\
@@ -267,16 +285,16 @@ main = (doTests doTest . map (doEval . doParse)) [
     \  Nil->Nil;\
     \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
     \in $map $plustwo [1,2,3,4,5]", "[3,4,5,6,7]"),
-    (
-    "let $mult={\\$n->{\\$m->case $n of {\
-    \  0->0;\
-    \  Succ $nn -> $plus ($mult $nn $m) $m;}}}\
-    \in let $multtwo=$mult 2 \
-    \in let $plus={\\$n->{\\$m->case $n of {\
-    \  0->$m;\
-    \  Succ $nn -> $plus $nn (Succ $m); }}}\
-    \in let $app={\\$f->{\\$x->$f $x}}\
-    \in $app $multtwo 1", "3"),
+    -- (
+    -- "let $mult={\\$p->{\\$q->case $p of {\
+    -- \  0->0;\
+    -- \  Succ $pp -> $plus ($mult $pp $q) $q;}}}\
+    -- \in let $plus={\\$n->{\\$m->case $n of {\
+    -- \  0->$m;\
+    -- \  Succ $nn -> $plus $nn (Succ $m); }}}\
+    -- \in let $multtwo=$mult 2 \
+    -- \in let $app={\\$f->{\\$x->$f $x}}\
+    -- \in $app $multtwo 1", "3"),
 
     -- (
     -- "let $mult={\\$n->{\\$m->case $n of {\
