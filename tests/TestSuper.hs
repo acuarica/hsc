@@ -27,11 +27,10 @@ main = (doTests doTest . map (doSuper . doParse)) [
     \in $map $inc", "A"),
 
     -- (
-    -- "   let $inc={\\$n->Succ $n}\
-    -- \in let $mapinc={\\$xs-> case $xs of {\
+    -- "let $mapinc={\\$xs-> case $xs of {\
     -- \  Nil->Nil;\
     -- \  Cons $y $ys -> Cons (Succ $y) ($mapinc $ys) ; }}\
-    -- \in $map $inc", "A"),
+    -- \in $mapinc", "A"),
 
     ("$x", "$x")
   ]

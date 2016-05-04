@@ -6,44 +6,7 @@ module Expr (
   true, false, zero, suc, nil, cons
   ) where
 
-import Control.Arrow ((***), second)
-
--- | The expression type functor.
-data ExprF tag var a
-  = Var  var Bool
-  | Con  tag [a]
-  | Let  var a a
-  | Lam  var a
-  | App  a a
-  | Case a [(Pat a, a)]
-  deriving (Eq, Show)
-
--- | Represents patterns in case expressions.
-type Pat a = a
-
-instance Functor (ExprF tag var) where
-  fmap f expr = case expr of
-    Var var tainted -> Var var tainted
-    Con tag args -> Con tag (map f args)
-    Let var valexpr inexpr -> Let var (f valexpr) (f inexpr)
-    Lam var lamexpr -> Lam var (f lamexpr)
-    App funexpr valexpr -> App (f funexpr) (f valexpr)
-    Case scexpr cases -> Case (f scexpr) (map (f *** f) cases)
-
--- | Fix point functor.
-newtype Fix f = In (f (Fix f))
-
--- | Set or unsets the tainted flag in variables.
-setTaintF :: Bool -> ExprF tag var a
-setTaintF tainted expr = case expr of
-  Var var _ -> Var var tainted
-  expr' -> expr'
-
---untaint
-
-
--- | The expression type.
-type Expr = Fix (ExprF Var Tag)
+import Control.Arrow (second)
 
 -- | Represents identifier variable.
 type Var = String
@@ -51,6 +14,19 @@ type Var = String
 -- | Represents constructor name.
 -- | Also called tag to be matched in case expressions.
 type Tag = String
+
+-- | The expression type.
+data Expr
+  = Var  Var  Bool
+  | Con  Tag  [Expr]
+  | Let  Var  Expr Expr
+  | Lam  Var  Expr
+  | App  Expr Expr
+  | Case Expr [(Pat, Expr)]
+  deriving (Eq, Show)
+
+-- | Represents patterns in case expressions.
+type Pat = Expr
 
 -- | Set or unsets the tainted flag in variables.
 setTaint :: Bool -> Expr -> Expr
