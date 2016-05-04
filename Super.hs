@@ -4,7 +4,7 @@ module Super where
 import Expr
 
 super :: Expr -> Expr
-super expr = fold expr
+super = selExpr . fold . (,,,) [] [] 0
 
 type State = (Env, Stack, Time, Expr)
 
@@ -17,14 +17,15 @@ type Stack = [Expr]
 -- | Times
 type Time = Int
 
-selexpr :: State -> Expr
-selExpr (_, _, _, expr) = Expr
+selExpr :: State -> Expr
+selExpr (_, _, _, expr) = expr
 
+fold :: State -> State
 fold (env, stack, time, expr) = case expr of
-  Var var tainted -> Var var tainted
+  Var var tainted -> (env, stack, time, Var var tainted)
   Con tag args -> (env, stack, time, Con tag (args ++ stack))
-  Lam var lamexpr ->
-  Let var valexpr inexpr -> Let var valexpr (inexpr)
-  App funexpr valexpr -> (env, stack, newtime, App
+  Lam var lamexpr -> (env, stack, time, Lam var lamexpr)
+  Let var valexpr inexpr -> (env, stack, time, Let var valexpr inexpr)
+  App funexpr valexpr -> (env, stack, newtime, App funexpr valexpr)
   where newtime = time + 1
   --Case scexpr cases ->

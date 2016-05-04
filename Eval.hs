@@ -7,39 +7,48 @@ import Debug.Trace
 -- | Stack for application calls.
 type Stack = [Expr]
 
-type State = (Env, Stack, Expr)
+type Time = Int
+
+type State = (Env, Stack, Time, Expr)
 
 selexpr :: State -> Expr
-selexpr (_, _, expr) = expr
+selexpr (_, _, _, expr) = expr
+
 
 -- | Internal eval.
 eval' :: State -> State
-eval' (env, stack, expr) = case expr of
+eval' s@(env, stack, time, expr) = if time > 100 then s else
+  case expr of
   Var var tainted -> if tainted
-    then (env, stack, Var var True)
+    then (env, stack, nt, Var var True)
     else case fetch var env of
-      (Nothing,_) -> (taintVar var env, stack, Var var True)
-      (Just val,env') -> eval' (env, stack, val)
-  Con tag args -> (env, [], Con tag (
-    map (selexpr . eval' . (,,) env []) args ++
-    map (selexpr . eval' . (,,) env []) stack ))
+      (Nothing,_) -> (taintVar var env, stack, nt, Var var True)
+      (Just val,env') -> eval' (env, stack, nt, val)
+  Con tag args -> (env, [], nt, Con tag (
+    map (selexpr . eval' . (,,,) env [] nt) args ++
+    map (selexpr . eval' . (,,,) env [] nt) stack ))
   Lam var lamexpr -> case stack of
-      [] -> case eval' (taintVar var env, [], lamexpr) of
-        (env', stack', lamexpr') -> (env, stack', Lam var lamexpr')
+      [] -> case eval' (taintVar var env, [], nt, lamexpr) of
+        (env', stack', time', lamexpr') -> (env, stack', time', Lam var lamexpr')
       valexpr:rest ->
-        case eval' (put var valexpr env, rest, untaint lamexpr) of
-        (env', stack', lamexpr') ->
-          (env, stack', lamexpr')
+        case eval' (put var valexpr env, rest, nt, untaint lamexpr) of
+        (env', stack', t, lamexpr') ->
+          (env, stack', nt,lamexpr')
   Let var valexpr inexpr ->
-    eval' (put var valexpr env, stack, inexpr)
-  App funexpr valexpr -> case eval' (env, [], valexpr) of
-    (env', stack', valexpr') ->
-      case eval' (env', valexpr':stack'++stack, funexpr) of
-        (env'', [], resexpr) -> (env'', [], resexpr)
-        (env'', stack', _) -> (env'', stack, App funexpr valexpr)
-  Case scexpr cases -> case eval' (env, stack, scexpr) of
-    (env', stack', Con sctag scargs) -> evalAlt env sctag scargs cases
-    (env', stack', scexpr') -> (env, stack, Case scexpr' cases )
+    eval' (put var valexpr env, stack, nt, inexpr)
+  App funexpr valexpr ->
+    case eval' (env, [], nt, valexpr) of
+    (env', stack', t', valexpr') ->
+      case eval' (env', valexpr':stack'++stack, t', funexpr) of
+      --case eval' (env, valexpr:stack, nt, funexpr) of
+        (env'', [], t', resexpr) -> (env'', [], nt, resexpr)
+        (env'', stack', t', _) -> (env'', stack, nt, App funexpr valexpr)
+  Case scexpr cases -> case eval' (env, stack, nt, scexpr) of
+    (env', stack', t', Con sctag scargs) -> evalAlt nt env sctag scargs cases
+    (env', stack', t', scexpr') -> (env, stack, nt, Case scexpr' (
+      map (\(p,e)-> (p, selexpr (eval' (env, stack, nt, e)) )) cases
+      ))
+  where nt = time + 1
       --(map  (\(p,e)->(p, selexpr (eval' (env, stack, e)) )) cases)
       --)
 
@@ -65,15 +74,15 @@ fetch var [] = (Nothing, [])
 fetch var ((v,e):xs) = if v == var then (Just e, xs) else fetch var xs
 
 -- | Gets the right case alternative.
-evalAlt :: Env -> Tag -> [Expr] -> [(Pat, Expr)] -> State
-evalAlt env sctag scargs pats = case pats of
+evalAlt :: Time -> Env -> Tag -> [Expr] -> [(Pat, Expr)] -> State
+evalAlt t env sctag scargs pats = case pats of
   [] -> error ("Constructor tag not found: " ++ sctag)
   ((patexpr, altexpr):pats') -> case eval patexpr of
     Con pattag patargs -> if pattag == sctag
-      then case eval' (buildAltEnv scargs patargs env, [], altexpr) of
-        (env'', stack'', expr'') -> (env, stack'', expr'')
-      else evalAlt env sctag scargs pats'
-    _ -> evalAlt env sctag scargs pats'
+      then case eval' (buildAltEnv scargs patargs env, [], t, altexpr) of
+        (env'', stack'', t', expr'') -> (env, stack'', t', expr'')
+      else evalAlt t env sctag scargs pats'
+    _ -> evalAlt t env sctag scargs pats'
 
 buildAltEnv :: [Expr] -> [Expr] -> Env -> Env
 buildAltEnv scargs patargs env = case (scargs, patargs) of
@@ -85,4 +94,4 @@ buildAltEnv scargs patargs env = case (scargs, patargs) of
 
 -- | The eval function.
 eval :: Expr -> Expr
-eval expr = selexpr (eval' (newenv, [], expr))
+eval = selexpr . eval' . (,,,) newenv [] 0

@@ -27,7 +27,9 @@ main = (doTests doTest . map (doEval . doParse)) [
     ("{\\$x->$x} {\\$a->{\\$b->$a}}", "{\\$a->{\\$b->$a}}"),
     ("let $a={\\$f->{\\$x->$f $x}} in $a", "{\\$f->{\\$x->$f $x}}"),
     ("{\\$f->{\\$x->$f $x}} {\\$b->T} F", "T"),
-    ("let $inf=Succ($inf) in $inf", "T"),
+    (
+    "   let $head={\\$xs->case $xs of {Cons $y $ys -> $y;} } \
+    \in let $inf=Cons A $inf in $head $inf ", "A"),
     ("let $a={\\$f->{\\$x->$f $x}} in $a {\\$b->T} F", "T"),
     ("let $a={\\$f->{\\$x->$f $x}} in $a {\\$b->T}", "{\\$x->T}"),
     (
@@ -291,16 +293,16 @@ main = (doTests doTest . map (doEval . doParse)) [
     \  Nil->Nil;\
     \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
     \in $map $plustwo [1,2,3,4,5]", "[3,4,5,6,7]"),
-    -- (
-    -- "let $mult={\\$p->{\\$q->case $p of {\
-    -- \  0->0;\
-    -- \  Succ $pp -> $plus ($mult $pp $q) $q;}}}\
-    -- \in let $plus={\\$n->{\\$m->case $n of {\
-    -- \  0->$m;\
-    -- \  Succ $nn -> $plus $nn (Succ $m); }}}\
-    -- \in let $multtwo=$mult 2 \
-    -- \in let $app={\\$f->{\\$x->$f $x}}\
-    -- \in $mult 2", "2"), -- $app $multtwo 1
+    (
+    "let $mult={\\$p->{\\$q->case $p of {\
+    \  0->0;\
+    \  Succ $pp -> $plus ($mult $pp $q) $q;}}}\
+    \in let $plus={\\$n->{\\$m->case $n of {\
+    \  0->$m;\
+    \  Succ $nn -> $plus $nn (Succ $m); }}}\
+    \in let $multtwo=$mult 2 \
+    \in let $app={\\$f->{\\$x->$f $x}}\
+    \in $app $multtwo", "2"),
 
     -- (
     -- "let $mult={\\$n->{\\$m->case $n of {\

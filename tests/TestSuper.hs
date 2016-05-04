@@ -7,15 +7,15 @@ import Test.HUnit
 import Util
 import Expr
 import Parser
---import Super
+import Super
 import Eval
+import Pretty
 
-super = eval
 doSuper :: (String, Expr, Expr) -> (String, Expr, Expr)
-doSuper (s, expr, expexpr) = (s, super expexpr, super expr)
+doSuper (s, expr, expexpr) = (s, eval expexpr, eval expr)
 
 doParse :: (String, String) -> (String, Expr, Expr)
-doParse (e, expexpr) = (e, parseExpr e, parseExpr expexpr)
+doParse (e, expexpr) = (pretty (parseExpr e), parseExpr e, parseExpr expexpr)
 
 main :: IO ()
 main = (doTests doTest . map (doSuper . doParse)) [
@@ -24,13 +24,11 @@ main = (doTests doTest . map (doSuper . doParse)) [
     \in let $map={\\$f->{\\$xs-> case $xs of {\
     \  Nil->Nil;\
     \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
-    \in $map $inc", "A"),
+    \in $map $inc", "A")
 
     -- (
     -- "let $mapinc={\\$xs-> case $xs of {\
     -- \  Nil->Nil;\
     -- \  Cons $y $ys -> Cons (Succ $y) ($mapinc $ys) ; }}\
     -- \in $mapinc", "A"),
-
-    ("$x", "$x")
   ]

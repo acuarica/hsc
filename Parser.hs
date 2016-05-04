@@ -2,6 +2,7 @@
 module Parser where
 
 import Expr
+import Pretty
 import Data.Char
 import Control.Monad
 import Control.Applicative

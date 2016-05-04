@@ -16,6 +16,9 @@ class Pretty a where
 instance Pretty Expr where
   pretty = pretty' False
 
+instance Show Expr where
+  show = pretty
+
 -- | Pretty prints a string is the same as show.
 instance Show a => Pretty [a] where
   pretty = show

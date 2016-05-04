@@ -23,7 +23,7 @@ data Expr
   | Lam  Var  Expr
   | App  Expr Expr
   | Case Expr [(Pat, Expr)]
-  deriving (Eq, Show)
+  deriving (Eq)
 
 -- | Represents patterns in case expressions.
 type Pat = Expr
