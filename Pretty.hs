@@ -1,5 +1,5 @@
 
-module Pretty (pretty) where
+module Pretty (Pretty, pretty) where
 
 import Control.Exception (assert)
 import Data.Maybe (fromMaybe)
@@ -7,9 +7,18 @@ import Data.List (intercalate)
 
 import Expr
 
+-- | All types that are pretty-printable.
+class Pretty a where
+  -- | Pretty-prints a type.
+  pretty :: a -> String
+
 -- | Pretty prints an expression.
-pretty :: Expr -> String
-pretty = pretty' False
+instance Pretty Expr where
+  pretty = pretty' False
+
+-- | Pretty prints a string is the same as show.
+instance Show a => Pretty [a] where
+  pretty = show
 
 -- | Pretty prints an expression.
 -- | par indicates whether parenthesis are needed.

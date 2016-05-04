@@ -1,43 +1,43 @@
-name:                hsc
-version:             0.1
-synopsis:            Haskell Supercompiler Project
-description:         The Haskell Supercompiler Project uses supercompilation
-                     techniques to optimize Haskell applications.
-                     Also uses supercompilation to prove properties
-                     of Haskell programs.
-author:              Luis Mastrangelo
-maintainer:          luis.mastrangelo@usi.ch
-category:            Language
-build-type:          Simple
-extra-source-files:  README.md
-cabal-version:       >=1.10
+name:               hsc
+version:            0.1
+synopsis:           Haskell Supercompiler Project
+description:        The Haskell Supercompiler Project uses supercompilation
+                    techniques to optimize Haskell applications.
+                    Also uses supercompilation to prove properties
+                    of Haskell programs.
+author:             Luis Mastrangelo
+maintainer:         luis.mastrangelo@usi.ch
+category:           Language
+build-type:         Simple
+extra-source-files: README.md
+cabal-version:      >=1.10
 
 executable hsc
-  main-is:             Main.hs
-  build-depends:       base >=4.8 && <4.9
-  hs-source-dirs:      .
-  default-language:    Haskell98
+  main-is:          Main.hs
+  build-depends:    base >=4.8 && <4.9
+  hs-source-dirs:   .
+  default-language: Haskell98
 
 executable test-parser
-  main-is:             TestParser.hs
-  build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      . tests
-  default-language:    Haskell98
+  main-is:          TestParser.hs
+  build-depends:    base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:   . tests
+  default-language: Haskell98
 
 executable test-eval
-  main-is:             TestEval.hs
-  build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      . tests
-  default-language:    Haskell98
+  main-is:          TestEval.hs
+  build-depends:    base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:   . tests
+  default-language: Haskell98
 
 executable test-rec
-  main-is:             TestRec.hs
-  build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      . tests
-  default-language:    Haskell98
+  main-is:          TestRec.hs
+  build-depends:    base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:   . tests
+  default-language: Haskell98
 
 executable test-super
-  main-is:             TestSuper.hs
-  build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      . tests
-  default-language:    Haskell98
+  main-is:          TestSuper.hs
+  build-depends:    base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:   . tests
+  default-language: Haskell98

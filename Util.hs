@@ -4,8 +4,10 @@ module Util where
 import System.Exit
 import Test.HUnit
 
-doTest :: (Show a, Eq b, Show b) => (a, b, b) -> Test
-doTest (msg, exp, act) = TestCase (assertEqual (show msg) exp act)
+import Pretty
+
+doTest :: (Pretty a, Eq b, Show b) => (a, b, b) -> Test
+doTest (msg, exp, act) = TestCase (assertEqual (pretty msg) exp act)
 
 doTests :: (a -> Test) -> [a] -> IO ()
 doTests test tests = do

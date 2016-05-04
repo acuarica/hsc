@@ -27,7 +27,12 @@ main = (doTests doTest . map (doEval . doParse)) [
     ("{\\$x->$x} {\\$a->{\\$b->$a}}", "{\\$a->{\\$b->$a}}"),
     ("let $a={\\$f->{\\$x->$f $x}} in $a", "{\\$f->{\\$x->$f $x}}"),
     ("{\\$f->{\\$x->$f $x}} {\\$b->T} F", "T"),
+    ("let $inf=Succ($inf) in $inf", "T"),
     ("let $a={\\$f->{\\$x->$f $x}} in $a {\\$b->T} F", "T"),
+    ("let $a={\\$f->{\\$x->$f $x}} in $a {\\$b->T}", "{\\$x->T}"),
+    (
+    "let $a={\\$f->{\\$x->$f $x}} \
+    \in $a {\\$b->Succ $b}", "{\\$x->Succ $x}"),
     ("{\\$a->Succ (Succ $a)} 1", "3"),
     ("let $sumtwo={\\$a->Succ (Succ $a)} in $sumtwo 1", "3"),
     ("let $a={\\$f->{\\$x->$f $x}} in $a {\\$n->Succ $n} 0", "1"),
@@ -295,7 +300,7 @@ main = (doTests doTest . map (doEval . doParse)) [
     -- \  Succ $nn -> $plus $nn (Succ $m); }}}\
     -- \in let $multtwo=$mult 2 \
     -- \in let $app={\\$f->{\\$x->$f $x}}\
-    -- \in $app $multtwo 1", "3"),
+    -- \in $mult 2", "2"), -- $app $multtwo 1
 
     -- (
     -- "let $mult={\\$n->{\\$m->case $n of {\
@@ -310,12 +315,6 @@ main = (doTests doTest . map (doEval . doParse)) [
     -- \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
     -- \in let $app={\\$f->{\\$x-> $f $x}}\
     -- \in $app $multtwo 1", "2"),
-
-    -- (
-    -- "let $map={\\$f->{\\$xs-> case $xs of {\
-    -- \  Nil->Nil;\
-    -- \  Cons $y $ys -> Cons ($f $y) ($map $f $ys) ; }}}\
-    -- \in $map ({\\$x->X})", "{\\$b->Succ (Succ (Succ (Succ $b)))}"),
 
     ("$x", "$x")
   ]

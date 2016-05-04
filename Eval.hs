@@ -11,12 +11,6 @@ type State = (Env, Stack, Expr)
 
 selexpr :: State -> Expr
 selexpr (_, _, expr) = expr
---
--- evalStack :: Env -> (Stack, [Expr]) ->(Stack, [Expr])
--- evalStack env ([], exprs) = ([], exprs)
--- evalStack env (expr:stack, exprs) = case eval' (env, [], expr) of
---   (env', [], expr') -> evalStack env (stack, exprs ++ [expr'])
---   (env', stack', expr') -> (stack, exprs ++ [expr])
 
 -- | Internal eval.
 eval' :: State -> State
@@ -45,9 +39,9 @@ eval' (env, stack, expr) = case expr of
         (env'', stack', _) -> (env'', stack, App funexpr valexpr)
   Case scexpr cases -> case eval' (env, stack, scexpr) of
     (env', stack', Con sctag scargs) -> evalAlt env sctag scargs cases
-    (env', stack', scexpr') -> (env, stack, Case scexpr'
-      (map  (\(p,e)->(p, selexpr (eval' (env, stack, e)) )) cases)
-      )
+    (env', stack', scexpr') -> (env, stack, Case scexpr' cases )
+      --(map  (\(p,e)->(p, selexpr (eval' (env, stack, e)) )) cases)
+      --)
 
 -- | Environment that binds variables to values.
 type Env = [(Var, Expr)]
