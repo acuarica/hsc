@@ -7,6 +7,7 @@ import Test.HUnit
 import Util
 import Expr
 import Parser
+import Eval
 
 doEval :: (String, Expr, Expr) -> (String, Expr, Expr)
 doEval (s, expr, expexpr) = (s, eval expexpr, eval expr)

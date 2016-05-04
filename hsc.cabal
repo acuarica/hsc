@@ -21,23 +21,23 @@ executable hsc
 executable test-parser
   main-is:             TestParser.hs
   build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      .
+  hs-source-dirs:      . tests
   default-language:    Haskell98
 
 executable test-eval
   main-is:             TestEval.hs
   build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      .
+  hs-source-dirs:      . tests
   default-language:    Haskell98
 
 executable test-rec
   main-is:             TestRec.hs
   build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      .
+  hs-source-dirs:      . tests
   default-language:    Haskell98
 
 executable test-super
   main-is:             TestSuper.hs
   build-depends:       base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:      .
+  hs-source-dirs:      . tests
   default-language:    Haskell98
