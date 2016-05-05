@@ -1,5 +1,7 @@
 
-module Parser where
+module Parser (
+  parseExpr
+) where
 
 import Expr
 import Pretty
@@ -53,8 +55,10 @@ instance Alternative Parser where
 
   (<|>) (Parser p) (Parser q) = Parser (\s ->
       case p s of
-        Error msg -> q s
-        res -> res
+        Error msg'p -> case q s of
+          Error msg'q -> Error (msg'p ++ " or " ++ msg'q)
+          done -> done
+        done -> done
     )
 
 -- | Parses a char
@@ -110,12 +114,6 @@ number = do
   spaces
   return (read (s ++ cs))
 
-word :: Parser String
-word = do
-  cs <- some alpha
-  spaces
-  return cs
-
 lowerword :: Parser String
 lowerword = do
   c  <- loweralpha
@@ -130,17 +128,10 @@ upperword = do
   spaces
   return (c:cs)
 
-dollarword :: Parser String
-dollarword = do
-  d <- char '$'
-  w <- lowerword
-  return (d:w)
-
-sat :: Parser String -> (String -> Bool) -> Parser String
-sat p pred = (>>=) p (\s ->
-  if pred s
+sat :: String -> Parser String -> (String -> Bool) -> Parser String
+sat msg p pred = (>>=) p (\s -> if pred s
     then return s
-    else Parser (const (Error (printf "expecting got %s" s))))
+    else Parser (const (Error (printf "expecting %s got %s" msg s))))
 
 parens :: Parser a -> Parser a
 parens m = do { reserved "("; n <- m; reserved ")"; return n }
@@ -151,20 +142,22 @@ braces m = do { reserved "{"; n <- m; reserved "}"; return n }
 brackets :: Parser a -> Parser a
 brackets m = do { reserved "["; n <- m; reserved "]"; return n }
 
-str s = "``" ++ s ++ "''"
+chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
+p `chainl1` op = do {a <- p; rest a}
+  where rest a = (do {f <- op; b <- p; rest (f a b)}) <|> return a
 
 parseWith :: Show a => Parser a -> String -> a
 parseWith p s =
   case parse (do { spaces; p }) s of
     Done a _ [] -> a
-    Done a chars rest -> error $ "Parser didn't consume entire stream: "++
-      str rest ++ " in " ++ str s ++ " at " ++ show chars ++
+    Done a chars rest -> error $
+      "Parser didn't consume entire stream: <<" ++ rest ++ ">> " ++
+      " in <<" ++ s ++ ">> at " ++ show chars ++
                    " with " ++ show a
     Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s
 
-chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-p `chainl1` op = do {a <- p; rest a}
-  where rest a = (do {f <- op; b <- p; rest (f a b)}) <|> return a
+parseExpr :: String -> Expr
+parseExpr = parseWith exprp
 
 exprp :: Parser Expr
 exprp = termp `chainl1` return App
@@ -183,6 +176,48 @@ litintp :: Parser Expr
 litintp = do { n <- number; return (f n) }
   where f n = if n == 0 then zero else App suc (f (n-1))
 
+letp :: Parser Expr
+letp = do
+  reserved "let"
+  var <- lowerword
+  reserved "="
+  valexpr <- exprp
+  reserved "in"
+  inexpr <- exprp
+  return (Let var valexpr inexpr)
+
+varp :: Parser Expr
+varp = do
+  var <- sat (show keywords) lowerword (not . (`elem` keywords))
+  return (usevar var)
+  where keywords = ["let", "in", "case", "of"]
+
+conp :: Parser Expr
+conp = do { tag <- upperword; return (con tag) }
+
+lamp :: Parser Expr
+lamp = do
+  var <- lowerword
+  reserved "->"
+  valexpr <- exprp
+  return (Lam var valexpr)
+
+casep :: Parser Expr
+casep = do
+  reserved "case"
+  sc <- exprp
+  reserved "of"
+  alts <- some altp
+  return (Case sc alts False)
+
+altp :: Parser (Pat, Expr)
+altp = do
+  alt <- exprp
+  reserved "->"
+  res <- exprp
+  reserved ";"
+  return (alt, res)
+
 listp :: Parser Expr
 listp = (do
       item <- exprp
@@ -192,48 +227,3 @@ listp = (do
         return (App (App cons item) rest)) <|>
         return (App (App cons item) nil)
     ) <|> return nil
-
-varp :: Parser Expr
-varp = do { v <- dollarword; return (usevar v) }
-
-conp :: Parser Expr
-conp = do { x <- upperword; return (Con x []) }
-
-lamp :: Parser Expr
-lamp = do
-  reserved "\\"
-  var <- dollarword
-  reserved "->"
-  valexpr <- exprp
-  return (Lam var valexpr)
-
-letp :: Parser Expr
-letp = do
-  reserved "let"
-  var <- dollarword
-  reserved "="
-  valexpr <- exprp
-  reserved "in"
-  inexpr <- exprp
-  return (Let var valexpr inexpr)
-
-casep :: Parser Expr
-casep = do
-  reserved "case"
-  sc <- exprp
-  reserved "of"
-  reserved "{"
-  alts <- some altp
-  reserved "}"
-  return (Case sc alts)
-
-altp :: Parser (Pat, Expr)
-altp = do
-    alt <- exprp
-    reserved "->"
-    res <- exprp
-    reserved ";"
-    return (alt, res)
-
-parseExpr :: String -> Expr
-parseExpr = parseWith exprp

@@ -1,5 +1,5 @@
 
-module Pretty (Pretty, pretty) where
+module Pretty () where
 
 import Control.Exception (assert)
 import Data.Maybe (fromMaybe)
@@ -7,28 +7,19 @@ import Data.List (intercalate)
 
 import Expr
 
--- | All types that are pretty-printable.
-class Pretty a where
-  -- | Pretty-prints a type.
-  pretty :: a -> String
-
--- | Pretty prints an expression.
-instance Pretty Expr where
-  pretty = pretty' False
-
 instance Show Expr where
   show = pretty
 
--- | Pretty prints a string is the same as show.
-instance Show a => Pretty [a] where
-  pretty = show
+-- | Pretty prints an expression.
+pretty :: Expr -> String
+pretty = pretty' False
 
 -- | Pretty prints an expression.
 -- | par indicates whether parenthesis are needed.
 pretty' :: Bool -> Expr -> String
 pretty' par expr = case expr of
   Var var tainted ->
-    (if tainted then '!' else '?' ) : var
+    prettyTainted tainted : var
   Con tag args -> fromMaybe (if null args
       then tag
       else paren (tag ++ " " ++ unwords (map (pretty' True) args)) )
@@ -39,10 +30,13 @@ pretty' par expr = case expr of
     "let " ++ var ++ "=" ++ pretty valexpr ++ " in " ++ pretty inexpr
   App funexpr valexpr ->
      paren (pretty funexpr ++ " " ++ pretty' True valexpr)
-  Case sexpr cs ->
-    "case " ++ pretty sexpr ++ " of {" ++
+  Case scexpr cs tainted ->
+    "case" ++ prettyTainted tainted : ' ' : pretty scexpr ++ " of {" ++
     foldr (\ (p, e) s -> pretty p ++ " -> " ++ pretty e ++ ";" ++ s) "}" cs
   where paren s = if par then "(" ++ s ++ ")" else s
+
+prettyTainted :: Bool -> Char
+prettyTainted tainted = if tainted then '!' else '?'
 
 type PrettyCon = Expr -> Maybe String
 

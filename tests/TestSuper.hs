@@ -15,7 +15,7 @@ doSuper :: (String, Expr, Expr) -> (String, Expr, Expr)
 doSuper (s, expr, expexpr) = (s, eval expexpr, eval expr)
 
 doParse :: (String, String) -> (String, Expr, Expr)
-doParse (e, expexpr) = (pretty (parseExpr e), parseExpr e, parseExpr expexpr)
+doParse (e, expexpr) = (show (parseExpr e), parseExpr e, parseExpr expexpr)
 
 main :: IO ()
 main = (doTests doTest . map (doSuper . doParse)) [

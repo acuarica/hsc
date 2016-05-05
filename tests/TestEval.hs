@@ -11,7 +11,7 @@ import Util
 
 doPrint :: (Expr, Expr, Expr) -> String
 doPrint (expr, expexpr, actexpr) =
-  pretty expr ++ " ~~> " ++ pretty actexpr
+  show expr ++ " ~~> " ++ show actexpr
 
 doEval :: (Expr, Expr) -> (Expr, Expr, Expr)
 doEval (expr, expexpr) = (expr, expexpr, eval expr)
@@ -46,36 +46,36 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (App (Lam "x" x) zero, zero),
     (Let "x" zero x, zero),
     (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
-    (Let "x" true (Case x [(false, true), (true, false)]), false),
-    (Let "x" (Lam "y" (Case y [(false, true), (true, false)]))
+    (Let "x" true (Case x [(false, true), (true, false)] False), false),
+    (Let "x" (Lam "y" (Case y [(false, true), (true, false)] False))
         (Let "z" true (App x z)),
       false),
-    (Let "iszero" (Lam "n" (Case n [(zero, true), (App suc m, false)]))
+    (Let "iszero" (Lam "n" (Case n [(zero, true), (App suc m, false)] False))
         (Let "x" two (App iszero x)),
       false),
-    (Let "iszero" (Lam "n" (Case n [(zero, true), (App suc m, false)]))
+    (Let "iszero" (Lam "n" (Case n [(zero, true), (App suc m, false)] False ))
         (Let "x" zero (App iszero x)),
       true),
     (Let "plus1" (Lam "n" (App suc n)) (Let "x" one (App plus1 x)), two),
     (Let "and" (Lam "n" (Lam "m" (Case n [
         (false, false),
         (true, m)
-      ]))) (App (App (usevar "and") true) true),
+      ] False))) (App (App (usevar "and") true) true),
       true),
     (Let "pred" (Lam "n" (Case n [
         (zero, zero),
         (App suc n', n')
-      ])) (App (usevar "pred") zero),
+      ] False)) (App (usevar "pred") zero),
       zero),
     (Let "pred" (Lam "n" (Case n [
         (zero, zero),
         (App suc n', n')
-      ])) (App (usevar "pred") two),
+      ] False)) (App (usevar "pred") two),
       one),
     (Let "plus" (Lam "n" (Lam "m" (Case n [
         (zero, m),
         (App suc n', App (App plus n') (App suc m))
-      ]))) (App (App plus three) two),
+      ] False))) (App (App plus three) two),
       five),
     (Let "x" (Con "Zero" []) (App (Con "Succ" []) (usevar "x")),
       Con "Succ" [Con "Zero" []])

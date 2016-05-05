@@ -14,10 +14,33 @@ type State = (Env, Stack, Time, Expr)
 selexpr :: State -> Expr
 selexpr (_, _, _, expr) = expr
 
+type State' = (Env, Stack', Time, Expr)
+
+data StackFrame = Val Expr | Thunk Expr
+type Stack' = [StackFrame]
+
+--type Queue = [Expr]
+
+step :: State' -> State'
+--step (env, Thunk t:stack, time, expr) = step
+step (env, stack, time, expr) = case expr of
+  Var var tainted -> case fetch var env of
+    (Just val,env') -> (env, stack, newtime, val)
+  Let var valexpr inexpr ->
+    (put var valexpr env, stack, newtime, inexpr)
+  Lam var lamexpr -> case stack of
+    Val valexpr:rest -> (put var valexpr env, rest, newtime, lamexpr)
+  App funexpr valexpr -> (env, Thunk valexpr:stack, newtime, funexpr)
+  where newtime = time + 1
+  -- case eval' (env, [], nt, valexpr) of
+  -- (env', stack', t', valexpr') ->
+  --   case eval'  of
+  --     (env'', [], t', resexpr) -> (env'', [], nt, resexpr)
+
 
 -- | Internal eval.
 eval' :: State -> State
-eval' s@(env, stack, time, expr) = if time > 100 then s else
+eval' s@(env, stack, time, expr) = --if time > 200 then s else
   case expr of
   Var var tainted -> if tainted
     then (env, stack, nt, Var var True)
@@ -43,11 +66,14 @@ eval' s@(env, stack, time, expr) = if time > 100 then s else
       --case eval' (env, valexpr:stack, nt, funexpr) of
         (env'', [], t', resexpr) -> (env'', [], nt, resexpr)
         (env'', stack', t', _) -> (env'', stack, nt, App funexpr valexpr)
-  Case scexpr cases -> case eval' (env, stack, nt, scexpr) of
+  c@(Case scexpr cases tainted) -> case eval' (env, stack, nt, scexpr) of
     (env', stack', t', Con sctag scargs) -> evalAlt nt env sctag scargs cases
-    (env', stack', t', scexpr') -> (env, stack, nt, Case scexpr' (
-      map (\(p,e)-> (p, selexpr (eval' (env, stack, nt, e)) )) cases
-      ))
+    --(env', stack', t', Var var True) -> (env', stack', t', c)
+    (env', stack', t', v@(Var var True)) -> (env, stack, nt, Case v (
+        map (\(p,e)-> (p, selexpr (eval' (env, stack, nt, e)) )) cases
+        ) False)
+    --(env', stack', t', sc') -> (env', stack', t', c)
+    _ -> (env, stack, nt, c)
   where nt = time + 1
       --(map  (\(p,e)->(p, selexpr (eval' (env, stack, e)) )) cases)
       --)
