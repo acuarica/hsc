@@ -38,6 +38,16 @@ step (env, stack, time, expr) = case expr of
   --     (env'', [], t', resexpr) -> (env'', [], nt, resexpr)
 
 
+subst' :: Var -> Expr -> Expr -> Expr
+subst' var expr' expr = case expr of
+  v@(Var var' tainted) -> if var' == var then expr' else v
+  expr -> apply (subst' var expr') expr
+
+subst :: Var -> Env -> Expr -> Expr
+subst var env expr = case fetch var env of
+  (Nothing, _) -> expr
+  (Just expr', _) -> subst' var expr' expr
+
 -- | Internal eval.
 eval' :: State -> State
 eval' s@(env, stack, time, expr) = --if time > 200 then s else
@@ -54,16 +64,16 @@ eval' s@(env, stack, time, expr) = --if time > 200 then s else
       [] -> case eval' (taintVar var env, [], nt, lamexpr) of
         (env', stack', time', lamexpr') -> (env, stack', time', Lam var lamexpr')
       valexpr:rest ->
-        case eval' (put var valexpr env, rest, nt, untaint lamexpr) of
+        case eval' (put var (subst var env valexpr) env, rest, nt, untaint lamexpr) of
         (env', stack', t, lamexpr') ->
           (env, stack', nt,lamexpr')
   Let var valexpr inexpr ->
     eval' (put var valexpr env, stack, nt, inexpr)
   App funexpr valexpr ->
-    case eval' (env, [], nt, valexpr) of
-    (env', stack', t', valexpr') ->
-      case eval' (env', valexpr':stack'++stack, t', funexpr) of
-      --case eval' (env, valexpr:stack, nt, funexpr) of
+    --case eval' (env, [], nt, valexpr) of
+      --(env', stack', t', valexpr') ->
+      --case eval' (env', valexpr':stack'++stack, t', funexpr) of
+      case eval' (env, valexpr:stack, nt, funexpr) of
         (env'', [], t', resexpr) -> (env'', [], nt, resexpr)
         (env'', stack', t', _) -> (env'', stack, nt, App funexpr valexpr)
   c@(Case scexpr cases tainted) -> case eval' (env, stack, nt, scexpr) of

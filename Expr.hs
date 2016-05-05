@@ -1,7 +1,7 @@
 
 module Expr (
   Var, Tag, Expr(..), Pat,
-  untaint, usevar, con,
+  apply, untaint, usevar, con,
   true, false, zero, suc, nil, cons
 ) where
 
