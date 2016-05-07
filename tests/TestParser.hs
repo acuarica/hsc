@@ -1,8 +1,6 @@
 
 module Main where
 
-import Test.HUnit
-
 import Expr
 import Parser
 import Util

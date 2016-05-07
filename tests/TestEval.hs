@@ -1,9 +1,6 @@
 
 module Main where
 
-import System.Exit
-import Test.HUnit
-
 import Expr
 import Eval
 import Pretty

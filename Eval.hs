@@ -35,12 +35,19 @@ selexpr (_, _, _, expr) = expr
 --     (env, stack, newtime, Push valexpr:funexpr:queue)
 --   where newtime = time + 1
 
+type Fresh = Int
+
+--fapply :: Monad m => m (Expr -> Expr) -> m Expr -> m Expr
+--fapply f fexpr 
+
 --isValue
-aform :: Expr -> Expr
-aform expr = case expr of
+aform :: Fresh -> Expr -> Expr
+aform fr expr = case expr of
   App funexpr valexpr ->
-    Let "x_" (apply aform valexpr) (App (apply aform funexpr) (usevar "x_"))
-  expr -> apply aform expr
+    Let (make fr) (apply (aform (fr+1)) valexpr)
+      (App (apply (aform (fr+1)) funexpr) (usevar (make fr)))
+  expr -> apply (aform (fr+1)) expr
+  where make i = "v" ++ "_" ++ show i
 
 subst' :: Var -> Expr -> Expr -> Expr
 subst' var expr' expr = case expr of

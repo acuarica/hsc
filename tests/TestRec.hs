@@ -1,9 +1,6 @@
 
 module Main where
 
-import System.Exit
-import Test.HUnit
-
 import Util
 import Expr
 import Parser
