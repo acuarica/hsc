@@ -5,7 +5,7 @@ import Expr
 import Debug.Trace
 
 -- | Stack for application calls.
-type Stack = [Expr]
+type Stack = [(Env,Expr)]
 
 type Time = Int
 
@@ -14,29 +14,33 @@ type State = (Env, Stack, Time, Expr)
 selexpr :: State -> Expr
 selexpr (_, _, _, expr) = expr
 
-type State' = (Env, Stack', Time, Expr)
+--type Op a =
+--type State' = (Env, Stack, Time, [Expr])
 
-data StackFrame = Val Expr | Thunk Expr
-type Stack' = [StackFrame]
+--data StackFrame = Val Expr | Thunk Expr
+--type Stack' = [StackFrame]
 
 --type Queue = [Expr]
+--
+-- step :: State' -> State'
+-- step (env, stack, time, expr:queue) = case expr of
+--   Var var tainted -> case fetch var env of
+--     (Just val,env') -> (env, stack, newtime, val:queue)
+--   Let var valexpr inexpr ->
+--     (put var valexpr env, stack, newtime, inexpr:queue)
+--   Lam var lamexpr -> case stack of
+--     (env',valexpr):rest ->
+--       (put var valexpr env, rest, newtime, lamexpr:queue)
+--   App funexpr valexpr ->
+--     (env, stack, newtime, Push valexpr:funexpr:queue)
+--   where newtime = time + 1
 
-step :: State' -> State'
---step (env, Thunk t:stack, time, expr) = step
-step (env, stack, time, expr) = case expr of
-  Var var tainted -> case fetch var env of
-    (Just val,env') -> (env, stack, newtime, val)
-  Let var valexpr inexpr ->
-    (put var valexpr env, stack, newtime, inexpr)
-  Lam var lamexpr -> case stack of
-    Val valexpr:rest -> (put var valexpr env, rest, newtime, lamexpr)
-  App funexpr valexpr -> (env, Thunk valexpr:stack, newtime, funexpr)
-  where newtime = time + 1
-  -- case eval' (env, [], nt, valexpr) of
-  -- (env', stack', t', valexpr') ->
-  --   case eval'  of
-  --     (env'', [], t', resexpr) -> (env'', [], nt, resexpr)
-
+--isValue
+aform :: Expr -> Expr
+aform expr = case expr of
+  App funexpr valexpr ->
+    Let "x_" (apply aform valexpr) (App (apply aform funexpr) (usevar "x_"))
+  expr -> apply aform expr
 
 subst' :: Var -> Expr -> Expr -> Expr
 subst' var expr' expr = case expr of
@@ -45,45 +49,47 @@ subst' var expr' expr = case expr of
 
 subst :: Var -> Env -> Expr -> Expr
 subst var env expr = case fetch var env of
-  (Nothing, _) -> expr
-  (Just expr', _) -> subst' var expr' expr
+  Nothing -> expr
+  Just expr' -> subst' var expr' expr
 
 -- | Internal eval.
 eval' :: State -> State
-eval' s@(env, stack, time, expr) = --if time > 200 then s else
-  case expr of
+eval' (env, stack, time, expr) = case expr of
   Var var tainted -> if tainted
     then (env, stack, nt, Var var True)
     else case fetch var env of
-      (Nothing,_) -> (taintVar var env, stack, nt, Var var True)
-      (Just val,env') -> eval' (env, stack, nt, val)
+      Nothing -> (taintVar var env, stack, nt, Var var True)
+      Just val -> eval' (env, stack, nt, val)
   Con tag args -> (env, [], nt, Con tag (
     map (selexpr . eval' . (,,,) env [] nt) args ++
-    map (selexpr . eval' . (,,,) env [] nt) stack ))
+    map (\(e,ex)-> selexpr ( eval' (env, [], nt, ex))) stack ))
   Lam var lamexpr -> case stack of
-      [] -> case eval' (taintVar var env, [], nt, lamexpr) of
-        (env', stack', time', lamexpr') -> (env, stack', time', Lam var lamexpr')
-      valexpr:rest ->
-        case eval' (put var (subst var env valexpr) env, rest, nt, untaint lamexpr) of
-        (env', stack', t, lamexpr') ->
-          (env, stack', nt,lamexpr')
-  Let var valexpr inexpr ->
-    eval' (put var valexpr env, stack, nt, inexpr)
-  App funexpr valexpr ->
-    --case eval' (env, [], nt, valexpr) of
-      --(env', stack', t', valexpr') ->
-      --case eval' (env', valexpr':stack'++stack, t', funexpr) of
-      case eval' (env, valexpr:stack, nt, funexpr) of
-        (env'', [], t', resexpr) -> (env'', [], nt, resexpr)
-        (env'', stack', t', _) -> (env'', stack, nt, App funexpr valexpr)
+      [] ->
+        case eval' (taintVar var env, [], nt, lamexpr) of
+          (env', stack', time', lamexpr') ->
+            (env, stack', time', Lam var lamexpr')
+      (envstack,valexpr):rest ->
+        case eval' (put var valexpr env, rest, nt, untaint lamexpr) of
+          (env', stack', t, lamexpr') ->
+            (env, stack', nt,lamexpr')
+  Let var valexpr inexpr ->eval' (put var valexpr env, stack, nt, inexpr)
+--    case eval' (put var valexpr env, stack, nt, inexpr) of
+  --    (env', stack', nt', resexpr) ->
+  App funexpr valexpr -> case eval' (env, [], nt, valexpr) of
+    (env', stack', t', valexpr') ->
+      case eval' (env', (env,valexpr'):stack'++stack, t', funexpr) of
+        (env'', [], t', funexpr') ->
+          (env, [], nt, funexpr')
+        (env'', stack', t', funexpr') ->
+          (env, stack, nt, App funexpr' valexpr')
   c@(Case scexpr cases tainted) -> case eval' (env, stack, nt, scexpr) of
     (env', stack', t', Con sctag scargs) -> evalAlt nt env sctag scargs cases
     --(env', stack', t', Var var True) -> (env', stack', t', c)
     (env', stack', t', v@(Var var True)) -> (env, stack, nt, Case v (
-        map (\(p,e)-> (p, selexpr (eval' (env, stack, nt, e)) )) cases
-        ) False)
+         map (\(p,e)-> (p, selexpr (eval' (taintVar "cp" env, stack', t', e)) )) cases
+         ) False)
     --(env', stack', t', sc') -> (env', stack', t', c)
-    _ -> (env, stack, nt, c)
+    --_ -> (env, stack, nt, c)
   where nt = time + 1
       --(map  (\(p,e)->(p, selexpr (eval' (env, stack, e)) )) cases)
       --)
@@ -105,9 +111,9 @@ taintVar var env = case env of
 newenv :: Env
 newenv = []
 
-fetch :: Var -> Env -> (Maybe Expr, Env)
-fetch var [] = (Nothing, [])
-fetch var ((v,e):xs) = if v == var then (Just e, xs) else fetch var xs
+fetch :: Var -> Env -> Maybe Expr
+fetch var [] = Nothing
+fetch var ((v,e):xs) = if v == var then Just e else fetch var xs
 
 -- | Gets the right case alternative.
 evalAlt :: Time -> Env -> Tag -> [Expr] -> [(Pat, Expr)] -> State

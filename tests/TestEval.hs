@@ -9,15 +9,11 @@ import Eval
 import Pretty
 import Util
 
-doPrint :: (Expr, Expr, Expr) -> String
-doPrint (expr, expexpr, actexpr) =
-  show expr ++ " ~~> " ++ show actexpr
-
-doEval :: (Expr, Expr) -> (Expr, Expr, Expr)
-doEval (expr, expexpr) = (expr, expexpr, eval expr)
+doEval :: (Expr, Expr) -> (String, Expr, Expr)
+doEval (expr, expexpr) = (show expr, expexpr, eval expr)
 
 main :: IO ()
-main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
+main = doTests doEval [
     (x, Var "x" True),
     (var, Var "var" True),
     (true, true),
@@ -50,11 +46,15 @@ main = ((\ts -> doPrints doPrint ts >> doTests doTest ts) . map doEval) [
     (Let "x" (Lam "y" (Case y [(false, true), (true, false)] False))
         (Let "z" true (App x z)),
       false),
-    (Let "iszero" (Lam "n" (Case n [(zero, true), (App suc m, false)] False))
-        (Let "x" two (App iszero x)),
+    (Let "iszero" (Lam "n" (Case n [
+        (zero, true),
+        (App suc m, false)
+      ] False)) (Let "x" two (App iszero x)),
       false),
-    (Let "iszero" (Lam "n" (Case n [(zero, true), (App suc m, false)] False ))
-        (Let "x" zero (App iszero x)),
+    (Let "iszero" (Lam "n" (Case n [
+        (zero, true),
+        (App suc m, false)]
+      False )) (Let "x" zero (App iszero x)),
       true),
     (Let "plus1" (Lam "n" (App suc n)) (Let "x" one (App plus1 x)), two),
     (Let "and" (Lam "n" (Lam "m" (Case n [

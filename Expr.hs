@@ -60,7 +60,7 @@ apply f expr = case expr of
   Lam  var lamexpr          -> Lam var (f lamexpr)
   Let  var valexpr inexpr   -> Let var (f valexpr) (f inexpr)
   App  funexpr valexpr      -> App (f funexpr) (f valexpr)
-  Case scexpr cases tainted -> Case (f scexpr) (map (second f) cases) tainted
+  Case scexpr cases t -> Case (f scexpr) (map (second f) cases) t
 
 -- | Untaints variables in this expression.
 untaint :: Expr -> Expr
@@ -72,6 +72,7 @@ untaint expr = case expr of
 usevar :: Var -> Expr
 usevar var = Var var False
 
+-- | Creates a constructor.
 con :: Tag -> Expr
 con tag = Con tag []
 

@@ -25,14 +25,14 @@ pretty' par expr = case expr of
       else paren (tag ++ " " ++ unwords (map (pretty' True) args)) )
       ((prettyNat <|> prettyList) expr)
   Lam var expr ->
-    "{\\" ++ var ++ " -> " ++ pretty expr ++ "}"
+    "{" ++ var ++ " -> " ++ pretty expr ++ "}"
   Let var valexpr inexpr ->
     "let " ++ var ++ "=" ++ pretty valexpr ++ " in " ++ pretty inexpr
   App funexpr valexpr ->
      paren (pretty funexpr ++ " " ++ pretty' True valexpr)
   Case scexpr cs tainted ->
-    "case" ++ prettyTainted tainted : ' ' : pretty scexpr ++ " of {" ++
-    foldr (\ (p, e) s -> pretty p ++ " -> " ++ pretty e ++ ";" ++ s) "}" cs
+    "case" ++ prettyTainted tainted : ' ' : pretty scexpr ++ " of " ++
+    foldr (\ (p, e) s -> pretty p ++ "->" ++ pretty e ++ "; " ++ s) "" cs
   where paren s = if par then "(" ++ s ++ ")" else s
 
 prettyTainted :: Bool -> Char
@@ -49,7 +49,7 @@ prettyNat :: Expr -> Maybe String
 prettyNat expr = case doNat expr of
   (n, Nothing) -> Just (show n)
   (0, Just expr') -> Nothing
-  (n, Just expr') -> Just (show n ++ "@" ++ pretty expr')
+  (n, Just expr') -> Just (show n ++ "@" ++ pretty' True expr')
 
 prettyList :: Expr -> Maybe String
 prettyList expr = case doList expr of
