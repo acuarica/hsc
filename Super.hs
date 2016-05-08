@@ -3,8 +3,8 @@ module Super where
 
 import Expr
 
-supercompile :: Expr -> Expr
-supercompile = selExpr . reduce . newstate
+--supercompile :: Expr -> Expr
+--supercompile = selExpr . reduce . newstate
 
 newstate :: Expr -> State
 newstate = (,,) [] []
@@ -16,6 +16,7 @@ type State = (Env, Stack, Expr)
 -- doOp (env, stack, (expr, op):queue) = case op of
 --   Push -> (env, expr:stack, queue)
 --   Put var -> ((var, expr):env, stack, queue)
+
 
 step :: State -> Maybe State
 step (env, stack, expr) = case expr of
@@ -53,11 +54,10 @@ altEnv scargs patvars env = case (scargs, patvars) of
     altEnv scargs' patvars' ((patvar', scarg'):env)
   _ -> error "Incorrect matching case"
 
-
-reduce :: State -> State
-reduce state = case step state of
-  Nothing -> state
-  Just state' -> reduce state'
+reduce :: ([Expr], State) -> ([Expr], State)
+reduce (es, state) = case step state of
+  Nothing -> (selExpr state:es, state)
+  Just state' -> reduce (selExpr state':es, state')
 
 -- | Environment that binds variables to values.
 type Env = [(Var, Expr)]

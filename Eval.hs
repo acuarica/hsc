@@ -4,6 +4,8 @@ module Eval where
 import Expr
 import Debug.Trace
 
+import Control.Arrow (second)
+
 -- | Stack for application calls.
 type Stack = [(Env,Expr)]
 
@@ -14,40 +16,59 @@ type State = (Env, Stack, Time, Expr)
 selexpr :: State -> Expr
 selexpr (_, _, _, expr) = expr
 
---type Op a =
---type State' = (Env, Stack, Time, [Expr])
-
---data StackFrame = Val Expr | Thunk Expr
---type Stack' = [StackFrame]
-
---type Queue = [Expr]
---
--- step :: State' -> State'
--- step (env, stack, time, expr:queue) = case expr of
---   Var var tainted -> case fetch var env of
---     (Just val,env') -> (env, stack, newtime, val:queue)
---   Let var valexpr inexpr ->
---     (put var valexpr env, stack, newtime, inexpr:queue)
---   Lam var lamexpr -> case stack of
---     (env',valexpr):rest ->
---       (put var valexpr env, rest, newtime, lamexpr:queue)
---   App funexpr valexpr ->
---     (env, stack, newtime, Push valexpr:funexpr:queue)
---   where newtime = time + 1
-
 type Fresh = Int
 
 --fapply :: Monad m => m (Expr -> Expr) -> m Expr -> m Expr
 --fapply f fexpr
 
+data Norm a = Norm [(Var, a)] a
+
+instance Functor Norm where
+  fmap f (Norm env a) = Norm (map (second f) env) (f a)
+
+instance Applicative Norm where
+  pure = Norm []
+  Norm env f <*> Norm env' a = error ""
+--instance Monad Norm where
+  --return n = Norm ([], n)
+  --ma >>= f = error ""
+
 --isValue
-aform :: Fresh -> Expr -> Expr
-aform fr expr = case expr of
-  App funexpr valexpr ->
-    Let (make fr) (apply (aform (fr+1)) valexpr)
-      (App (apply (aform (fr+1)) funexpr) (usevar (make fr)))
-  expr -> apply (aform (fr+1)) expr
-  where make i = "v" ++ "_" ++ show i
+aform' :: (Fresh, Env, Expr) -> (Fresh, Env, Expr)
+aform' (fr, env, expr) = case expr of
+  Var var tainted -> (fr, env, expr)
+  Lam var lamexpr -> case aform' (fr, env, lamexpr) of
+    (fr', env', lamexpr') -> (fr', env', Lam var lamexpr')
+  App funexpr valexpr -> case aform' (fr, env, valexpr) of
+    (fr', env', valexpr') -> case aform' (fr', env', funexpr) of
+      (fr'', env'', funexpr'') ->
+        (fr''+2,
+          (make (fr'' + 1), App funexpr'' (usevar (make fr''))):
+          (make fr'', valexpr'):env'',
+          usevar (make (fr''+1)) )
+    --Let (make fr) (apply (aform (fr+1)) valexpr)
+      --((makefr, valexpr) :env)
+      --(App funexpr (usevar (make fr)))
+    --expr -> apply (aform (fr+1)) expr
+  where make i = "$v" ++ "_" ++ show i
+      --  newfr = fr + 1
+
+inline :: Env -> Expr -> Expr
+inline env expr = case expr of
+  Var var tainted -> case lookup var env of
+    Nothing -> Var var tainted
+    Just val -> val
+  --Let var valexpr inexpr ->
+  --App funexpr valexpr
+
+
+envToLet :: Env -> Expr -> Expr
+envToLet [] expr = expr
+envToLet ((var,valexpr):env) expr = envToLet env (Let var valexpr expr)
+
+aform :: Expr -> Expr
+aform expr = case aform' (0, [], expr) of
+  (fr', env', expr') -> envToLet env' expr'
 
 subst' :: Var -> Expr -> Expr -> Expr
 subst' var expr' expr = case expr of

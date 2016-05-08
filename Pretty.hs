@@ -27,7 +27,8 @@ pretty' par expr = case expr of
   Lam var expr ->
     "{" ++ var ++ " -> " ++ pretty expr ++ "}"
   Let var valexpr inexpr ->
-    "let " ++ var ++ "=" ++ pretty valexpr ++ " in " ++ pretty inexpr
+    paren ("let " ++ var ++ "=" ++ pretty valexpr ++ "\n" ++
+           " in " ++ pretty inexpr)
   App funexpr valexpr ->
      paren (pretty funexpr ++ " " ++ pretty' True valexpr)
   Case scexpr cs tainted ->
