@@ -38,7 +38,7 @@ selexpr (_, _, _, expr) = expr
 type Fresh = Int
 
 --fapply :: Monad m => m (Expr -> Expr) -> m Expr -> m Expr
---fapply f fexpr 
+--fapply f fexpr
 
 --isValue
 aform :: Fresh -> Expr -> Expr
@@ -126,19 +126,21 @@ fetch var ((v,e):xs) = if v == var then Just e else fetch var xs
 evalAlt :: Time -> Env -> Tag -> [Expr] -> [(Pat, Expr)] -> State
 evalAlt t env sctag scargs pats = case pats of
   [] -> error ("Constructor tag not found: " ++ sctag)
-  ((patexpr, altexpr):pats') -> case eval patexpr of
-    Con pattag patargs -> if pattag == sctag
-      then case eval' (buildAltEnv scargs patargs env, [], t, altexpr) of
+  ((Pat pattag patvars, altexpr):pats') -> --case eval patexpr of
+    --Con pattag patargs ->
+    if pattag == sctag
+      then case eval' (buildAltEnv scargs patvars env, [], t, altexpr) of
         (env'', stack'', t', expr'') -> (env, stack'', t', expr'')
       else evalAlt t env sctag scargs pats'
-    _ -> evalAlt t env sctag scargs pats'
+    --_ -> evalAlt t env sctag scargs pats'
 
-buildAltEnv :: [Expr] -> [Expr] -> Env -> Env
-buildAltEnv scargs patargs env = case (scargs, patargs) of
+buildAltEnv :: [Expr] -> [Var] -> Env -> Env
+buildAltEnv scargs patvars env = case (scargs, patvars) of
   ([], []) -> env
-  (scarg':scargs', patarg':patargs') -> case patarg' of
-    Var var _ -> buildAltEnv scargs' patargs' (put var scarg' env)
-    _ -> buildAltEnv scargs' patargs' env
+  (scarg':scargs', patvar':patvars') -> --case patvar' of
+    --Var var _ ->
+    buildAltEnv scargs' patvars' (put patvar' scarg' env)
+    --_ -> buildAltEnv scargs' patargs' env
   _ -> error "Incorrect matching case"
 
 -- | The eval function.

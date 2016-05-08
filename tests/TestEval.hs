@@ -39,39 +39,41 @@ main = doTests doEval [
     (App (Lam "x" x) zero, zero),
     (Let "x" zero x, zero),
     (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
-    (Let "x" true (Case x [(false, true), (true, false)] False), false),
-    (Let "x" (Lam "y" (Case y [(false, true), (true, false)] False))
-        (Let "z" true (App x z)),
-      false),
+    (Let "x" true (Case x [
+        (Pat "False" [], true),
+        (Pat "True" [], false)
+      ] False), false),
+    (Let "x" (Lam "y" (Case y [
+        (Pat "False" [], true),
+        (Pat "True" [], false)
+      ] False)) (Let "z" true (App x z)), false),
     (Let "iszero" (Lam "n" (Case n [
-        (zero, true),
-        (App suc m, false)
-      ] False)) (Let "x" two (App iszero x)),
-      false),
+        (Pat "Zero" [], true),
+        (Pat "Succ" ["m"], false)
+      ] False)) (Let "x" two (App iszero x)), false),
     (Let "iszero" (Lam "n" (Case n [
-        (zero, true),
-        (App suc m, false)]
-      False )) (Let "x" zero (App iszero x)),
-      true),
+        (Pat "Zero" [], true),
+        (Pat "Succ" ["m"], false)]
+      False )) (Let "x" zero (App iszero x)), true),
     (Let "plus1" (Lam "n" (App suc n)) (Let "x" one (App plus1 x)), two),
     (Let "and" (Lam "n" (Lam "m" (Case n [
-        (false, false),
-        (true, m)
+        (Pat "False" [], false),
+        (Pat "True" [], m)
       ] False))) (App (App (usevar "and") true) true),
       true),
     (Let "pred" (Lam "n" (Case n [
-        (zero, zero),
-        (App suc n', n')
+        (Pat "Zero" [], zero),
+        (Pat "Succ" ["n'"], n')
       ] False)) (App (usevar "pred") zero),
       zero),
     (Let "pred" (Lam "n" (Case n [
-        (zero, zero),
-        (App suc n', n')
+        (Pat "Zero" [], zero),
+        (Pat "Succ" ["n'"], n')
       ] False)) (App (usevar "pred") two),
       one),
     (Let "plus" (Lam "n" (Lam "m" (Case n [
-        (zero, m),
-        (App suc n', App (App plus n') (App suc m))
+        (Pat "Zero" [], m),
+        (Pat "Succ" ["n'"], App (App plus n') (App suc m))
       ] False))) (App (App plus three) two),
       five),
     (Let "x" (Con "Zero" []) (App (Con "Succ" []) (usevar "x")),

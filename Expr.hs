@@ -1,21 +1,19 @@
 
-module Expr (
-  Var, Tag, Expr(..), Pat,
-  apply, untaint, usevar, con,
-  true, false, zero, suc, nil, cons
-) where
+module Expr where
 
 import Control.Arrow (second)
 
 -- | The expression type functor.
-data Expr
+data Expr--F var tag pat
   = Var  Var  Bool
   | Con  Tag  [Expr]
   | Let  Var  Expr Expr
   | Lam  Var  Expr
   | App  Expr Expr
   | Case Expr [(Pat, Expr)] Bool
-  deriving (Eq)
+  deriving Eq
+
+--type Expr = ExprF Var Tag (Pat Tag Var)
 
 -- | Represents identifier variable.
 type Var = String
@@ -27,8 +25,10 @@ type Tag = String
 -- | The expression type.
 --type Expr = ExprF Var Tag
 
+data Pat = Pat Tag [String] deriving (Eq, Show)
+
 -- | Represents patterns in case expressions.
-type Pat = Expr
+--type Pat = Expr
 --
 -- class (Functor f) => Applicative f where
 --     pure :: a -> f a

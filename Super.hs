@@ -4,36 +4,60 @@ module Super where
 import Expr
 
 supercompile :: Expr -> Expr
-supercompile = selExpr . step . newstate
+supercompile = selExpr . reduce . newstate
 
 newstate :: Expr -> State
-newstate expr = ([], [], [(expr, Push)])
+newstate = (,,) [] []
 
-data Op = Push | Put Var deriving (Eq, Show)
-type State = (Env, Stack, [(Expr, Op)])
+--data Op = Push | Put Var deriving (Eq, Show)
+type State = (Env, Stack, Expr)
 
-doOp :: State -> State
-doOp (env, stack, (expr, op):queue) = case op of
-  Push -> (env, expr:stack, queue)
-  Put var -> ((var, expr):env, stack, queue)
+-- doOp :: State -> State
+-- doOp (env, stack, (expr, op):queue) = case op of
+--   Push -> (env, expr:stack, queue)
+--   Put var -> ((var, expr):env, stack, queue)
 
-step :: State -> State
-step (env, stack, (expr, op):queue) = case expr of
+step :: State -> Maybe State
+step (env, stack, expr) = case expr of
   Var var tainted -> case lookup var env of
-    Nothing -> (env, stack, (Var var tainted, op):queue)
-    Just val -> (env, stack, (val, op):queue)
-  Con tag [] -> case stack of
-    [] -> doOp (env, [], (Con tag stack, op):queue)
+    Nothing -> Nothing
+    Just val -> Just (env, stack, val)
+  Con tag args -> case stack of
+    [] -> Nothing
+    stack -> Just (env, [], Con tag (args ++ stack))
+  Lam var lamexpr -> case stack of
+    [] -> Nothing
+    top:rest -> Just ((var, top):env, rest, lamexpr)
   Let var valexpr inexpr ->
-    (env, stack, (valexpr, Put var):(inexpr, op):queue)
+    Just ((var, valexpr):env, stack, inexpr)
   App funexpr valexpr ->
-    (env, stack, (valexpr, Push):(funexpr, op):queue)
+    Just (env, valexpr:stack, funexpr)
+  Case scexpr cases _ -> case scexpr of
+    Con tag args -> Just (stepCase env stack tag args cases)
+    _ -> Nothing
 
---
--- reduce :: State -> State
--- reduce state = case step state of
---   Nothing -> state
---   Just s' -> reduce s'
+stepCase :: Env -> Stack -> Tag -> [Expr] -> [(Pat, Expr)] -> State
+stepCase env stack tag args cases = (altEnv args patvars env, stack, expr)
+  where (Pat _ patvars, expr) = lookupCase tag cases
+
+lookupCase :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
+lookupCase tag cases = case cases of
+  (Pat pattag patvars, expr):cases' -> if pattag == tag
+    then (Pat pattag patvars, expr)
+    else lookupCase tag cases'
+
+altEnv :: [Expr] -> [Var] -> Env -> Env
+altEnv scargs patvars env = case (scargs, patvars) of
+  ([], []) -> env
+  (scarg':scargs', patvar':patvars') ->
+    altEnv scargs' patvars' ((patvar', scarg'):env)
+  _ -> error "Incorrect matching case"
+
+
+reduce :: State -> State
+reduce state = case step state of
+  Nothing -> state
+  Just state' -> reduce state'
 
 -- | Environment that binds variables to values.
 type Env = [(Var, Expr)]
@@ -45,14 +69,19 @@ type Stack = [Expr]
 type Time = Int
 
 selExpr :: State -> Expr
-selExpr (_, _, (expr, _):_) = expr
+selExpr (_, _, expr) = expr
 
--- fold :: State -> State
--- fold (env, stack, expr) = case expr of
---   Var var tainted -> (env, stack, Var var tainted)
---   Con tag args -> (env, stack, Con tag (args ++ stack))
---   Lam var lamexpr -> (env, stack, Lam var lamexpr)
---   Let var valexpr inexpr -> (env, stack, Let var valexpr inexpr)
---   App funexpr valexpr -> (env, stack, App funexpr valexpr)
---   --where newtime = time + 1
---   --Case scexpr cases ->
+fold' :: State -> State
+fold' (env, stack, expr) = case expr of
+  Var var tainted ->
+    (env, stack, Var var tainted)
+  Con tag args -> (env, stack, Con tag (args ++ stack))
+  Lam var lamexpr -> (env, stack, Lam var lamexpr)
+  Let var valexpr inexpr -> (env, stack, Let var valexpr inexpr)
+  App funexpr valexpr ->
+    (env, stack, App
+      (selExpr (fold' (env, stack, funexpr)))
+      (selExpr (fold' (env, stack, valexpr)))
+      )
+  --where newtime = time + 1
+  --Case scexpr cases ->

@@ -46,15 +46,15 @@ main = doTests (doEval . doParse) [
     "let id={a-> a}\
     \in let app={f->{x->f x}}\
     \in app id [1,2,3,4,5]", "[1,2,3,4,5]"),
-    ("let cp={a->case a of 0->0; Succ b->Succ (cp b); } in cp 4", "4"),
+    ("let cp={a->case a of Zero->0; Succ b->Succ (cp b); } in cp 4", "4"),
     (
     "let cp={a->case a of \
-    \  0->0;\
+    \  Zero->0;\
     \  Succ aa -> Succ (cp aa); }\
     \in {x->x} (cp 5)", "5"),
     ("{f->{x->f x}}", "{f->{x->f x}}"),
     (
-    "let cp={a->case a of 0->0; Succ aa->Succ (cp aa);} \
+    "let cp={a->case a of Zero->0; Succ aa->Succ (cp aa);} \
     \in {f->{x->f x}}", "{f->{x->f x}}"),
     -- (
     -- "let cp={a->case a of 0->0; Succ aa->Succ (cp aa);} \
@@ -66,7 +66,7 @@ main = doTests (doEval . doParse) [
     \in len [1,2,3,4,5,6,7]", "7"),
     (
     "let plus={n->{m->case n of \
-    \  0->m;\
+    \  Zero->m;\
     \  Succ l -> plus l (Succ m); }}\
     \in plus 2 3", "5"),
     (
@@ -74,15 +74,15 @@ main = doTests (doEval . doParse) [
     \  Nil->0;\
     \  Cons y ys -> Succ (len ys);}\
     \in let plus={n->{m->case n of \
-    \  0->m;\
+    \  Zero->m;\
     \  Succ l -> plus l (Succ m); }}\
     \in len [1,2,3,4,5,6,7]", "7"),
     (
     "let mult={n->{m->case n of \
-    \  0->0;\
+    \  Zero->0;\
     \  Succ nn -> plus (mult nn m) m;}}\
     \in let plus={n->{m->case n of \
-    \  0->m;\
+    \  Zero->m;\
     \  Succ nn -> plus nn (Succ m); }}\
     \in mult 4 5", "20"),
     (

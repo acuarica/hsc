@@ -212,11 +212,12 @@ casep = do
 
 altp :: Parser (Pat, Expr)
 altp = do
-  alt <- exprp
+  tag <- upperword
+  vars <- many lowerword
   reserved "->"
   res <- exprp
   reserved ";"
-  return (alt, res)
+  return (Pat tag vars, res)
 
 listp :: Parser Expr
 listp = (do
