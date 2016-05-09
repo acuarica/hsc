@@ -1,10 +1,14 @@
 
 module Super where
 
-import Expr
+import Control.Arrow
 
---supercompile :: Expr -> Expr
---supercompile = selExpr . reduce . newstate
+import Expr
+import Pretty
+
+supercompile :: Expr -> Expr
+supercompile expr = envToLet hist (selExpr state)
+  where (hist, state) = reduce 0 [] (newstate expr)
 
 newstate :: Expr -> State
 newstate = (,,) [] []
@@ -16,7 +20,6 @@ type State = (Env, Stack, Expr)
 -- doOp (env, stack, (expr, op):queue) = case op of
 --   Push -> (env, expr:stack, queue)
 --   Put var -> ((var, expr):env, stack, queue)
-
 
 step :: State -> Maybe State
 step (env, stack, expr) = case expr of
@@ -54,10 +57,40 @@ altEnv scargs patvars env = case (scargs, patvars) of
     altEnv scargs' patvars' ((patvar', scarg'):env)
   _ -> error "Incorrect matching case"
 
-reduce :: ([Expr], State) -> ([Expr], State)
-reduce (es, state) = case step state of
-  Nothing -> (selExpr state:es, state)
-  Just state' -> reduce (selExpr state':es, state')
+type Hist = [(Var, Expr)]
+
+match :: Expr -> Expr -> Bool
+match expr expr' = expr == expr'
+
+lookupMatch :: Hist -> Expr -> Maybe Var
+lookupMatch [] _ = Nothing
+lookupMatch ((var, expr'):hist) expr = if match expr expr'
+  then Just var
+  else lookupMatch hist expr
+
+replState :: Expr -> State -> State
+replState expr (env, stack, _) = (env, stack, expr)
+
+reduce :: Int -> Hist -> State -> (Hist, State)
+reduce n hist state = case lookupMatch hist (selExpr state) of
+  Nothing -> case step state of
+    --Nothing -> ((var n, selExpr state):hist, state)
+    Nothing -> (hist, replState (split go (selExpr state)) state)
+    Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
+  Just var -> (hist, replState (Var var False) state)
+  where var n = "$v_" ++ show n
+        go expr = selExpr $ snd $ reduce (n+1) hist (replState expr state)
+
+split :: (Expr -> Expr) -> Expr -> Expr
+split f expr = case expr of
+  Var var t -> Var var t
+  Con tag args -> Con tag (map f args)
+  Case scexpr cases t -> Case scexpr (map (second f) cases) t
+  e' -> error $ "Error with Split in: " ++ show e'
+
+envToLet :: Hist -> Expr -> Expr
+envToLet [] expr = expr
+envToLet ((var,valexpr):env) expr = Let var valexpr (envToLet env expr)
 
 -- | Environment that binds variables to values.
 type Env = [(Var, Expr)]

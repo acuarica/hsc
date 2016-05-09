@@ -80,6 +80,8 @@ subst var env expr = case fetch var env of
   Nothing -> expr
   Just expr' -> subst' var expr' expr
 
+--f (Var var _) =
+
 -- | Internal eval.
 eval' :: State -> State
 eval' (env, stack, time, expr) = case expr of
