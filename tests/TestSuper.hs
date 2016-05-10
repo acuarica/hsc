@@ -24,7 +24,7 @@ e' = subst "f" (usevar "lala") e
 
 main :: IO ()
 main = --doTests (doSuper . doParse) [
-    mapM_ (print . supercompile . parseExpr) [
+    mapM_ (putStrLn . showRed . reduce 0 [] . newstate . parseExpr) [
     --("x", Var "x" False),
     --("True", true),
     --("Succ Zero", Con "Succ" [zero]),
@@ -39,8 +39,10 @@ main = --doTests (doSuper . doParse) [
 
     "let inc={n->Succ n}\
     \ in let map={f->{xs->case xs of \
-    \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc zs"
+    \  Nil->Nil; \
+    \  Cons y ys-> Cons (f y) (map f ys);}}\
+    \in map inc ys"
+
     --
     -- ( root =
     -- "let $mapinc={\\$xs-> case $xs of {\

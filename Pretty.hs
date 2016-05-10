@@ -30,7 +30,7 @@ pretty' par expr = case expr of
   Lam var expr ->
     "{" ++ var ++ " -> " ++ pretty expr ++ "}"
   Let var valexpr inexpr ->
-    paren ("let " ++ var ++ "=" ++ pretty' True valexpr ++ "\n" ++
+    paren ("let " ++ var ++ "=" ++ pretty' True valexpr ++ "" ++
            " in " ++ pretty inexpr)
   App funexpr valexpr ->
      paren (pretty funexpr ++ " " ++ pretty' True valexpr)
@@ -43,7 +43,7 @@ prettyPat :: Pat -> String
 prettyPat (Pat tag vars) = unwords (tag:vars)
 
 prettyTainted :: Bool -> Char
-prettyTainted tainted = if tainted then '!' else '?'
+prettyTainted tainted = '\0' -- if tainted then '!' else '?'
 
 type PrettyCon = Expr -> Maybe String
 
