@@ -66,7 +66,7 @@ match expr expr' = expr == expr'
 lookupMatch :: Hist -> Expr -> Maybe Var
 lookupMatch [] _ = Nothing
 lookupMatch ((var, expr'):hist) expr = if match expr expr'
-  then trace (show expr ++ "~" ++ show expr' ++"@"++var) (Just var)
+  then trace (show expr ++ "~" ++ show expr' ++" with "++var) (Just var)
   else lookupMatch hist expr
 
 replState :: Expr -> State -> State
@@ -90,10 +90,8 @@ reduce :: Int -> Hist -> State -> (Hist, State)
 reduce n hist state@(env,st,ex) = traceShow state $
   case lookupMatch hist ex of
   Nothing -> case step state of
-    --Nothing -> ((var n, selExpr state):hist, state)
-    --Nothing -> ((var n, selExpr (go' state)):hist, go' state)
-    Nothing -> case traceShowId ex of
-      Var v t -> ((var n, Var v t):hist, (env, st, Var v t))
+    Nothing -> case trace ("reduce: " ++ show ex ++ "@"++show st) ex of
+      Var v t -> (hist, (env, st, foldl App (Var v t) st))
       Con tag args -> case reduces args n hist env of
         (args', h') -> ((var n, Con tag args'):h', (env, st, Con tag args'))
       Case scexpr cases t -> case reduces (map snd cases) n hist env of
@@ -102,8 +100,14 @@ reduce n hist state@(env,st,ex) = traceShow state $
              (env, st, Case scexpr (zip (map fst cases) cs') t ))
       _ -> error $ "Error with Split in: " ++ show ex
     Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
-  Just var -> (hist, replState (Var var False) state)
+  --Just var -> (hist, replState (Var var False) state)
+  Just var -> reduce n hist (replState (Var var False) state)
   where var n = "$v_" ++ show n
+--
+-- deapply :: Stack -> Expr -> Expr
+-- deapply stack expr = case stack of
+--   [] -> expr
+--   top:rest -> deapply rest (App expr top)
 
 reduces :: [Expr] -> Int -> Hist -> Env -> ([Expr], Hist)
 reduces [] n hist env = ([], hist)
