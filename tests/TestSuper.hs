@@ -13,6 +13,15 @@ doSuper (s, expr, expstate) = (s, supercompile expr, supercompile expr)
 doParse :: (String, Expr) -> (String, Expr, Expr)
 doParse (e, expstate) = (show (parseExpr e), parseExpr e, expstate)
 
+s = "let inc={n->Succ n} in let map={f->{xs->case xs of   Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}} in map inc ys"
+
+e = parseExpr "let inc={n->Succ n}\
+\ in let map={f->{xs->case xs of \
+\  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
+\in map inc ys"
+
+e' = subst "f" (usevar "lala") e
+
 main :: IO ()
 main = --doTests (doSuper . doParse) [
     mapM_ (print . supercompile . parseExpr) [
@@ -31,7 +40,7 @@ main = --doTests (doSuper . doParse) [
     "let inc={n->Succ n}\
     \ in let map={f->{xs->case xs of \
     \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc ys"
+    \in map inc zs"
     --
     -- ( root =
     -- "let $mapinc={\\$xs-> case $xs of {\

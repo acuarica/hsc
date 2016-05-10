@@ -3,6 +3,8 @@ module Super where
 
 import Control.Arrow
 
+import Debug.Trace
+
 import Expr
 import Pretty
 
@@ -13,13 +15,12 @@ supercompile expr = envToLet hist (selExpr state)
 newstate :: Expr -> State
 newstate = (,,) [] []
 
---data Op = Push | Put Var deriving (Eq, Show)
 type State = (Env, Stack, Expr)
 
--- doOp :: State -> State
--- doOp (env, stack, (expr, op):queue) = case op of
---   Push -> (env, expr:stack, queue)
---   Put var -> ((var, expr):env, stack, queue)
+subst :: Var -> Expr -> Expr -> Expr
+subst var valexpr bodyexpr = case bodyexpr of
+  Var var' t -> if var' == var then valexpr else Var var' t
+  _ -> apply (subst var valexpr) bodyexpr
 
 step :: State -> Maybe State
 step (env, stack, expr) = case expr of
@@ -31,7 +32,7 @@ step (env, stack, expr) = case expr of
     stack -> Just (env, [], Con tag (args ++ stack))
   Lam var lamexpr -> case stack of
     [] -> Nothing
-    top:rest -> Just ((var, top):env, rest, lamexpr)
+    top:rest -> Just (env, rest, subst var top lamexpr)
   Let var valexpr inexpr ->
     Just ((var, valexpr):env, stack, inexpr)
   App funexpr valexpr ->
@@ -65,21 +66,77 @@ match expr expr' = expr == expr'
 lookupMatch :: Hist -> Expr -> Maybe Var
 lookupMatch [] _ = Nothing
 lookupMatch ((var, expr'):hist) expr = if match expr expr'
-  then Just var
+  then trace (show expr ++ "~" ++ show expr' ++"@"++var) (Just var)
   else lookupMatch hist expr
 
 replState :: Expr -> State -> State
 replState expr (env, stack, _) = (env, stack, expr)
 
+newtype HistM a = HistM [(Var, a)]
+
+instance Functor HistM where
+  fmap f (HistM xs) = HistM (map (second f) xs)
+
+instance Applicative HistM where
+  pure a = HistM []
+  (HistM f) <*> (HistM xs) = error ""
+
+--instance Monad HistM where
+  --return = pure
+  --m a -> (a -> m b) -> m b
+  --HistM xs >>= f = HistM
+
 reduce :: Int -> Hist -> State -> (Hist, State)
-reduce n hist state = case lookupMatch hist (selExpr state) of
+reduce n hist state@(env,st,ex) = traceShow state $
+  case lookupMatch hist ex of
   Nothing -> case step state of
     --Nothing -> ((var n, selExpr state):hist, state)
-    Nothing -> (hist, replState (split go (selExpr state)) state)
+    --Nothing -> ((var n, selExpr (go' state)):hist, go' state)
+    Nothing -> case traceShowId ex of
+      Var v t -> ((var n, Var v t):hist, (env, st, Var v t))
+      Con tag args -> case reduces args n hist env of
+        (args', h') -> ((var n, Con tag args'):h', (env, st, Con tag args'))
+      Case scexpr cases t -> case reduces (map snd cases) n hist env of
+        (cs', h') -> (
+               (var n, Case scexpr (zip (map fst cases) cs') t ):h',
+             (env, st, Case scexpr (zip (map fst cases) cs') t ))
+      _ -> error $ "Error with Split in: " ++ show ex
     Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
   Just var -> (hist, replState (Var var False) state)
   where var n = "$v_" ++ show n
-        go expr = selExpr $ snd $ reduce (n+1) hist (replState expr state)
+
+reduces :: [Expr] -> Int -> Hist -> Env -> ([Expr], Hist)
+reduces [] n hist env = ([], hist)
+reduces (x:xs) n hist env = (selExpr s:xs', h')
+  where (h, s) = reduce (n+1) hist (env, [], x)
+        (xs', h') = reduces xs (n+10) ((var n, selExpr s):h) env
+        var n = "#w_" ++ show n
+
+data C a = C Int a
+
+instance Functor C where
+  fmap f (C n a) = C n (f a)
+
+instance Applicative C where
+  pure = return
+  (C n f) <*> (C n' a) = C (n+n') (f a)
+
+instance Monad C where
+  return = C 0
+  (C n expr) >>= f = case f expr of
+    C n' expr' -> C (n'+n) expr'
+
+
+
+sp :: Monad m => (Expr -> m Expr) -> m Expr -> m Expr
+sp f mexpr = do
+  expr <- mexpr
+  case expr of
+    Var var t -> return (Var var t)
+    Lam v lexpr -> f lexpr >>= (\a -> return (Lam v a))
+  return expr
+      --return ()
+    --Con tag args -> Con tag (mapM f args)
 
 split :: (Expr -> Expr) -> Expr -> Expr
 split f expr = case expr of

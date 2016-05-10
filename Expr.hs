@@ -25,7 +25,7 @@ type Tag = String
 -- | The expression type.
 --type Expr = ExprF Var Tag
 
-data Pat = Pat Tag [String] deriving (Eq, Show)
+data Pat = Pat Tag [String] deriving Eq
 
 -- | Represents patterns in case expressions.
 --type Pat = Expr

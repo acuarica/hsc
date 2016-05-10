@@ -10,6 +10,9 @@ import Expr
 instance Show Expr where
   show = pretty
 
+instance Show Pat where
+  show = prettyPat
+
 -- | Pretty prints an expression.
 pretty :: Expr -> String
 pretty = pretty' False
@@ -35,6 +38,9 @@ pretty' par expr = case expr of
     "case" ++ prettyTainted tainted : ' ' : pretty scexpr ++ " of " ++
     foldr (\ (p, e) s -> show p ++ "->" ++ pretty e ++ "; " ++ s) "" cs
   where paren s = if par then "(" ++ s ++ ")" else s
+
+prettyPat :: Pat -> String
+prettyPat (Pat tag vars) = unwords (tag:vars)
 
 prettyTainted :: Bool -> Char
 prettyTainted tainted = if tainted then '!' else '?'
