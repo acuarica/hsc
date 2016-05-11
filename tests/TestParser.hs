@@ -4,6 +4,7 @@ module Main where
 import Expr
 import Parser
 import Util
+import Pretty
 
 doParse :: (String, Expr) -> (String, Expr, Expr)
 doParse (code, expected) = (code, expected, parseExpr code)
@@ -17,20 +18,20 @@ main = doTests doParse  [
     ("Zero", zero),
     ("1", App suc zero),
     ("3", App suc (App suc (App suc zero))),
-    ("True", true),
-    ("False", false),
+    ("Nil", nil),
+    ("Cons", cons),
     ("Succ Zero", App suc zero),
     ("(Succ Zero)", App suc zero),
     ("((Succ) (Zero))", App suc zero),
     ("Succ (Succ Zero)", App suc (App suc zero)),
     ("Nil", nil),
-    ("Cons True Nil", App (App cons true) nil),
+    ("Cons Zero Nil", App (App cons zero) nil),
     ("Cons 0 (Cons 0 Nil)", App (App cons zero) (App (App cons zero) nil)),
     ("f x", App (Var "f") (Var "x")),
     ("f x y", App (App (Var "f") (Var "x")) (Var "y")),
     ("f var y", App (App (Var "f") (Var "var")) (Var "y")),
     ("Succ n", App suc (Var "n")),
-    ("let x=True in x", Let "x" true (Var "x")),
+    ("let x=Nil in x", Let "x" nil (Var "x")),
     ("{x->x}", Lam "x" (Var "x")),
     ("{var->var}", Lam "var" (Var "var")),
     ("{x->True}", Lam "x" true),
@@ -61,8 +62,8 @@ main = doTests doParse  [
       ]),
     ("case var of True -> False; False -> True; Just n -> m;",
       Case (Var "var") [
-        (Pat "True" [], false),
-        (Pat "False" [], true),
+        (Pat "True" [], Con "False" []),
+        (Pat "False" [], Con "True" []),
         (Pat "Just" ["n"], Var "m")
       ]),
     ("[]", nil),

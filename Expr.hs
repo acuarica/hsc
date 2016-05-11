@@ -71,21 +71,6 @@ apply f expr = case expr of
   App funexpr valexpr -> App (f funexpr) (f valexpr)
   Case scexpr alts -> Case (f scexpr) (map (second f) alts)
 
--- | Untaints variables in this expression.
-untaint :: Expr -> Expr
-untaint expr = case expr of
-  Var var -> Var var
-  _ -> apply untaint expr
-
--- | Creates a constructor.
+-- | Creates a constructor with the given tag.
 con :: Tag -> Expr
 con tag = Con tag []
-
--- | Some common used expressions.
-true, false, zero, suc, nil, cons :: Expr
-true = con "True"
-false = con "False"
-zero = con "Zero"
-suc = con "Succ"
-nil = con "Nil"
-cons = con "Cons"

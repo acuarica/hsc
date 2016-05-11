@@ -1,5 +1,5 @@
 
-module Pretty () where
+module Pretty (zero, suc, nil, cons, true, false) where
 
 import Control.Exception (assert)
 import Data.Maybe (fromMaybe)
@@ -80,3 +80,14 @@ doList expr = case expr of
       (xs, e) -> (item:xs, e)
     _ -> ([], Just expr)
   expr' -> ([], Just expr)
+
+-- | Some common used expressions for easy write of expressions.
+-- | These expressions are pretty printed accordingly.
+zero, suc, nil, cons :: Expr
+true = con "True"
+false = con "False"
+
+zero = con "Zero"
+suc = con "Succ"
+nil = con "Nil"
+cons = con "Cons"

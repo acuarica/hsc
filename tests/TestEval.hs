@@ -78,8 +78,7 @@ main = doTests doEval [
       five),
     (Let "x" (Con "Zero" []) (App (Con "Succ" []) (Var "x")),
       Con "Succ" [Con "Zero" []])
-  ]
-  where
+  ] where
     x = Var "x"
     y = Var "y"
     z = Var "z"
