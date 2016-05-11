@@ -3,17 +3,15 @@ module Expr where
 
 import Control.Arrow (second)
 
--- | The expression type functor.
-data Expr--F var tag pat
+-- | The expression type.
+data Expr
   = Var  Var  Bool
   | Con  Tag  [Expr]
   | Let  Var  Expr Expr
   | Lam  Var  Expr
   | App  Expr Expr
-  | Case Expr [(Pat, Expr)] Bool
+  | Case Expr [(Pat, Expr)]
   deriving Eq
-
---type Expr = ExprF Var Tag (Pat Tag Var)
 
 -- | Represents identifier variable.
 type Var = String
@@ -22,45 +20,29 @@ type Var = String
 -- | Also called tag to be matched in case expressions.
 type Tag = String
 
--- | The expression type.
---type Expr = ExprF Var Tag
-
+-- | Case patterns.
 data Pat = Pat Tag [String] deriving Eq
 
--- | Represents patterns in case expressions.
---type Pat = Expr
---
--- class (Functor f) => Applicative f where
---     pure :: a -> f a
---     (<*>) :: f (a -> b) -> f a -> f b
---(>>=) :: (Monad m) => m a -> (a -> m b) -> m b
---fapply :: (f Expr -> Expr) -> (f Expr -> f Expr) -> f Expr -> f Expr
--- fapply :: (Expr -> t) -> (Expr -> Expr) -> Expr -> t
+-- | Variable substitution.
+subst :: Var -> Expr -> Expr -> Expr
+subst var valexpr bodyexpr = case bodyexpr of
+  Var var' t -> if var' == var then valexpr else Var var' t
+  _ -> apply (subst var valexpr) bodyexpr
 
--- class Context c where
---   --push :: Expr -> c
---   --pull :: c -> Expr
---   sel :: c -> Expr
---
--- newtype S = S (Int, Expr)
---
--- instance Context S where
---   sel (S (n, expr)) = expr
-
--- fapply :: Context c => (c -> c) -> c -> c
--- fapply e p f cexpr = case sel cexpr of
---   Var  var tainted        -> f (Var var tainted)
---   Lam  var lamexpr        -> f (Lam var (e (p lamexpr)))
---   --Con  tag arg        -> g (Con tag args)
+-- | Lookup the alternative according to the constructor tag.
+lookupAlt :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
+lookupAlt tag ((Pat pattag patvars, expr):alts) = if pattag == tag
+  then (Pat pattag patvars, expr)
+  else lookupAlt tag alts
 
 apply :: (Expr -> Expr) -> Expr -> Expr
 apply f expr = case expr of
-  Var  var tainted          -> Var var tainted
-  Con  tag args             -> Con tag (map f args)
-  Lam  var lamexpr          -> Lam var (f lamexpr)
-  Let  var valexpr inexpr   -> Let var (f valexpr) (f inexpr)
-  App  funexpr valexpr      -> App (f funexpr) (f valexpr)
-  Case scexpr cases t -> Case (f scexpr) (map (second f) cases) t
+  Var  var tainted -> Var var tainted
+  Con  tag args -> Con tag (map f args)
+  Lam  var lamexpr -> Lam var (f lamexpr)
+  Let  var valexpr inexpr -> Let var (f valexpr) (f inexpr)
+  App  funexpr valexpr -> App (f funexpr) (f valexpr)
+  Case scexpr alts -> Case (f scexpr) (map (second f) alts)
 
 -- | Untaints variables in this expression.
 untaint :: Expr -> Expr

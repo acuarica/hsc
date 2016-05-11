@@ -7,10 +7,10 @@ import Debug.Trace
 
 import Expr
 import Pretty
-
-supercompile :: Expr -> Expr
-supercompile expr = envToLet hist (selExpr state)
-  where (hist, state) = reduce 0 [] (newstate expr)
+--
+-- supercompile :: Expr -> Expr
+-- supercompile expr = envToLet hist (selExpr state)
+--   where (hist, state) = reduce 0 [] (newstate expr)
 
 newstate :: Expr -> State
 newstate = (,,) [] []
@@ -21,62 +21,63 @@ showEnv env = intercalate "\n" (map (\(v,e)->v ++ " |-> " ++show e) env)
 showList' :: Show a => [a] -> String
 showList' xs = intercalate "\n" (map show xs)
 
+showState :: State -> String
+showState (env, stack, expr) =
+  showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
+
 showRed :: (Hist, State) -> String
 showRed (hist, (env, stack, expr)) =
   showEnv hist ++ "\n\n" ++
   showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
 
+-- | State of the eval machine.
 type State = (Env, Stack, Expr)
 
-newtype Env' var a = Env' [(var, a)]
+-- | Environment that binds variables to values.
+type Env = [(Var, Expr)]
 
-type Stack' a = [a]
-data State' var a = State' (Env' var a) (Stack' a) a
+-- | Stack for application calls.
+type Stack = [StackFrame]
 
-bind :: State' var a -> (a -> State' var b) -> State' var b
-bind (State' (Env' env) stack a) f = case f a of
-  (State' (Env' env') stack' b) -> error ""
+data StackFrame
+  = Alts [(Pat, Expr)]
+  | Arg Expr
+  | Val Expr
+  | Update Var
+  deriving Show
 
 step :: State -> Maybe State
-step (env, stack, expr) = case expr of
-  Var var tainted -> case lookup var env of
+step (env, stack, expr) = trace (show (env, stack, expr)) $
+  case expr of
+  Var var _ -> case lookup var env of
     Nothing -> Nothing
-    Just val -> Just (env, stack, val)
-  Con tag args -> case stack of
+    Just val -> Just (env, Update var:stack, val)
+  val@(Con tag args) -> case stack of
     [] -> Nothing
-    stack -> Just (env, [], Con tag (args ++ stack))
-  Lam var lamexpr -> case stack of
+    Arg (Con tag' args'):stack' ->
+      Just (env, stack', Con tag (args ++ [Con tag' args']))
+    Arg argexpr:stack' ->
+      Just (env, Val (Con tag args):stack', argexpr)
+    Val (Con tag' args'):stack' ->
+      Just (env, stack', Con tag' (args' ++ [Con tag args]))
+    Alts alts:stack' ->
+      let (Pat _ patvars, altexpr) = lookupAlt tag alts
+      in Just (zip patvars args ++ env, stack', altexpr)
+    Update x:stack' -> Just ((x, val):env, stack', val)
+  val@(Lam var lamexpr) -> case stack of
     [] -> Nothing
-    top:rest -> Just (env, rest, subst var top lamexpr)
+    Arg argexpr:stack' -> Just (env, stack', subst var argexpr lamexpr)
+    Update x:stack' -> Just ((x, val):env, stack', val)
   Let var valexpr inexpr ->
     Just ((var, valexpr):env, stack, inexpr)
   App funexpr valexpr ->
-    Just (env, valexpr:stack, funexpr)
-  Case scexpr cases _ -> case scexpr of
-    Con tag args -> Just (stepCase env stack tag args cases)
-    _ -> Nothing
+    Just (env, Arg valexpr:stack, funexpr)
+  Case scexpr alts -> Just (env, Alts alts:stack, scexpr)
 
-subst :: Var -> Expr -> Expr -> Expr
-subst var valexpr bodyexpr = case bodyexpr of
-  Var var' t -> if var' == var then valexpr else Var var' t
-  _ -> apply (subst var valexpr) bodyexpr
-
-stepCase :: Env -> Stack -> Tag -> [Expr] -> [(Pat, Expr)] -> State
-stepCase env stack tag args cases = (altEnv args patvars env, stack, expr)
-  where (Pat _ patvars, expr) = lookupCase tag cases
-
-lookupCase :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
-lookupCase tag cases = case cases of
-  (Pat pattag patvars, expr):cases' -> if pattag == tag
-    then (Pat pattag patvars, expr)
-    else lookupCase tag cases'
-
-altEnv :: [Expr] -> [Var] -> Env -> Env
-altEnv scargs patvars env = case (scargs, patvars) of
-  ([], []) -> env
-  (scarg':scargs', patvar':patvars') ->
-    altEnv scargs' patvars' ((patvar', scarg'):env)
-  _ -> error "Incorrect matching case"
+reduce :: State -> State
+reduce state = case step state of
+  Nothing -> state
+  Just state' -> reduce state'
 
 type Hist = [(Var, Expr)]
 
@@ -103,9 +104,6 @@ selH (H env _ ) = env
 putH :: Expr -> HistM -> HistM
 putH expr (H hist count) = H (("$h" ++ show count, expr):hist) (count+1)
 
---hist'' :: Expr -> HistM
---hist'' expr = hist expr newhist
-
 freeVars :: Expr -> [Var]
 freeVars expr = case expr of
   Var var _ -> [var]
@@ -113,7 +111,7 @@ freeVars expr = case expr of
   Lam var lamexpr -> del var (freeVars lamexpr)
   Let var valexpr inexpr -> del var (freeVars valexpr ++ freeVars inexpr)
   App funexpr valexpr -> freeVars funexpr ++ freeVars valexpr
-  Case scexpr alts _ -> freeVars scexpr ++
+  Case scexpr alts -> freeVars scexpr ++
     concatMap (\(Pat p vars, e) -> dels vars (freeVars e)) alts
   where del var xs = [x | x <- xs, x /= var]
         dels vars xs = [x | x <- xs, x `notElem` vars]
@@ -125,63 +123,47 @@ flatten expr = expr:case expr of
   Lam _ lamexpr -> flatten lamexpr
   Let _ valexpr inexpr -> flatten valexpr ++ flatten inexpr
   App funexpr valexpr -> flatten funexpr ++ flatten valexpr
-  Case scexpr alts _ -> flatten scexpr ++ concatMap (flatten . snd) alts
+  Case scexpr alts -> flatten scexpr ++ concatMap (flatten . snd) alts
 
 tohist :: [Expr] -> HistM
 tohist [] = newhist
 tohist (e:es) = putH e (tohist es)
 
--- hist' :: Expr -> HistM -> HistM
--- hist' expr hist = (put expr hist) case expr of
---   Var var tainted -> []
---   --Con tag args -> []
---   --Lam var lamexpr -> hist' lamexpr
---   --Let var valexpr inexpr -> hist (n+1) lamexpr
---   App funexpr valexpr -> hist' valexpr
-  --Case scexpr alts _ ->
-
-
-
-reduce :: Int -> Hist -> State -> (Hist, State)
-reduce n hist state@(env,st,ex) = --trace (show state) $
-  case lookupMatch hist ex of
-  Nothing ->
+reduce' :: Int -> Hist -> State -> (Hist, State)
+reduce' n hist state@(env,st,ex) = --trace (show state) $
+  --case lookupMatch hist ex of
+  --Nothing ->
     case step state of
-    Nothing -> case ex of--trace ("reduce: " ++ show ex ++ "@"++show st) ex of
-      Var v t -> (hist, (env, st, foldl App (Var v t) st))
-      Con tag args -> case reduces args n hist env of
-        (args', h') -> ((var n, Con tag args'):h', (env, st, Con tag args'))
-      Case scexpr cases t -> case reduces (map snd cases) n hist env of
-        (cs', h') -> (
-               (var n, Case scexpr (zip (map fst cases) cs') t ):h',
-             (env, st, Case scexpr (zip (map fst cases) cs') t ))
-      _ -> error $ "Error with Split in: " ++ show ex
+    Nothing -> (hist, state)
+    --case ex of--trace ("reduce: " ++ show ex ++ "@"++show st) ex of
+      -- Var v t -> (hist, (env, st, foldl App (Var v t) st))
+      -- Con tag args -> case reduces args n hist env of
+      --   (args', h') ->
+      ---- ((var n, Con tag args'):h', (env, st, Con tag args'))
+      -- Case scexpr cases t ->
+      --    case reduces (map snd cases) n hist env of
+      --   (cs', h') -> (
+      --          (var n, Case scexpr (zip (map fst cases) cs') t ):h',
+      --        (env, st, Case scexpr (zip (map fst cases) cs') t ))
+      -- _ -> error $ "Error with Split in: " ++ show ex
     --Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
-    Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
+    --Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
+    Just state' -> reduce' (n+1) (hist) state'
 
-  Just var -> (hist, replState (Var var False) state)
+  --Just var -> (hist, replState (Var var False) state)
   --Just var -> reduce n hist (replState (Var var False) state)
   where var n = "$v" ++ show n
 
 reduces :: [Expr] -> Int -> Hist -> Env -> ([Expr], Hist)
 reduces [] n hist env = ([], hist)
 reduces (x:xs) n hist env = (selExpr s:xs', h')
-  where (h, s) = reduce (n+1) hist (env, [], x)
+  where (h, s) = reduce' (n+1) hist (env, [], x)
         (xs', h') = reduces xs (n+10) h env
         --var n = "#w_" ++ show n
 
 envToLet :: Hist -> Expr -> Expr
 envToLet [] expr = expr
 envToLet ((var,valexpr):env) expr = Let var valexpr (envToLet env expr)
-
--- | Environment that binds variables to values.
-type Env = [(Var, Expr)]
-
--- | Stack for application calls.
-type Stack = [Expr]
-
--- | Times
-type Time = Int
 
 selExpr :: State -> Expr
 selExpr (_, _, expr) = expr

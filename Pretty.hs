@@ -34,8 +34,8 @@ pretty' par expr = case expr of
            " in " ++ pretty inexpr)
   App funexpr valexpr ->
      paren (pretty funexpr ++ " " ++ pretty' True valexpr)
-  Case scexpr cs tainted ->
-    "case" ++ prettyTainted tainted : ' ' : pretty scexpr ++ " of " ++
+  Case scexpr cs ->
+    "case " ++ pretty scexpr ++ " of " ++
     foldr (\ (p, e) s -> show p ++ "->" ++ pretty e ++ "; " ++ s) "" cs
   where paren s = if par then "(" ++ s ++ ")" else s
 

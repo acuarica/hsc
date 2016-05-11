@@ -112,12 +112,12 @@ eval' (env, stack, time, expr) = case expr of
           (env, [], nt, funexpr')
         (env'', stack', t', funexpr') ->
           (env, stack, nt, App funexpr' valexpr')
-  c@(Case scexpr cases tainted) -> case eval' (env, stack, nt, scexpr) of
+  c@(Case scexpr cases) -> case eval' (env, stack, nt, scexpr) of
     (env', stack', t', Con sctag scargs) -> evalAlt nt env sctag scargs cases
     --(env', stack', t', Var var True) -> (env', stack', t', c)
     (env', stack', t', v@(Var var True)) -> (env, stack, nt, Case v (
          map (\(p,e)-> (p, selexpr (eval' (taintVar "cp" env, stack', t', e)) )) cases
-         ) False)
+         ))
     --(env', stack', t', sc') -> (env', stack', t', c)
     --_ -> (env, stack, nt, c)
   where nt = time + 1

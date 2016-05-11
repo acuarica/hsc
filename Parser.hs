@@ -205,10 +205,10 @@ lamp = do
 casep :: Parser Expr
 casep = do
   reserved "case"
-  sc <- exprp
+  scexpr <- exprp
   reserved "of"
   alts <- some altp
-  return (Case sc alts False)
+  return (Case scexpr alts)
 
 altp :: Parser (Pat, Expr)
 altp = do

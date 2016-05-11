@@ -42,22 +42,22 @@ main = doTests doParse  [
     ("case x of True -> False;",
       Case (usevar "x") [
         (Pat "True" [], false)
-      ] False),
+      ]),
     ("case var of True -> False;",
       Case (usevar "var") [
         (Pat "True" [], false)
-      ] False),
+      ]),
     ("case var of True -> False; False -> True;",
       Case (usevar "var") [
         (Pat "True" [], false),
         (Pat "False" [], true)
-      ] False),
+      ]),
     ("case var of True -> False; False -> True; Just n -> m;",
       Case (usevar "var") [
         (Pat "True" [], false),
         (Pat "False" [], true),
         (Pat "Just" ["n"], usevar "m")
-      ] False),
+      ]),
     ("[]", nil),
     ("  [  ]  ", nil),
     ("[True]", App (App cons true) nil),
