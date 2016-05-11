@@ -10,9 +10,9 @@ doParse (code, expected) = (code, expected, parseExpr code)
 
 main :: IO ()
 main = doTests doParse  [
-    ("x", usevar "x"),
-    ("var", usevar "var"),
-    ("veryverylonglongvar", usevar "veryverylonglongvar"),
+    ("x", Var "x"),
+    ("var", Var "var"),
+    ("veryverylonglongvar", Var "veryverylonglongvar"),
     ("0", zero),
     ("Zero", zero),
     ("1", App suc zero),
@@ -26,37 +26,44 @@ main = doTests doParse  [
     ("Nil", nil),
     ("Cons True Nil", App (App cons true) nil),
     ("Cons 0 (Cons 0 Nil)", App (App cons zero) (App (App cons zero) nil)),
-    ("f x", App (usevar "f") (usevar "x")),
-    ("f x y", App (App (usevar "f") (usevar "x")) (usevar "y")),
-    ("f var y", App (App (usevar "f") (usevar "var")) (usevar "y")),
-    ("Succ n", App suc (usevar "n")),
-    ("let x=True in x", Let "x" true (usevar "x")),
-    ("{x->x}", Lam "x" (usevar "x")),
-    ("{var->var}", Lam "var" (usevar "var")),
+    ("f x", App (Var "f") (Var "x")),
+    ("f x y", App (App (Var "f") (Var "x")) (Var "y")),
+    ("f var y", App (App (Var "f") (Var "var")) (Var "y")),
+    ("Succ n", App suc (Var "n")),
+    ("let x=True in x", Let "x" true (Var "x")),
+    ("{x->x}", Lam "x" (Var "x")),
+    ("{var->var}", Lam "var" (Var "var")),
     ("{x->True}", Lam "x" true),
     ("{x->2}", Lam "x" (App suc (App suc zero))),
-    ("{f->{x->f x}}", Lam "f" (Lam "x" (App (usevar "f") (usevar "x")))),
-    ("let x={y->y} in x", Let "x" (Lam "y" (usevar "y")) (usevar "x")),
-    ("let id={y->y} in id", Let "id" (Lam "y" (usevar "y")) (usevar "id")),
-    ("let x=0 in Succ x", Let "x" zero (App suc (usevar "x"))),
+    ("{f->{x->f x}}", Lam "f" (Lam "x" (App (Var "f") (Var "x")))),
+    ("let x={y->y} in x", Let "x" (Lam "y" (Var "y")) (Var "x")),
+    ("let id={y->y} in id", Let "id" (Lam "y" (Var "y")) (Var "id")),
+    ("let x=0 in Succ x", Let "x" zero (App suc (Var "x"))),
+    ("let cp={a->case a of Zero->0; Succ aa->Succ (cp aa);} in cp",
+      Let "cp"(Lam "a" (Case (Var "a") [
+        (Pat "Zero" [],
+          Con "Zero" []),
+        (Pat "Succ" ["aa"],
+          App (Con "Succ" []) (App (Var "cp") (Var "aa")))
+      ])) (Var "cp")),
     ("case x of True -> False;",
-      Case (usevar "x") [
+      Case (Var "x") [
         (Pat "True" [], false)
       ]),
     ("case var of True -> False;",
-      Case (usevar "var") [
+      Case (Var "var") [
         (Pat "True" [], false)
       ]),
     ("case var of True -> False; False -> True;",
-      Case (usevar "var") [
+      Case (Var "var") [
         (Pat "True" [], false),
         (Pat "False" [], true)
       ]),
     ("case var of True -> False; False -> True; Just n -> m;",
-      Case (usevar "var") [
+      Case (Var "var") [
         (Pat "True" [], false),
         (Pat "False" [], true),
-        (Pat "Just" ["n"], usevar "m")
+        (Pat "Just" ["n"], Var "m")
       ]),
     ("[]", nil),
     ("  [  ]  ", nil),
@@ -71,13 +78,13 @@ main = doTests doParse  [
         App (App cons true) (
           App (App cons false) (
             App (App cons true) nil))) ),
-    ("[x]", App (App cons (usevar "x")) nil),
+    ("[x]", App (App cons (Var "x")) nil),
     ("[x,y]",
-      App (App cons (usevar "x")) (
-        App (App cons (usevar "y")) nil)),
+      App (App cons (Var "x")) (
+        App (App cons (Var "y")) nil)),
     ("[x,One,y,Two]",
-      App (App cons (usevar "x")) (
+      App (App cons (Var "x")) (
         App (App cons (Con "One" [])) (
-          App (App cons (usevar "y")) (
+          App (App cons (Var "y")) (
             App (App cons (Con "Two" [])) nil))) )
   ]

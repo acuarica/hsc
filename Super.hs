@@ -39,6 +39,7 @@ type Env = [(Var, Expr)]
 -- | Stack for application calls.
 type Stack = [StackFrame]
 
+-- Stack frame for stack.
 data StackFrame
   = Alts [(Pat, Expr)]
   | Arg Expr
@@ -46,38 +47,58 @@ data StackFrame
   | Update Var
   deriving Show
 
+put :: Var -> Expr -> Env -> Env
+put var expr [] = [(var, expr)]
+put var expr ((var',expr'):env) = if var' == var
+  then (var,expr):env
+  else (var',expr'):put var expr env
+
 step :: State -> Maybe State
-step (env, stack, expr) = trace (show (env, stack, expr)) $
+step (env, stack, expr) = --trace (show (env, stack, expr)) $
   case expr of
-  Var var _ -> case lookup var env of
+  Var var -> case lookup var env of
     Nothing -> Nothing
     Just val -> Just (env, Update var:stack, val)
   val@(Con tag args) -> case stack of
     [] -> Nothing
-    Arg (Con tag' args'):stack' ->
-      Just (env, stack', Con tag (args ++ [Con tag' args']))
-    Arg argexpr:stack' ->
-      Just (env, Val (Con tag args):stack', argexpr)
-    Val (Con tag' args'):stack' ->
-      Just (env, stack', Con tag' (args' ++ [Con tag args]))
+    -- Arg (Con tag' args'):stack' ->
+    --   Just (env, stack', Con tag (args ++ [Con tag' args']))
+    -- Arg argexpr:stack' ->
+    --   Just (env, Val (Con tag args):stack', argexpr)
+    -- Val (Con tag' args'):stack' ->
+    --   Just (env, stack', Con tag' (args' ++ [Con tag args]))
     Alts alts:stack' ->
       let (Pat _ patvars, altexpr) = lookupAlt tag alts
-      in Just (zip patvars args ++ env, stack', altexpr)
-    Update x:stack' -> Just ((x, val):env, stack', val)
+      in Just (env, stack', substAlts (zip patvars args) altexpr)
+    Update x:stack' -> Just (put x val env, stack', val)
+    Arg argexpr:stack' ->
+      Just (env, stack', Con tag (args ++ [argexpr]))
   val@(Lam var lamexpr) -> case stack of
     [] -> Nothing
-    Arg argexpr:stack' -> Just (env, stack', subst var argexpr lamexpr)
-    Update x:stack' -> Just ((x, val):env, stack', val)
+    Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
+    Update x:stack' -> Just (put x val env, stack', val)
   Let var valexpr inexpr ->
-    Just ((var, valexpr):env, stack, inexpr)
+    Just (put var valexpr env, stack, inexpr)
   App funexpr valexpr ->
     Just (env, Arg valexpr:stack, funexpr)
   Case scexpr alts -> Just (env, Alts alts:stack, scexpr)
 
+-- | Reduce a state to Weak head normal form.
 reduce :: State -> State
 reduce state = case step state of
   Nothing -> state
   Just state' -> reduce state'
+
+-- | Reduce a state to normal form.
+-- | A normal form is either a constructor (Con) or
+-- | lambda abstraction (Lam).
+nf :: State -> State
+nf state = case reduce state of
+  (env, [], Con tag args) ->
+    (env, [], Con tag (map (selExpr . nf . (,,) env []) args))
+  (env, stack, Con _ _) -> error "Stack/Con"
+  state' -> state'
+
 
 type Hist = [(Var, Expr)]
 
@@ -87,8 +108,7 @@ match expr expr' = expr == expr'
 lookupMatch :: Hist -> Expr -> Maybe Var
 lookupMatch [] _ = Nothing
 lookupMatch ((var, expr'):hist) expr = if match expr expr'
-  then --trace (show expr ++ "~" ++ show expr' ++" with "++var) $
-    (Just var)
+  then Just var
   else lookupMatch hist expr
 
 data HistM = H Hist Int
@@ -103,27 +123,6 @@ selH (H env _ ) = env
 
 putH :: Expr -> HistM -> HistM
 putH expr (H hist count) = H (("$h" ++ show count, expr):hist) (count+1)
-
-freeVars :: Expr -> [Var]
-freeVars expr = case expr of
-  Var var _ -> [var]
-  Con _ args -> concatMap freeVars args
-  Lam var lamexpr -> del var (freeVars lamexpr)
-  Let var valexpr inexpr -> del var (freeVars valexpr ++ freeVars inexpr)
-  App funexpr valexpr -> freeVars funexpr ++ freeVars valexpr
-  Case scexpr alts -> freeVars scexpr ++
-    concatMap (\(Pat p vars, e) -> dels vars (freeVars e)) alts
-  where del var xs = [x | x <- xs, x /= var]
-        dels vars xs = [x | x <- xs, x `notElem` vars]
-
-flatten :: Expr -> [Expr]
-flatten expr = expr:case expr of
-  Var _ _ -> []
-  Con _ args -> concatMap flatten args
-  Lam _ lamexpr -> flatten lamexpr
-  Let _ valexpr inexpr -> flatten valexpr ++ flatten inexpr
-  App funexpr valexpr -> flatten funexpr ++ flatten valexpr
-  Case scexpr alts -> flatten scexpr ++ concatMap (flatten . snd) alts
 
 tohist :: [Expr] -> HistM
 tohist [] = newhist
@@ -148,7 +147,7 @@ reduce' n hist state@(env,st,ex) = --trace (show state) $
       -- _ -> error $ "Error with Split in: " ++ show ex
     --Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
     --Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
-    Just state' -> reduce' (n+1) (hist) state'
+    Just state' -> reduce' (n+1) hist state'
 
   --Just var -> (hist, replState (Var var False) state)
   --Just var -> reduce n hist (replState (Var var False) state)
@@ -166,7 +165,7 @@ envToLet [] expr = expr
 envToLet ((var,valexpr):env) expr = Let var valexpr (envToLet env expr)
 
 selExpr :: State -> Expr
-selExpr (_, _, expr) = expr
+selExpr state = let (_, _, expr) = state in expr
 
 replState :: Expr -> State -> State
 replState expr (env, stack, _) = (env, stack, expr)

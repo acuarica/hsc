@@ -21,8 +21,8 @@ pretty = pretty' False
 -- | par indicates whether parenthesis are needed.
 pretty' :: Bool -> Expr -> String
 pretty' par expr = case expr of
-  Var var tainted ->
-    prettyTainted tainted : var
+  Var var ->
+    var
   Con tag args -> fromMaybe (if null args
       then tag
       else paren (tag ++ " " ++ unwords (map (pretty' True) args)) )
@@ -41,9 +41,6 @@ pretty' par expr = case expr of
 
 prettyPat :: Pat -> String
 prettyPat (Pat tag vars) = unwords (tag:vars)
-
-prettyTainted :: Bool -> Char
-prettyTainted tainted = '\0' -- if tainted then '!' else '?'
 
 type PrettyCon = Expr -> Maybe String
 

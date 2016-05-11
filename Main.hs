@@ -9,13 +9,6 @@ import Eval
 import Language.Haskell.Exts
 import HSE
 
-one :: a
-one = one
-
-a = b
-b = a
-
-
 
 main :: IO ()
 main = do

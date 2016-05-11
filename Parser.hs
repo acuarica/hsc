@@ -189,7 +189,7 @@ letp = do
 varp :: Parser Expr
 varp = do
   var <- sat (show keywords) lowerword (not . (`elem` keywords))
-  return (usevar var)
+  return (Var var)
   where keywords = ["let", "in", "case", "of"]
 
 conp :: Parser Expr

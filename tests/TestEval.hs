@@ -11,8 +11,8 @@ doEval (expr, expexpr) = (show expr, expexpr, eval expr)
 
 main :: IO ()
 main = doTests doEval [
-    (x, Var "x" True),
-    (var, Var "var" True),
+    (x, Var "x"),
+    (var, Var "var"),
     (true, true),
     (false, false),
     (zero, zero),
@@ -22,8 +22,8 @@ main = doTests doEval [
     (App suc zero, one),
     (App suc (App suc zero), two),
     (App suc (App suc (App suc zero)), three),
-    (App suc n, Con "Succ" [Var "n" True]),
-    (App suc (App suc n), Con "Succ" [Con "Succ" [Var "n" True]]),
+    (App suc n, Con "Succ" [Var "n"]),
+    (App suc (App suc n), Con "Succ" [Con "Succ" [Var "n"]]),
     (App cons zero, Con "Cons" [zero]),
     (App (Con "Cons" [zero]) nil, Con "Cons" [zero, nil]),
     (App (App cons zero) nil, Con "Cons" [zero, nil]),
@@ -35,7 +35,7 @@ main = doTests doEval [
       Con "Cons" [five,
         Con "Cons" [one,
           Con "Cons" [zero,
-            Var "xs" True]]]),
+            Var "xs"]]]),
     (App (Lam "x" x) zero, zero),
     (Let "x" zero x, zero),
     (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
@@ -59,39 +59,39 @@ main = doTests doEval [
     (Let "and" (Lam "n" (Lam "m" (Case n [
         (Pat "False" [], false),
         (Pat "True" [], m)
-      ]))) (App (App (usevar "and") true) true),
+      ]))) (App (App (Var "and") true) true),
       true),
     (Let "pred" (Lam "n" (Case n [
         (Pat "Zero" [], zero),
         (Pat "Succ" ["n'"], n')
-      ])) (App (usevar "pred") zero),
+      ])) (App (Var "pred") zero),
       zero),
     (Let "pred" (Lam "n" (Case n [
         (Pat "Zero" [], zero),
         (Pat "Succ" ["n'"], n')
-      ])) (App (usevar "pred") two),
+      ])) (App (Var "pred") two),
       one),
     (Let "plus" (Lam "n" (Lam "m" (Case n [
         (Pat "Zero" [], m),
         (Pat "Succ" ["n'"], App (App plus n') (App suc m))
       ]))) (App (App plus three) two),
       five),
-    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (usevar "x")),
+    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (Var "x")),
       Con "Succ" [Con "Zero" []])
   ]
   where
-    x = usevar "x"
-    y = usevar "y"
-    z = usevar "z"
-    var = usevar "var"
-    n = usevar "n"
-    n' = usevar "n'"
-    m = usevar "m"
-    m' = usevar "m'"
-    xs = usevar "xs"
-    iszero = usevar "iszero"
-    plus1 = usevar "plus1"
-    plus = usevar "plus"
+    x = Var "x"
+    y = Var "y"
+    z = Var "z"
+    var = Var "var"
+    n = Var "n"
+    n' = Var "n'"
+    m = Var "m"
+    m' = Var "m'"
+    xs = Var "xs"
+    iszero = Var "iszero"
+    plus1 = Var "plus1"
+    plus = Var "plus"
     one = Con "Succ" [zero]
     two = Con "Succ" [one]
     three = Con "Succ" [two]

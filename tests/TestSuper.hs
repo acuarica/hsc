@@ -26,7 +26,7 @@ s' ="let inc={n->Succ n}\
 \  Cons y ys-> Cons (f y) (map f ys);}}\
 \in map inc [1,2,3,4,5,6,7]"
 
-e' = subst "f" (usevar "lala") e
+e' = subst ("f", (Var "lala")) e
 
 doe = showEnv . selH . tohist . flatten
 
@@ -45,7 +45,14 @@ main = -- putStrLn $ doe e
     -- (
     -- "let cp={n->case n of Zero->Zero; Succ nn->Succ (cp nn);}\
     -- \in cp 5", Con "A" [])
-    s'
+    --s'
+
+    "let cat={xs->{ys->case xs of\
+    \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\
+    \in let rev={rs->case rs of\
+    \  Nil->Nil; Cons s ss->cat (rev ss) [s]; }\
+    \in rev [A,B]"
+
     --"Cons (Succ 1) [Succ 2, Succ (Succ 3),4,A]"
 
     --
