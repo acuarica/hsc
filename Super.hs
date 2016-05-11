@@ -18,12 +18,24 @@ newstate = (,,) [] []
 showEnv :: [(Var, Expr)] -> String
 showEnv env = intercalate "\n" (map (\(v,e)->v ++ " |-> " ++show e) env)
 
+showList' :: Show a => [a] -> String
+showList' xs = intercalate "\n" (map show xs)
+
 showRed :: (Hist, State) -> String
 showRed (hist, (env, stack, expr)) =
   showEnv hist ++ "\n\n" ++
   showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
 
 type State = (Env, Stack, Expr)
+
+newtype Env' var a = Env' [(var, a)]
+
+type Stack' a = [a]
+data State' var a = State' (Env' var a) (Stack' a) a
+
+bind :: State' var a -> (a -> State' var b) -> State' var b
+bind (State' (Env' env) stack a) f = case f a of
+  (State' (Env' env') stack' b) -> error ""
 
 step :: State -> Maybe State
 step (env, stack, expr) = case expr of
@@ -77,6 +89,58 @@ lookupMatch ((var, expr'):hist) expr = if match expr expr'
   then --trace (show expr ++ "~" ++ show expr' ++" with "++var) $
     (Just var)
   else lookupMatch hist expr
+
+data HistM = H Hist Int
+
+newhist :: HistM
+newhist = H [] 0
+
+bindH :: HistM -> (a -> HistM) -> HistM
+bindH (H hist count) f = error ""
+
+selH (H env _ ) = env
+
+putH :: Expr -> HistM -> HistM
+putH expr (H hist count) = H (("$h" ++ show count, expr):hist) (count+1)
+
+--hist'' :: Expr -> HistM
+--hist'' expr = hist expr newhist
+
+freeVars :: Expr -> [Var]
+freeVars expr = case expr of
+  Var var _ -> [var]
+  Con _ args -> concatMap freeVars args
+  Lam var lamexpr -> del var (freeVars lamexpr)
+  Let var valexpr inexpr -> del var (freeVars valexpr ++ freeVars inexpr)
+  App funexpr valexpr -> freeVars funexpr ++ freeVars valexpr
+  Case scexpr alts _ -> freeVars scexpr ++
+    concatMap (\(Pat p vars, e) -> dels vars (freeVars e)) alts
+  where del var xs = [x | x <- xs, x /= var]
+        dels vars xs = [x | x <- xs, x `notElem` vars]
+
+flatten :: Expr -> [Expr]
+flatten expr = expr:case expr of
+  Var _ _ -> []
+  Con _ args -> concatMap flatten args
+  Lam _ lamexpr -> flatten lamexpr
+  Let _ valexpr inexpr -> flatten valexpr ++ flatten inexpr
+  App funexpr valexpr -> flatten funexpr ++ flatten valexpr
+  Case scexpr alts _ -> flatten scexpr ++ concatMap (flatten . snd) alts
+
+tohist :: [Expr] -> HistM
+tohist [] = newhist
+tohist (e:es) = putH e (tohist es)
+
+-- hist' :: Expr -> HistM -> HistM
+-- hist' expr hist = (put expr hist) case expr of
+--   Var var tainted -> []
+--   --Con tag args -> []
+--   --Lam var lamexpr -> hist' lamexpr
+--   --Let var valexpr inexpr -> hist (n+1) lamexpr
+--   App funexpr valexpr -> hist' valexpr
+  --Case scexpr alts _ ->
+
+
 
 reduce :: Int -> Hist -> State -> (Hist, State)
 reduce n hist state@(env,st,ex) = --trace (show state) $

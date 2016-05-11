@@ -20,11 +20,20 @@ e = parseExpr "let inc={n->Succ n}\
 \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
 \in map inc ys"
 
+s' ="let inc={n->Succ n}\
+\ in let map={f->{xs->case xs of \
+\  Nil->Nil; \
+\  Cons y ys-> Cons (f y) (map f ys);}}\
+\in map inc ys"
+
 e' = subst "f" (usevar "lala") e
 
+doe = showEnv . selH . tohist . flatten
+
 main :: IO ()
-main = --doTests (doSuper . doParse) [
-    mapM_ (putStrLn . showRed . reduce 0 [] . newstate . parseExpr) [
+main = putStrLn $ doe e
+  --doTests (doSuper . doParse) [
+--    mapM_ (putStrLn . showRed . reduce 0 [] . newstate . parseExpr) [
     --("x", Var "x" False),
     --("True", true),
     --("Succ Zero", Con "Succ" [zero]),
@@ -37,11 +46,6 @@ main = --doTests (doSuper . doParse) [
     -- "let cp={n->case n of Zero->Zero; Succ nn->Succ (cp nn);}\
     -- \in cp 5", Con "A" [])
 
-    "let inc={n->Succ n}\
-    \ in let map={f->{xs->case xs of \
-    \  Nil->Nil; \
-    \  Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc ys"
 
     --
     -- ( root =
@@ -50,4 +54,4 @@ main = --doTests (doSuper . doParse) [
     -- \  Cons $y $ys -> Cons (Succ $y) ($mapinc $ys) ; }}\
     -- \in $mapinc", "A"),
 --    ("x", usevar "x")
-  ]
+--  ]
