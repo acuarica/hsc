@@ -1,11 +1,14 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 module Eval where
+
+import Data.List (intercalate)
 
 import Expr
 
 -- | The eval function with head normal form reduction.
 eval :: Expr -> Expr
-eval = selExpr . hnf . newState []
+eval = toExpr . hnf . newState []
 
 -- | State of the eval machine.
 type State = (Env, Stack, Expr)
@@ -14,10 +17,14 @@ type State = (Env, Stack, Expr)
 newState :: Env -> Expr -> State
 newState env = (,,) env []
 
--- | Selects the expr from a given state.
-selExpr :: State -> Expr
-selExpr (_, [], expr) = expr
---selExpr (_, stack', expr) = --error (show expr)
+-- | Selects the expr from a given state: That is, it uses the expr
+-- | and the stack.
+toExpr :: State -> Expr
+toExpr s@(env, stack, expr) = go expr stack
+  where go expr [] = expr
+        go expr (Arg arg:stack') = go (App expr arg) stack'
+        go expr (Alts alts:stack') = go (Case expr alts) stack'
+        go _ _ = error $ "toExpr error: " ++ show s
 
 -- | Environment that binds variables to values.
 type Env = [(Var, Expr)]
@@ -34,8 +41,19 @@ data StackFrame
 instance Show StackFrame where
   show frame = case frame of
     Alts alts -> "Alts:" ++ show alts
-    Arg expr -> show expr
+    Arg expr -> '#':show expr
     Update var -> "Update:" ++ var
+
+instance {-# OVERLAPPING #-} Show State where
+  show (env, stack, expr) =
+    show env ++ "\n" ++ show stack ++ "\n" ++ show expr
+
+instance {-# OVERLAPPING #-} Show Env where
+  show env = intercalate "\n" (map (\(v,e)->v ++ " |-> " ++show e) env)
+
+-- showList' :: Show a => [a] -> String
+-- showList' xs = intercalate "\n" (map show xs)
+
 
 -- | Reduce a state to Head Normal Form (HNF).
 -- | A normal form is either a constructor (Con) or
@@ -43,7 +61,7 @@ instance Show StackFrame where
 hnf :: State -> State
 hnf state = case reduce state of
   (env, [], Con tag args) ->
-    (env, [], Con tag (map (selExpr . hnf . newState env) args))
+    (env, [], Con tag (map (toExpr . hnf . newState env) args))
   (env, stack, Con _ _) -> error "Stack/Con"
   state' -> state'
 

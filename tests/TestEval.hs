@@ -10,8 +10,8 @@ doEval (expr, expexpr) = (show expr, expexpr, eval expr)
 
 main :: IO ()
 main = doTests doEval [
-    (x, Var "x"),
-    (var, Var "var"),
+    (x, x),
+    (var, var),
     (true, true),
     (false, false),
     (zero, zero),
@@ -21,8 +21,8 @@ main = doTests doEval [
     (App suc zero, one),
     (App suc (App suc zero), two),
     (App suc (App suc (App suc zero)), three),
-    (App suc n, Con "Succ" [Var "n"]),
-    (App suc (App suc n), Con "Succ" [Con "Succ" [Var "n"]]),
+    (App suc n, Con "Succ" [n]),
+    (App suc (App suc n), Con "Succ" [Con "Succ" [n]]),
     (App cons zero, Con "Cons" [zero]),
     (App (Con "Cons" [zero]) nil, Con "Cons" [zero, nil]),
     (App (App cons zero) nil, Con "Cons" [zero, nil]),
@@ -34,7 +34,7 @@ main = doTests doEval [
       Con "Cons" [five,
         Con "Cons" [one,
           Con "Cons" [zero,
-            Var "xs"]]]),
+            xs]]]),
     (App (Lam "x" x) zero, zero),
     (Let "x" zero x, zero),
     (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
@@ -76,7 +76,20 @@ main = doTests doEval [
       ]))) (App (App plus three) two),
       five),
     (Let "x" (Con "Zero" []) (App (Con "Succ" []) (Var "x")),
-      Con "Succ" [Con "Zero" []])
+      Con "Succ" [Con "Zero" []]),
+    (app cons [App f y, app g [f, ys]],
+      Con "Cons" [App f y,app g [f, ys]]),
+    (Case xs [], Case xs []),
+    (Case xs [(Pat "A" [], zero), (Pat "B" [], one)],
+      Case xs [(Pat "A" [], zero), (Pat "B" [], one)]),
+    (Case xs [(Pat "A" ["x"], App suc x), (Pat "B" ["y"], App suc y)],
+      Case xs [(Pat "A" ["x"], App suc x), (Pat "B" ["y"], App suc y)]),
+    (Case (App f xs) [(Pat "A" [], zero)],
+      Case (App f xs) [(Pat "A" [], zero)]),
+    (Case (App suc (App f n)) [
+        (Pat "Zero" [], zero),
+        (Pat "Succ" ["n'"], App f n')
+      ], App f (App f n))
   ] where
     x = Var "x"
     y = Var "y"
@@ -86,7 +99,10 @@ main = doTests doEval [
     n' = Var "n'"
     m = Var "m"
     m' = Var "m'"
+    f = Var "f"
+    g = Var "g"
     xs = Var "xs"
+    ys = Var "ys"
     iszero = Var "iszero"
     plus1 = Var "plus1"
     plus = Var "plus"

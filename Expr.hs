@@ -127,6 +127,12 @@ apply f expr = case expr of
   App funexpr valexpr -> App (f funexpr) (f valexpr)
   Case scexpr alts -> Case (f scexpr) (map (second f) alts)
 
+-- | Function application of args to expr.
+app :: Expr -> [Expr] -> Expr
+app expr args = case args of
+  [] -> expr
+  arg:args' -> app (App expr arg) args'
+
 -- | Creates a constructor with the given tag.
 con :: Tag -> Expr
 con tag = Con tag []
@@ -136,7 +142,6 @@ con tag = Con tag []
 zero, suc, nil, cons :: Expr
 true = con "True"
 false = con "False"
-
 zero = con "Zero"
 suc = con "Succ"
 nil = con "Nil"

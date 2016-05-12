@@ -11,16 +11,6 @@ import Eval
 --supercompile :: Expr -> Expr
 --supercompile expr = newState []
 
-showEnv :: [(Var, Expr)] -> String
-showEnv env = intercalate "\n" (map (\(v,e)->v ++ " |-> " ++show e) env)
-
-showList' :: Show a => [a] -> String
-showList' xs = intercalate "\n" (map show xs)
-
-showState :: State -> String
-showState (env, stack, expr) =
-  showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
-
 -- showRed :: (Hist, State) -> String
 -- showRed (hist, (env, stack, expr)) =
 --   showEnv hist ++ "\n\n" ++
@@ -91,7 +81,7 @@ reduce' n hist state@(env,st,ex) = --trace (show state) $
 
 reduces :: [Expr] -> Int -> Hist -> Env -> ([Expr], Hist)
 reduces [] n hist env = ([], hist)
-reduces (x:xs) n hist env = (selExpr s:xs', h')
+reduces (x:xs) n hist env = (toExpr s:xs', h')
   where (h, s) = reduce' (n+1) hist (env, [], x)
         (xs', h') = reduces xs (n+10) h env
         --var n = "#w_" ++ show n

@@ -16,7 +16,7 @@ import Supercompile
 main :: IO ()
 main = -- putStrLn $ doe e
   --doTests (doSuper . doParse) [
-    mapM_ (putStrLn . unwords . map showState . split . reduce . newState [] . parseExpr) [
+    mapM_ (putStrLn . unwords . map show . split . reduce . newState [] . parseExpr) [
       -- "x",
       -- "Tree",
       -- "Succ 3",

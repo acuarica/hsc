@@ -46,7 +46,6 @@ main = doTests (doEval . doParse) [
     ("let two={a->{b->a}} in let id={c->c} in id two", "{a->{b->a}}"),
     ("let fst={a->{b->a}} in let id={b->b} in id fst", "{a->{b->a}}"),
     ("let fst={a->{b->a}} in let id={a->a} in id fst", "{a->{b->a}}"),
-    ("Cons (f y) (map f zs)", "a"),
     (
     "let fst={a->{b->a}} \
     \in let p=fst True \
