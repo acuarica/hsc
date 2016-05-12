@@ -16,7 +16,8 @@ newState env = (,,) env []
 
 -- | Selects the expr from a given state.
 selExpr :: State -> Expr
-selExpr state = let (_, _, expr) = state in expr
+selExpr (_, [], expr) = expr
+--selExpr (_, stack', expr) = --error (show expr)
 
 -- | Environment that binds variables to values.
 type Env = [(Var, Expr)]
@@ -29,6 +30,12 @@ data StackFrame
   = Alts [(Pat, Expr)]
   | Arg Expr
   | Update Var
+
+instance Show StackFrame where
+  show frame = case frame of
+    Alts alts -> "Alts:" ++ show alts
+    Arg expr -> show expr
+    Update var -> "Update:" ++ var
 
 -- | Reduce a state to Head Normal Form (HNF).
 -- | A normal form is either a constructor (Con) or

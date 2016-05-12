@@ -6,7 +6,6 @@ import Expr
 import Parser
 import Eval
 import Supercompile
-import Pretty
 
 -- doSuper :: (String, Expr, Expr) -> (String, Expr, Expr)
 -- doSuper (s, expr, expstate) = (s, supercompile expr, supercompile expr)
@@ -17,12 +16,19 @@ import Pretty
 main :: IO ()
 main = -- putStrLn $ doe e
   --doTests (doSuper . doParse) [
-    mapM_ (putStrLn . showState . hnf . newState [] . parseExpr) [
+    mapM_ (putStrLn . unwords . map showState . split . reduce . newState [] . parseExpr) [
+      -- "x",
+      -- "Tree",
+      -- "Succ 3",
+      -- "Succ n",
+      -- "f x",
+      --"case n of Zero->A B; Succ nn->C D E;"
 
     "let inc={n->Succ n}\
     \ in let map={f->{xs->case xs of \
     \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc"
+    \in map inc zs"
+
 
     --
     -- ( root =

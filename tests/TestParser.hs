@@ -4,7 +4,6 @@ module Main where
 import Expr
 import Parser
 import Util
-import Pretty
 
 doParse :: (String, Expr) -> (String, Expr, Expr)
 doParse (code, expected) = (code, expected, parseExpr code)

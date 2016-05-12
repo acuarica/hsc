@@ -7,11 +7,9 @@ import Debug.Trace
 
 import Expr
 import Eval
-import Pretty
 
--- supercompile :: Expr -> Expr
--- supercompile expr = envToLet hist (selExpr state)
---   where (hist, state) = reduce 0 [] (newstate expr)
+--supercompile :: Expr -> Expr
+--supercompile expr = newState []
 
 showEnv :: [(Var, Expr)] -> String
 showEnv env = intercalate "\n" (map (\(v,e)->v ++ " |-> " ++show e) env)
@@ -21,14 +19,22 @@ showList' xs = intercalate "\n" (map show xs)
 
 showState :: State -> String
 showState (env, stack, expr) =
-  showEnv env ++ "\n" ++ "show stack" ++ "\n" ++ show expr
+  showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
 
-showRed :: (Hist, State) -> String
-showRed (hist, (env, stack, expr)) =
-  showEnv hist ++ "\n\n" ++
-  showEnv env ++ "\n" ++ "show stack" ++ "\n" ++ show expr
+-- showRed :: (Hist, State) -> String
+-- showRed (hist, (env, stack, expr)) =
+--   showEnv hist ++ "\n\n" ++
+--   showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
 
+--memo :: State -> Sta
+memo state = split (reduce state)
 
+split :: State -> [State]
+split (env, stack, expr) = case expr of
+  Var var -> case stack of
+    [] -> [(env, stack, expr)]
+    Alts alts:stack' -> map (\(pat, alt) -> hnf (env, stack', alt)) alts
+  --_ -> error $ "Error with Split in: " ++ show expr
 
 type Hist = [(Var, Expr)]
 

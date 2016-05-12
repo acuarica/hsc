@@ -2,7 +2,6 @@
 module Main where
 
 import Expr
-import Pretty
 import Eval
 import Util
 

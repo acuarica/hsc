@@ -2,6 +2,9 @@
 module Expr where
 
 import Control.Arrow (second)
+import Data.Maybe (fromMaybe)
+import Control.Exception (assert)
+import Data.List (intercalate)
 
 -- | The expression type.
 data Expr
@@ -22,6 +25,59 @@ type Tag = String
 
 -- | Case patterns against tag.
 data Pat = Pat Tag [Var] deriving Eq
+
+instance Show Expr where
+  show = show' False
+    where
+    show' par expr = case expr of
+      Var var ->
+        var
+      Con tag args -> fromMaybe (if null args
+        then tag
+        else paren par (tag ++ " " ++ unwords (map (show' True) args)))
+          ((prettyNat <|> prettyList) expr)
+      Lam var expr ->
+        "{" ++ var ++ " -> " ++ show expr ++ "}"
+      Let var valexpr inexpr ->
+        paren par ("let " ++ var ++ "=" ++ show' True valexpr ++ "" ++
+               " in " ++ show inexpr)
+      App funexpr valexpr ->
+         paren par (show funexpr ++ " " ++ show' True valexpr)
+      Case scexpr cs ->
+        "case " ++ show scexpr ++ " of " ++
+        foldr (\ (p, e) s -> show p ++ "->" ++ show e ++ "; " ++ s) "" cs
+    paren par s = if par then "(" ++ s ++ ")" else s
+    prettyNat expr = case doNat expr of
+      (n, Nothing) -> Just (show n)
+      (0, Just expr') -> Nothing
+      (n, Just expr') -> Just (show n ++ "@" ++ show' True expr')
+    prettyList expr = case doList expr of
+      (xs, Nothing) -> Just ("[" ++ int ", " xs ++ "]")
+      ([], Just _) -> Nothing
+      (xs, Just expr) ->
+        Just ("(" ++ int ":" xs ++ ":" ++ show expr ++ ")")
+    int sep xs = intercalate sep (map show xs)
+    doNat expr = case expr of
+      Con "Zero" args -> assert (null args) (0, Nothing)
+      Con "Succ" args -> case args of
+        [] -> (0, Just expr)
+        [arg] -> case doNat arg of
+          (n, e) -> (n+1, e)
+        _ -> error "Invalid arguments for Succ"
+      expr' -> (0, Just expr)
+    doList expr = case expr of
+      Con "Nil" args -> assert (null args) ([], Nothing)
+      Con "Cons" args -> case args of
+        [item, rest] -> case doList rest of
+          (xs, e) -> (item:xs, e)
+        _ -> ([], Just expr)
+      expr' -> ([], Just expr)
+    f <|> g = \expr -> case f expr of
+      Nothing -> g expr
+      Just s -> Just s
+
+instance Show Pat where
+  show (Pat tag vars) = unwords (tag:vars)
 
 -- | Variable substitution.
 subst :: (Var, Expr) -> Expr -> Expr
@@ -74,3 +130,14 @@ apply f expr = case expr of
 -- | Creates a constructor with the given tag.
 con :: Tag -> Expr
 con tag = Con tag []
+
+-- | Some common used expressions for easy write of expressions.
+-- | These expressions are pretty printed accordingly.
+zero, suc, nil, cons :: Expr
+true = con "True"
+false = con "False"
+
+zero = con "Zero"
+suc = con "Succ"
+nil = con "Nil"
+cons = con "Cons"
