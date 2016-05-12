@@ -12,6 +12,12 @@ import Supercompile
 --
 -- doParse :: (String, Expr) -> (String, Expr, Expr)
 -- doParse (e, expstate) = (show (parseExpr e), parseExpr e, expstate)
+e = parseExpr "let inc={n->Succ n}\
+    \ in let map={f->{xs->case xs of \
+    \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
+    \in map inc zs"
+
+s0 = newState [] e
 
 main :: IO ()
 main = -- putStrLn $ doe e

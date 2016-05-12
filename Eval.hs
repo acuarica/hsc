@@ -37,6 +37,7 @@ data StackFrame
   = Alts [(Pat, Expr)]
   | Arg Expr
   | Update Var
+  deriving Eq
 
 instance Show StackFrame where
   show frame = case frame of
@@ -46,14 +47,18 @@ instance Show StackFrame where
 
 instance {-# OVERLAPPING #-} Show State where
   show (env, stack, expr) =
-    show env ++ "\n" ++ show stack ++ "\n" ++ show expr
+    "Env:\n" ++ show env ++ "\n" ++
+    "Stack:\n" ++ show stack ++ "\n" ++
+    "Expr: " ++ show expr
 
 instance {-# OVERLAPPING #-} Show Env where
-  show env = intercalate "\n" (map (\(v,e)->v ++ " |-> " ++show e) env)
+  show env = intercalate "\n" (map ((++) "  " . show) env)
 
--- showList' :: Show a => [a] -> String
--- showList' xs = intercalate "\n" (map show xs)
+instance {-# OVERLAPPING #-} Show (Var, Expr) where
+  show (var, expr) = var ++ " |-> " ++ show expr
 
+instance {-# OVERLAPPING #-} Show Stack where
+  show stack = intercalate "\n" (map ((++) "  | " . show) stack)
 
 -- | Reduce a state to Head Normal Form (HNF).
 -- | A normal form is either a constructor (Con) or

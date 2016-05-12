@@ -17,82 +17,52 @@ import Eval
 --   showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
 
 --memo :: State -> Sta
-memo state = split (reduce state)
+--mm = memo 0
 
+memo state = --if hist < 2
+  --then
+    f $ rebuild s $ map memo (split s)
+  --else reduce state
+  where s = f state
+        f = hnf
+
+-- | Given a state, returns where to continue the computation.
 split :: State -> [State]
-split (env, stack, expr) = case expr of
+split s@(env, stack, expr) = case expr of
   Var var -> case stack of
-    [] -> [(env, stack, expr)]
-    Alts alts:stack' -> map (\(pat, alt) -> hnf (env, stack', alt)) alts
-  --_ -> error $ "Error with Split in: " ++ show expr
+    Alts alts:stack' -> map (\(pat, alt) -> (env, stack', alt)) alts
+  _ -> []
 
-type Hist = [(Var, Expr)]
+-- | Rebuilds the expression replacing the alternatives.
+-- | The state has to be stucked.
+rebuild :: State -> [State] -> State
+rebuild s@(env, stack, expr) ss = case expr of
+  Var var -> case stack of
+    Alts alts:stack' -> (env, Alts (zipWith rb alts ss):stack', expr)
+  _ -> case ss of
+    [] -> s
+    xs ->  error $ "Error in rebuild with: " ++ show expr-- ++" and "++show ss
+  where rb (p, _) s = (p, toExpr s)
+
+type Hist = Int --(Int, [(Var, Expr)])
+
+--emptyHist :: Hist
+--emptyHist = (0, [])
 
 match :: Expr -> Expr -> Bool
 match expr expr' = expr == expr'
+--
+-- lookupMatch :: Hist -> Expr -> Maybe Var
+-- lookupMatch [] _ = Nothing
+-- lookupMatch ((var, expr'):hist) expr = if match expr expr'
+--   then Just var
+--   else lookupMatch hist expr
 
-lookupMatch :: Hist -> Expr -> Maybe Var
-lookupMatch [] _ = Nothing
-lookupMatch ((var, expr'):hist) expr = if match expr expr'
-  then Just var
-  else lookupMatch hist expr
+--  where var n = "$v" ++ show n
 
-data HistM = H Hist Int
-
-newhist :: HistM
-newhist = H [] 0
-
-bindH :: HistM -> (a -> HistM) -> HistM
-bindH (H hist count) f = error ""
-
-selH (H env _ ) = env
-
-putH :: Expr -> HistM -> HistM
-putH expr (H hist count) = H (("$h" ++ show count, expr):hist) (count+1)
-
-tohist :: [Expr] -> HistM
-tohist [] = newhist
-tohist (e:es) = putH e (tohist es)
-
-reduce' :: Int -> Hist -> State -> (Hist, State)
-reduce' n hist state@(env,st,ex) = --trace (show state) $
-  --case lookupMatch hist ex of
-  --Nothing ->
-    case step state of
-    Nothing -> (hist, state)
-    --case ex of--trace ("reduce: " ++ show ex ++ "@"++show st) ex of
-      -- Var v t -> (hist, (env, st, foldl App (Var v t) st))
-      -- Con tag args -> case reduces args n hist env of
-      --   (args', h') ->
-      ---- ((var n, Con tag args'):h', (env, st, Con tag args'))
-      -- Case scexpr cases t ->
-      --    case reduces (map snd cases) n hist env of
-      --   (cs', h') -> (
-      --          (var n, Case scexpr (zip (map fst cases) cs') t ):h',
-      --        (env, st, Case scexpr (zip (map fst cases) cs') t ))
-      -- _ -> error $ "Error with Split in: " ++ show ex
-    --Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
-    --Just state' -> reduce (n+1) ((var n, selExpr state):hist) state'
-    Just state' -> reduce' (n+1) hist state'
-
-  --Just var -> (hist, replState (Var var False) state)
-  --Just var -> reduce n hist (replState (Var var False) state)
-  where var n = "$v" ++ show n
-
-reduces :: [Expr] -> Int -> Hist -> Env -> ([Expr], Hist)
-reduces [] n hist env = ([], hist)
-reduces (x:xs) n hist env = (toExpr s:xs', h')
-  where (h, s) = reduce' (n+1) hist (env, [], x)
-        (xs', h') = reduces xs (n+10) h env
-        --var n = "#w_" ++ show n
-
-envToLet :: Hist -> Expr -> Expr
-envToLet [] expr = expr
-envToLet ((var,valexpr):env) expr = Let var valexpr (envToLet env expr)
-
-
-
-
+-- envToLet :: Hist -> Expr -> Expr
+-- envToLet [] expr = expr
+-- envToLet ((var,valexpr):env) expr = Let var valexpr (envToLet env expr)
 
 type Fresh = Int
 
@@ -115,6 +85,6 @@ aform' (fr, env, expr) = case expr of
   where make i = "$v" ++ "_" ++ show i
       --  newfr = fr + 1
 
-aform :: Expr -> Expr
-aform expr = case aform' (0, [], expr) of
-  (fr', env', expr') -> envToLet env' expr'
+-- aform :: Expr -> Expr
+-- aform expr = case aform' (0, [], expr) of
+--   (fr', env', expr') -> envToLet env' expr'

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 
 module Expr where
 
@@ -79,15 +80,18 @@ instance Show Expr where
 instance Show Pat where
   show (Pat tag vars) = unwords (tag:vars)
 
+instance {-# OVERLAPPING #-} Show (Pat, Expr) where
+  show (pat, alt) = show pat ++ " -> " ++ show alt
+
 -- | Variable substitution.
 subst :: (Var, Expr) -> Expr -> Expr
 subst (var, valexpr) bodyexpr = case bodyexpr of
   Var var' -> if var' == var then valexpr else Var var'
   _ -> apply (subst (var, valexpr)) bodyexpr
 
+-- | Subtitutes a list of bindings in bodyexpr.
 substAlts :: [(Var, Expr)] -> Expr -> Expr
-substAlts [] bodyexpr = bodyexpr
-substAlts (bind:env) bodyexpr = substAlts env (subst bind bodyexpr)
+substAlts bindings bodyexpr = foldl (flip subst) bodyexpr bindings
 
 -- | Lookup the alternative according to the constructor tag.
 lookupAlt :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
