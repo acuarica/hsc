@@ -8,7 +8,10 @@ import Expr
 
 -- | The eval function with head normal form reduction.
 eval :: Expr -> Expr
-eval = toExpr . hnf . newState []
+eval = toExpr . hnf . newState emptyEnv
+
+emptyEnv :: Env
+emptyEnv = []
 
 -- | State of the eval machine.
 type State = (Env, Stack, Expr)

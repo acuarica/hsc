@@ -15,9 +15,9 @@ import Supercompile
 e = parseExpr "let inc={n->Succ n}\
     \ in let map={f->{xs->case xs of \
     \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc zs"
+    \in map inc ys"
 
-s0 = newState [] e
+s0 = newState emptyEnv e
 
 main :: IO ()
 main = -- putStrLn $ doe e
