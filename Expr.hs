@@ -64,7 +64,7 @@ instance Show Expr where
         [] -> (0, Just expr)
         [arg] -> case doNat arg of
           (n, e) -> (n+1, e)
-        _ -> error "Invalid arguments for Succ"
+        _ -> error $ "Invalid arguments for Succ: " ++ show args
       expr' -> (0, Just expr)
     doList expr = case expr of
       Con "Nil" args -> assert (null args) ([], Nothing)

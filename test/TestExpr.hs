@@ -1,8 +1,17 @@
 
---fileText <- readFile "Setup.hs"
---print fileText
---print $ fromParseResult (parseFileContents fileText)
---print $ aform $ parseExpr "f (g (h x))"
---print $ aform $ parseExpr "f (g x) (g (h x)) (h y)"
-print $ aform $ parseExpr "f (g x) (g (h x)) (h y)"
---putStrLn "To implement ..." >> exitFailure
+module Main where
+
+import Expr
+import Util
+
+doFreeVars :: (Expr, [Var]) -> (String, [Var], [Var])
+doFreeVars (expr, exp) = (show expr, exp, freeVars expr)
+
+main :: IO ()
+main = do
+  doTests doFreeVars [
+      (Var "x", ["x"])
+    ]
+  doTests doFreeVars [
+      (Var "x", ["x"])
+    ]

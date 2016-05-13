@@ -10,29 +10,30 @@ import Expr
 import Eval
 import Splitter
 
---supercompile :: Expr -> Expr
---supercompile expr = newState []
+supercompile :: Expr -> Expr
+supercompile expr = let (c, (count, hist)) = runMemo expr
+  in fromMemo hist (toExpr c)
 
--- showRed :: (Hist, State) -> String
--- showRed (hist, (env, stack, expr)) =
---   showEnv hist ++ "\n\n" ++
---   showEnv env ++ "\n" ++ show stack ++ "\n" ++ show expr
+--fromMemo (c, s) = toExpr c
+--runMemo :: Expr -> Memo Conf
+runMemo expr = let s = memo (return (newConf emptyEnv expr))
+  in run s (0, [])
 
--- a :: MemoM State -> Expr
--- a (m)
+fromMemo :: [(Var, Expr)] -> Expr -> Expr
+fromMemo [] expr = expr
+fromMemo ((var,valexpr):env) expr = Let var valexpr (fromMemo env expr)
 
---f $ rebuild s $ mapM memo (split s)
-memo :: MemoM State -> MemoM State
+memo :: Memo Conf -> Memo Conf
 memo mstate = do
   state@(env, stack, expr) <- mstate
   let rstate = f state
   ii <- isin rstate
   if isNothing ii
     then do
-      rec rstate
+      --rec rstate
       splits <- mapM (memo . return) (split rstate)
-      let r = f $ rebuild rstate splits
-      --rec r
+      --let r = f $ combine rstate splits
+      let r = combine rstate splits
       return r
     else do
       let var = fromJust ii
@@ -40,35 +41,38 @@ memo mstate = do
       return (env, stack, Var var)
   where f = reduce
 
-newtype Memo s a = Memo { run :: s -> (a, s) }
+-- | State monad.
+newtype State s a = State { run :: s -> (a, s) }
 
-instance Functor (Memo s) where
-  fmap f (Memo m) = Memo (\s -> let (a, s') = m s in (f a, s))
+instance Functor (State s) where
+  fmap f (State m) = State (\s -> let (a, s') = m s in (f a, s))
 
-instance Applicative (Memo s) where
-  pure a = Memo (\s -> (a, s))
+instance Applicative (State s) where
+  pure a = State (\s -> (a, s))
   f <*> x = error "Applicative Memo not defined"
 
-instance Monad (Memo s) where
+instance Monad (State s) where
   return = pure
-  (Memo m) >>= f = Memo (\s ->
+  (State m) >>= f = State (\s ->
     let (a, s') = m s in
-    let Memo m' = f a in m' s' )
+    let State m' = f a in m' s' )
 
 -- instance (Show s, Show a) => Show (Memo s a) where
 --   show (Memo m) = "Count:" ++ show c ++ " ~~ Hist:" ++
 --     show hs ++ show x
 
-type MemoM a = Memo (Int, [(Var, Expr)]) a
+type Memo a = State (Int, [(Var, Expr)]) a
 
-rec :: State -> MemoM State
-rec state = Memo (\(c, env) -> (state, (c+1, (var c, toExpr state):env)))
+rec :: Conf -> Memo Conf
+rec state = State (\(c, env) -> (state, (c+1, (var c, toExpr state):env)))
   where var n = "$v" ++ "_" ++ show n
 
-isin :: State -> MemoM (Maybe Var)
-isin state = Memo (
+isin :: Conf -> Memo (Maybe Var)
+isin state = State (
     \(c, env) -> (env `lookupMatch` toExpr state, (c, env))
   )
+
+--rebuild (c, _) = c
 
 --emptyHist :: Hist
 --emptyHist = (0, [])
@@ -81,10 +85,6 @@ lookupMatch [] _ = Nothing
 lookupMatch ((var, expr'):hist) expr = if expr `match` expr'
   then Just var
   else lookupMatch hist expr
-
--- envToLet :: Hist -> Expr -> Expr
--- envToLet [] expr = expr
--- envToLet ((var,valexpr):env) expr = Let var valexpr (envToLet env expr)
 
 type Fresh = Int
 

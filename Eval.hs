@@ -6,24 +6,24 @@ import Data.List (intercalate)
 
 import Expr
 
--- | The eval function with head normal form reduction.
+-- | The eval function with head? normal form reduction.
 eval :: Expr -> Expr
-eval = toExpr . hnf . newState emptyEnv
+eval = toExpr . hnf . newConf emptyEnv
 
 -- | Creates an empty environment.
 emptyEnv :: Env
 emptyEnv = []
 
--- | State of the eval machine.
-type State = (Env, Stack, Expr)
+-- | Configuration of the eval machine.
+type Conf = (Env, Stack, Expr)
 
--- | Creates a new state with an empty stack.
-newState :: Env -> Expr -> State
-newState env = (,,) env []
+-- | Creates a new configuration with an empty stack.
+newConf :: Env -> Expr -> Conf
+newConf env = (,,) env []
 
--- | Selects the expr from a given state: That is, it uses the expr
--- | and the stack.
-toExpr :: State -> Expr
+-- | Selects the expr from a given configuration:
+-- | That is, it uses the expr and the stack.
+toExpr :: Conf -> Expr
 toExpr s@(env, stack, expr) = go expr stack
   where go expr [] = expr
         go expr (Arg arg:stack') = go (App expr arg) stack'
@@ -49,7 +49,7 @@ instance Show StackFrame where
     Arg expr -> '#':show expr
     Update var -> "Update:" ++ var
 
-instance {-# OVERLAPPING #-} Show State where
+instance {-# OVERLAPPING #-} Show Conf where
   show (env, stack, expr) =
     "Env:\n" ++ show env ++ "\n" ++
     "Stack:\n" ++ show stack ++ "\n" ++
@@ -67,15 +67,15 @@ instance {-# OVERLAPPING #-} Show Stack where
 -- | Reduce a state to Head Normal Form (HNF).
 -- | A normal form is either a constructor (Con) or
 -- | lambda abstraction (Lam).
-hnf :: State -> State
+hnf :: Conf -> Conf
 hnf state = case reduce state of
   (env, [], Con tag args) ->
-    (env, [], Con tag (map (toExpr . hnf . newState env) args))
+    (env, [], Con tag (map (toExpr . hnf . newConf env) args))
   (env, stack, Con _ _) -> error "Stack/Con"
   state' -> state'
 
 -- | Reduce a state to Weak Head Normal Form (WHNF).
-reduce :: State -> State
+reduce :: Conf -> Conf
 reduce state = case step state of
   Nothing -> state
   Just state' -> reduce state'
@@ -88,7 +88,7 @@ put var expr ((var',expr'):env) = if var' == var
   else (var',expr'):put var expr env
 
 -- | Operational semantics with one-step reduction.
-step :: State -> Maybe State
+step :: Conf -> Maybe Conf
 step (env, stack, expr) = case expr of
   Var var -> case lookup var env of
     Nothing -> Nothing

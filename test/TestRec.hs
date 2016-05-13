@@ -12,8 +12,13 @@ doEval (s, expr, expexpr) = (s, eval expexpr, eval expr)
 doParse :: (String, String) -> (String, Expr, Expr)
 doParse (act, expexpr) = (act, parseExpr act, parseExpr expexpr)
 
+e = parseExpr "let x=(let cons=Cons in cons 0) in x cons"
+
+--a = let b = (let c=1 in c) in b+c
+
 main :: IO ()
 main = doTests (doEval . doParse) [
+    --("let x=(let y=Succ in y 0) in y", "A"),
     ("let x=0 in Succ x", "1"),
     ("let x=True in [x]", "[True]"),
     ("let id={a->a} in id [1,2,3,4,5]", "[1,2,3,4,5]"),

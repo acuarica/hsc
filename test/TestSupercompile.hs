@@ -18,12 +18,16 @@ e = parseExpr "let inc={n->Succ n}\
     \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
     \in map inc zs"
 
-s0 = newState emptyEnv e
+c0 = newConf emptyEnv e
+s0 = memo (return c0)
+sn = run s0 (0, [])
+--fromMemo (c, _) = c
+
+--cn = fromMemo sn
 
 main :: IO ()
-main = -- putStrLn $ doe e
-  --doTests (doSuper . doParse) [
-    mapM_ (putStrLn . unwords . map show . split . reduce . newState [] . parseExpr) [
+main = --doTests (doSuper . doParse) [
+    mapM_ (print . runMemo . parseExpr) [
       -- "x",
       -- "Tree",
       -- "Succ 3",
