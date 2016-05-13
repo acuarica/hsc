@@ -5,6 +5,7 @@ import Util
 import Expr
 import Parser
 import Eval
+import Splitter
 import Supercompile
 
 -- doSuper :: (String, Expr, Expr) -> (String, Expr, Expr)
@@ -15,7 +16,7 @@ import Supercompile
 e = parseExpr "let inc={n->Succ n}\
     \ in let map={f->{xs->case xs of \
     \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc ys"
+    \in map inc zs"
 
 s0 = newState emptyEnv e
 

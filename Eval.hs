@@ -10,6 +10,7 @@ import Expr
 eval :: Expr -> Expr
 eval = toExpr . hnf . newState emptyEnv
 
+-- | Creates an empty environment.
 emptyEnv :: Env
 emptyEnv = []
 
