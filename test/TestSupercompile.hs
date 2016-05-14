@@ -35,10 +35,13 @@ main = --doTests (doSuper . doParse) [
       -- "f x",
       --"case n of Zero->A B; Succ nn->C D E;"
 
-    "let inc={n->Succ n}\
-    \ in let map={f->{xs->case xs of \
-    \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc zs"
+    "let inc={n->Succ n} in let map={f->{xs->case xs of \
+    \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}} in map inc zs"
+
+    -- "let map={f->{xs->case xs of \
+    -- \  Nil->Nil; \
+    -- \  Cons y ys-> Cons (f y) (map f ys);}} \
+    -- \in map g (map f ys)"
 
 
     --

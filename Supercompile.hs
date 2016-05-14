@@ -30,7 +30,7 @@ memo mstate = do
   ii <- isin rstate
   if isNothing ii
     then do
-      --rec rstate
+      rec rstate
       splits <- mapM (memo . return) (split rstate)
       --let r = f $ combine rstate splits
       let r = combine rstate splits
@@ -57,25 +57,18 @@ instance Monad (State s) where
     let (a, s') = m s in
     let State m' = f a in m' s' )
 
--- instance (Show s, Show a) => Show (Memo s a) where
---   show (Memo m) = "Count:" ++ show c ++ " ~~ Hist:" ++
---     show hs ++ show x
+type Hist = [(Var, Conf)]
 
-type Memo a = State (Int, [(Var, Expr)]) a
+type Memo a = State (Int, Hist) a
 
 rec :: Conf -> Memo Conf
-rec state = State (\(c, env) -> (state, (c+1, (var c, toExpr state):env)))
+rec conf = State (\(c, env) -> (conf, (c+1, (var c, conf):env)))
   where var n = "$v" ++ "_" ++ show n
 
 isin :: Conf -> Memo (Maybe Var)
-isin state = State (
-    \(c, env) -> (env `lookupMatch` toExpr state, (c, env))
+isin conf = State (
+    \(c, env) -> (env `lookupMatch` conf, (c, env))
   )
-
---rebuild (c, _) = c
-
---emptyHist :: Hist
---emptyHist = (0, [])
 
 match :: Expr -> Expr -> Bool
 match expr expr' = expr == expr'

@@ -292,4 +292,9 @@ main = doTests (doEval . doParse) [
     \  Cons y ys -> Cons (f y) (map f ys) ; }}\
     \in let app={f->{x-> f x}}\
     \in app multtwo 1", "2")
+    -- (
+    -- "let map={f->{xs->case xs of \
+    -- \  Nil->Nil; \
+    -- \  Cons y ys-> Cons (f y) (map f ys);}} \
+    -- \in map g (map f ys)", "x")
   ]

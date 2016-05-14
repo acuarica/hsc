@@ -46,7 +46,7 @@ data StackFrame
 instance Show StackFrame where
   show frame = case frame of
     Alts alts -> "Alts:" ++ show alts
-    Arg expr -> '#':show expr
+    Arg expr -> "#(" ++ show expr ++ ")"
     Update var -> "Update:" ++ var
 
 instance {-# OVERLAPPING #-} Show Conf where

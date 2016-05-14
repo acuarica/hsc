@@ -10,7 +10,8 @@ split s@(env, stack, expr) = case expr of
   Var var -> case stack of
     [] -> []
     Alts alts:stack' -> map (\(pat, alt) -> (env, stack', alt)) alts
-    _ -> error $ "split var " ++ show expr ++ show stack
+    Arg _:_ -> []
+    _ -> error $ "Error: split var " ++ show expr ++ show stack
   Con tag args -> case stack of
     [] -> map (newConf env) args
     _ -> error $ "Spliting with Con and stack: " ++ show stack
@@ -22,6 +23,9 @@ combine s@(env, stack, expr) ss = case expr of
   Var var -> case stack of
     [] -> if null ss then s else error $ "Non-empty ss" ++ show ss
     Alts alts:stack' -> (env, Alts (zipWith rb alts ss):stack', expr)
+    _ -> if null ss
+      then s
+      else error $ "Error combine: Var/splits: " ++ var ++ show ss
   Con tag args -> case stack of
     [] -> if length args == length ss
       then (env, stack, Con tag (map toExpr ss))
