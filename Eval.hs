@@ -6,18 +6,19 @@ import Data.List (intercalate)
 
 import Expr
 
--- | The eval function with head? normal form reduction.
+-- | Evaluates the given expression to normal form.
 eval :: Expr -> Expr
-eval = toExpr . hnf . newConf emptyEnv
+eval = toExpr . nf . newConf emptyEnv
 
 -- | Creates an empty environment.
 emptyEnv :: Env
 emptyEnv = []
 
--- | Configuration of the eval machine.
+-- | Configuration of the step machine.
 type Conf = (Env, Stack, Expr)
 
--- | Creates a new configuration with an empty stack.
+-- | Given an environment,
+-- | creates a new configuration with an empty stack.
 newConf :: Env -> Expr -> Conf
 newConf env = (,,) env []
 
@@ -51,13 +52,13 @@ instance Show StackFrame where
 
 instance {-# OVERLAPPING #-} Show Conf where
   show (env, stack, expr) =
-    show expr ++ " @ " ++ show stack ++ "\n" ++ "{" ++ show env ++ "}\n"
+    "<#" ++ show env ++ "#>" ++ " <%" ++ show stack ++ "%> " ++ show expr
 
 instance {-# OVERLAPPING #-} Show Env where
-  show env = intercalate "\n " (map ((++) "" . show) env)
+  show env = intercalate " " (map ((++) "" . show) env)
 
 instance {-# OVERLAPPING #-} Show (Var, Expr) where
-  show (var, expr) = var ++ " |-> " ++ show expr
+  show (var, expr) = var ++ ":->" ++ show expr
 
 instance {-# OVERLAPPING #-} Show Stack where
   show stack = intercalate "|" (map ((++) "" . show) stack)
@@ -65,15 +66,16 @@ instance {-# OVERLAPPING #-} Show Stack where
 -- | Reduce a state to Normal Form (NF).
 -- | A normal form is either a constructor (Con) or
 -- | lambda abstraction (Lam).
-hnf :: Conf -> Conf
-hnf state = case reduce state of
+nf :: Conf -> Conf
+nf state = case reduce state of
   (env, [], Con tag args) ->
-    (env, [], Con tag (map (toExpr . hnf . newConf env) args))
+    (env, [], Con tag (map (toExpr . nf . newConf env) args))
   (env, stack, Con _ _) -> error "Stack/Con"
   state' -> state'
 
 -- | Reduce a state to Weak Head Normal Form (WHNF).
--- | Lambda abstractions are not further evaluated.
+-- | Lambda abstractions are not further evaluated as in
+-- | Head Normal Form (HNF).
 reduce :: Conf -> Conf
 reduce state = case step state of
   Nothing -> state

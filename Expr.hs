@@ -38,7 +38,7 @@ instance Show Expr where
         else paren par (tag ++ " " ++ unwords (map (show' True) args)))
           ((prettyNat <|> prettyList) expr)
       Lam var expr ->
-        "{" ++ var ++ " -> " ++ show expr ++ "}"
+        "{" ++ var ++ "->" ++ show expr ++ "}"
       Let var valexpr inexpr ->
         paren par ("let " ++ var ++ "=" ++ show' True valexpr ++ "" ++
                " in " ++ show inexpr)

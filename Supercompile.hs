@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 
 module Supercompile where
 
@@ -11,16 +12,23 @@ import Eval
 import Splitter
 
 supercompile :: Expr -> Expr
-supercompile expr = let (conf, (next, hist, prom)) = runMemo expr
-  in fromMemo prom (Var ((fst .head) prom))
+supercompile = gp . runMemo
+
+gp m@(conf, (next, hist, prom)) =
+  let (var, fv, expr) = head prom in
+    fromMemo prom (app (Var var) (map Var fv))
 
 runMemo expr = let s = memo (newConf emptyEnv expr)
   in run s (0, [], [])
 
-fromMemo :: [(Var, Conf)] -> Expr -> Expr
+fromMemo :: [(Var, [Var], Conf)] -> Expr -> Expr
 fromMemo [] expr = expr
-fromMemo ((var,valconf):env) expr =
-    Let var (toExpr valconf) (fromMemo env expr)
+fromMemo ((var, fv, valconf):env) expr =
+    Let (var) (toLambda fv (toExpr valconf)) (fromMemo env expr)
+
+toLambda :: [Var] -> Expr -> Expr
+toLambda [] expr = expr
+toLambda (v:vs) expr = Lam v (toLambda vs expr)
 
 add :: Var -> Expr -> Conf -> Conf
 add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
@@ -30,15 +38,15 @@ memo state@(env, stack, expr) = do
   ii <- isin state
   if isNothing ii
     then do
-      v <- rec state
+      (v, fv) <- rec state
       let rstate = reduce state
       splits <- mapM memo (split rstate)
       let r@(env', stack', expr') = combine rstate splits
-      promise v r
-      return (env', stack', app (Var v) (map Var (freeVars (toExpr state))))
+      promise v fv r
+      return (env', stack', app (Var v) (map Var fv))
     else do
-      let var = fromJust ii
-      return (env, stack, Var var)
+      let (var, fv) = fromJust ii
+      return (env, stack, app (Var var) (map Var fv))
 
 -- | State monad.
 newtype State s a = State { run :: s -> (a, s) }
@@ -56,24 +64,57 @@ instance Monad (State s) where
     let (a, s') = m s in
     let State m' = f a in m' s' )
 
-type Hist = [(Var, Conf)]
+type Hist = [(Var, [Var], Conf)]
 
-type Prom = [(Var, Conf)]
+type Prom = [(Var, [Var], Conf)]
+
+instance {-# OVERLAPPING #-} Show Hist where
+  show hist = "" ++
+    intercalate "\n" (map ((++) "  " . show) hist)
+
+instance {-# OVERLAPPING #-} Show (Var, [Var], Conf) where
+  show (var, args, expr) =
+    var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
+
+-- instance {-# OVERLAPPING #-} Show Prom where
+--   show env = "" ++
+--     intercalate "\n" (map ((++) "  " . show) env)
+
+instance {-# OVERLAPPING #-} Show (Var, Conf) where
+  show (var, expr) = var ++ " ~> " ++ show expr
+
+instance {-# OVERLAPPING #-} Show a => Show (a, (Int, Hist, Prom)) where
+  show (val, (next, hist, prom)) =
+    "Value: " ++ show val ++ "\n" ++
+    "Next: " ++ show next ++ "\n" ++
+    "Hist: \n" ++ show hist ++ "\n" ++
+    "Prom: \n" ++ show prom
+
 
 type Memo a = State (Int, Hist, Prom) a
 
-rec :: Conf -> Memo Var
+-- instance {-# OVERLAPPING #-} Show (Int, Conf) where
+--   show (var, expr) = var ++ " ~> " ++ show expr
+
+envExpr :: Conf -> Expr
+envExpr conf@(env, stack, expr) = rebuildEnv env (toExpr conf)
+  where rebuildEnv [] expr = expr
+        rebuildEnv ((var,valexpr):env) expr =
+          Let var valexpr (rebuildEnv env expr)
+
+rec :: Conf -> Memo (Var, [Var])
 rec conf = State (\(next, hist, prom) ->
-  let var = "$v" ++ "_" ++ show next in
-    (var, (next+1, (var, conf):hist, prom))
+  let var = "$v_" ++ show next in
+  let fv = (freeVars . envExpr) conf in
+    ((var, fv), (next+1, (var, fv, conf):hist, prom))
   )
 
-promise :: Var -> Conf -> Memo ()
-promise var conf = State (\(next, hist, prom) -> ((),
-    (next, hist, (var, conf):prom))
+promise :: Var -> [Var] -> Conf -> Memo ()
+promise var fv conf = State (\(next, hist, prom) -> ((),
+    (next, hist, (var, fv, conf):prom))
   )
 
-isin :: Conf -> Memo (Maybe Var)
+isin :: Conf -> Memo (Maybe (Var, [Var]))
 isin conf = State (
     \(next, hist, prom) -> (hist `lookupMatch` conf, (next, hist, prom))
   )
@@ -81,8 +122,8 @@ isin conf = State (
 match :: Conf -> Conf -> Bool
 match conf conf' = toExpr (reduce conf) == toExpr (reduce conf')
 
-lookupMatch :: Hist -> Conf -> Maybe Var
+lookupMatch :: Hist -> Conf -> Maybe (Var, [Var])
 lookupMatch [] _ = Nothing
-lookupMatch ((var, conf'):hist) conf = if conf `match` conf'
-  then Just var
+lookupMatch ((var, vars, conf'):hist) conf = if conf `match` conf'
+  then Just (var, vars)
   else lookupMatch hist conf

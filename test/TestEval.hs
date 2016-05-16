@@ -127,7 +127,7 @@ main = do
       "let id={a-> a}\
       \in let app={f->{x->f x}}\
       \in app id [1,2,3,4,5]", "[1,2,3,4,5]"),
-      ("let cp={a->case a of Zero->0; Succ b->Succ (cp b); } in cp 4", "4"),
+      ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
       (
       "let cp={a->case a of \
       \  Zero->0;\
@@ -358,7 +358,13 @@ main = do
       \  Nil->Nil;\
       \  Cons y ys -> Cons (f y) (map f ys) ; }}\
       \in let app={f->{x-> f x}}\
-      \in app multtwo 1", "2")
+      \in app multtwo 1", "2"),
+      (
+      "let $v_0={zs->case zs of Nil->$v_1;Cons y ys->$v_2 y ys;} in \
+      \let $v_2={y->{ys->(Cons ($v_3 y) ($v_0 ys))}} in \
+      \let $v_3={y->Succ ($v_4 y)} in \
+      \let $v_4={y->y} in \
+      \let $v_1=[] in $v_0 [1,2,3,4]", "[2,3,4,5]")
     ] where
     x = Var "x"
     y = Var "y"

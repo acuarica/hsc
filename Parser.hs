@@ -106,6 +106,12 @@ loweralpha = satisfy "loweralpha" (\c -> isAlpha c && isLower c)
 upperalpha :: Parser Char
 upperalpha = satisfy "upperalpha" (\c -> isAlpha c && isUpper c)
 
+dollar :: Parser Char
+dollar = satisfy "dollar sign" (== '$')
+
+underscore :: Parser Char
+underscore = satisfy "underscore" (== '_')
+
 number :: Parser Int
 number = do
   s <- string "-" <|> return []
@@ -178,7 +184,7 @@ litintp = do { n <- number; return (f n) }
 letp :: Parser Expr
 letp = do
   reserved "let"
-  var <- lowerword
+  var <- varnamep
   reserved "="
   valexpr <- exprp
   reserved "in"
@@ -187,16 +193,15 @@ letp = do
 
 varp :: Parser Expr
 varp = do
-  var <- sat (show keywords) lowerword (not . (`elem` keywords))
+  var <- varnamep
   return (Var var)
-  where keywords = ["let", "in", "case", "of"]
 
 conp :: Parser Expr
 conp = do { tag <- upperword; return (con tag) }
 
 lamp :: Parser Expr
 lamp = do
-  var <- lowerword
+  var <- varnamep
   reserved "->"
   valexpr <- exprp
   return (Lam var valexpr)
@@ -227,3 +232,14 @@ listp = (do
         return (App (App cons item) rest)) <|>
         return (App (App cons item) nil)
     ) <|> return nil
+
+varnamep :: Parser Var
+varnamep = sat (show keywords) varid (not . (`elem` keywords))
+  where keywords = ["let", "in", "case", "of"]
+
+varid :: Parser Var
+varid = do
+  c  <- loweralpha <|> dollar <|> underscore
+  cs <- many (alpha <|> digit <|> underscore)
+  spaces
+  return (c:cs)

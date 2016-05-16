@@ -8,15 +8,28 @@ import Eval
 import Splitter
 import Supercompile
 
--- doSuper :: (String, Expr, Expr) -> (String, Expr, Expr)
--- doSuper (s, expr, expstate) = (s, supercompile expr, supercompile expr)
---
--- doParse :: (String, Expr) -> (String, Expr, Expr)
--- doParse (e, expstate) = (show (parseExpr e), parseExpr e, expstate)
+e' = "let map={f->{xs->case xs of \
+  \Nil->Nil;Cons y ys-> Cons (f y) (map f ys);}} in map {n->Succ n} zs"
+
+e = "   let inc={n->Succ n}\
+ \in let map={f->{xs->case xs of \
+ \  Nil->Nil;\
+ \  Cons y ys-> Cons (f y) (map f ys);}}\
+ \in map inc zs"
+
+parse = parseExpr
+evalsp = eval . supercompile . parse
 
 main :: IO ()
-main = --doTests (doSuper . doParse) [
-    mapM_ (print . supercompile . parseExpr) [
+main = do
+  --doTests (\(e, f, ar) -> (f (evalsp e), parse ar)) [
+--      (e, Let "ys" (parse "[1]"), "[2]")
+    --]
+  mapM_ (print  . runMemo . parseExpr) [
+      e
+      --"[A,B,C,D]"
+    ]
+  --mapM_ (print . supercompile . parseExpr) [
     --mapM_ (print . (\(c,(n,h,p))->p) . runMemo . parseExpr) [
       -- "x",
       -- "Tree",
@@ -25,12 +38,7 @@ main = --doTests (doSuper . doParse) [
       -- "f x",
       --"case n of Zero->A B; Succ nn->C D E;"
 
-    "   let inc={n->Succ n}\
-    \in let map={f->{xs->case xs of \
-    \  Nil->Nil;\
-    \  Cons y ys-> Cons (f y) (map f ys);}}\
-    \in let cp={f->{g->{x->f (g x)}}} \
-    \in map (cp f g) zs"
+      --e
 
     -- "let map={f->{xs->case xs of \
     -- \  Nil->Nil; \
@@ -45,4 +53,4 @@ main = --doTests (doSuper . doParse) [
     -- \  Cons $y $ys -> Cons (Succ $y) ($mapinc $ys) ; }}\
     -- \in $mapinc", "A"),
 --    ("x", usevar "x")
-  ]
+--    ]
