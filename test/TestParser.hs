@@ -1,15 +1,14 @@
 
 module Main where
 
+import Control.Arrow (first)
+
 import Expr
 import Parser
 import Util
 
-doParse :: (String, Expr) -> (String, Expr, Expr)
-doParse (code, expected) = (code, expected, parseExpr code)
-
 main :: IO ()
-main = doTests doParse  [
+main = doTests (first parseExpr) [
     ("x", Var "x"),
     ("var", Var "var"),
     ("veryverylonglongvar", Var "veryverylonglongvar"),

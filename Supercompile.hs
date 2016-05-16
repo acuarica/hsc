@@ -2,7 +2,7 @@
 module Supercompile where
 
 import Data.List
-import Control.Arrow
+--import Control.Arrow
 import Debug.Trace
 import Data.Maybe (isNothing, fromJust)
 
@@ -11,35 +11,34 @@ import Eval
 import Splitter
 
 supercompile :: Expr -> Expr
-supercompile expr = let (c, (count, hist)) = runMemo expr
-  in fromMemo hist (toExpr c)
+supercompile expr = let (conf, (next, hist, prom)) = runMemo expr
+  in fromMemo prom (Var ((fst .head) prom))
 
---fromMemo (c, s) = toExpr c
---runMemo :: Expr -> Memo Conf
-runMemo expr = let s = memo (return (newConf emptyEnv expr))
-  in run s (0, [])
+runMemo expr = let s = memo (newConf emptyEnv expr)
+  in run s (0, [], [])
 
-fromMemo :: [(Var, Expr)] -> Expr -> Expr
+fromMemo :: [(Var, Conf)] -> Expr -> Expr
 fromMemo [] expr = expr
-fromMemo ((var,valexpr):env) expr = Let var valexpr (fromMemo env expr)
+fromMemo ((var,valconf):env) expr =
+    Let var (toExpr valconf) (fromMemo env expr)
 
-memo :: Memo Conf -> Memo Conf
-memo mstate = do
-  state@(env, stack, expr) <- mstate
-  let rstate = f state
-  ii <- isin rstate
+add :: Var -> Expr -> Conf -> Conf
+add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
+
+memo :: Conf -> Memo Conf
+memo state@(env, stack, expr) = do
+  ii <- isin state
   if isNothing ii
     then do
-      rec rstate
-      splits <- mapM (memo . return) (split rstate)
-      --let r = f $ combine rstate splits
-      let r = combine rstate splits
-      return r
+      v <- rec state
+      let rstate = reduce state
+      splits <- mapM memo (split rstate)
+      let r@(env', stack', expr') = combine rstate splits
+      promise v r
+      return (env', stack', app (Var v) (map Var (freeVars (toExpr state))))
     else do
       let var = fromJust ii
-      --return rstate
       return (env, stack, Var var)
-  where f = reduce
 
 -- | State monad.
 newtype State s a = State { run :: s -> (a, s) }
@@ -59,47 +58,31 @@ instance Monad (State s) where
 
 type Hist = [(Var, Conf)]
 
-type Memo a = State (Int, Hist) a
+type Prom = [(Var, Conf)]
 
-rec :: Conf -> Memo Conf
-rec conf = State (\(c, env) -> (conf, (c+1, (var c, conf):env)))
-  where var n = "$v" ++ "_" ++ show n
+type Memo a = State (Int, Hist, Prom) a
+
+rec :: Conf -> Memo Var
+rec conf = State (\(next, hist, prom) ->
+  let var = "$v" ++ "_" ++ show next in
+    (var, (next+1, (var, conf):hist, prom))
+  )
+
+promise :: Var -> Conf -> Memo ()
+promise var conf = State (\(next, hist, prom) -> ((),
+    (next, hist, (var, conf):prom))
+  )
 
 isin :: Conf -> Memo (Maybe Var)
 isin conf = State (
-    \(c, env) -> (env `lookupMatch` conf, (c, env))
+    \(next, hist, prom) -> (hist `lookupMatch` conf, (next, hist, prom))
   )
 
-match :: Expr -> Expr -> Bool
-match expr expr' = expr == expr'
+match :: Conf -> Conf -> Bool
+match conf conf' = toExpr (reduce conf) == toExpr (reduce conf')
 
-lookupMatch :: Env -> Expr -> Maybe Var
+lookupMatch :: Hist -> Conf -> Maybe Var
 lookupMatch [] _ = Nothing
-lookupMatch ((var, expr'):hist) expr = if expr `match` expr'
+lookupMatch ((var, conf'):hist) conf = if conf `match` conf'
   then Just var
-  else lookupMatch hist expr
-
-type Fresh = Int
-
-aform' :: (Fresh, Env, Expr) -> (Fresh, Env, Expr)
-aform' (fr, env, expr) = case expr of
-  Var var -> (fr, env, expr)
-  Lam var lamexpr -> case aform' (fr, env, lamexpr) of
-    (fr', env', lamexpr') -> (fr', env', Lam var lamexpr')
-  App funexpr valexpr -> case aform' (fr, env, valexpr) of
-    (fr', env', valexpr') -> case aform' (fr', env', funexpr) of
-      (fr'', env'', funexpr'') ->
-        (fr''+2,
-          (make (fr'' + 1), App funexpr'' (Var (make fr''))):
-          (make fr'', valexpr'):env'',
-          Var (make (fr''+1)) )
-    --Let (make fr) (apply (aform (fr+1)) valexpr)
-      --((makefr, valexpr) :env)
-      --(App funexpr (usevar (make fr)))
-    --expr -> apply (aform (fr+1)) expr
-  where make i = "$v" ++ "_" ++ show i
-      --  newfr = fr + 1
-
--- aform :: Expr -> Expr
--- aform expr = case aform' (0, [], expr) of
---   (fr', env', expr') -> envToLet env' expr'
+  else lookupMatch hist conf

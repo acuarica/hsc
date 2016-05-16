@@ -13,21 +13,11 @@ import Supercompile
 --
 -- doParse :: (String, Expr) -> (String, Expr, Expr)
 -- doParse (e, expstate) = (show (parseExpr e), parseExpr e, expstate)
-e = parseExpr "let inc={n->Succ n}\
-    \ in let map={f->{xs->case xs of \
-    \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}}\
-    \in map inc zs"
-
-c0 = newConf emptyEnv e
-s0 = memo (return c0)
-sn = run s0 (0, [])
---fromMemo (c, _) = c
-
---cn = fromMemo sn
 
 main :: IO ()
 main = --doTests (doSuper . doParse) [
-    mapM_ (print . runMemo . parseExpr) [
+    mapM_ (print . supercompile . parseExpr) [
+    --mapM_ (print . (\(c,(n,h,p))->p) . runMemo . parseExpr) [
       -- "x",
       -- "Tree",
       -- "Succ 3",
@@ -35,8 +25,12 @@ main = --doTests (doSuper . doParse) [
       -- "f x",
       --"case n of Zero->A B; Succ nn->C D E;"
 
-    "let inc={n->Succ n} in let map={f->{xs->case xs of \
-    \  Nil->Nil; Cons y ys-> Cons (f y) (map f ys);}} in map inc zs"
+    "   let inc={n->Succ n}\
+    \in let map={f->{xs->case xs of \
+    \  Nil->Nil;\
+    \  Cons y ys-> Cons (f y) (map f ys);}}\
+    \in let cp={f->{g->{x->f (g x)}}} \
+    \in map (cp f g) zs"
 
     -- "let map={f->{xs->case xs of \
     -- \  Nil->Nil; \

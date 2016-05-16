@@ -5,7 +5,7 @@ module Expr where
 import Control.Arrow (second)
 import Data.Maybe (fromMaybe)
 import Control.Exception (assert)
-import Data.List (intercalate)
+import Data.List (nub, delete, (\\), intercalate)
 
 -- | The expression type.
 data Expr
@@ -46,7 +46,7 @@ instance Show Expr where
          paren par (show funexpr ++ " " ++ show' True valexpr)
       Case scexpr cs ->
         "case " ++ show scexpr ++ " of " ++
-        foldr (\ (p, e) s -> show p ++ "->" ++ show e ++ "; " ++ s) "" cs
+        foldr (\ (p, e) s -> show p ++ "->" ++ show e ++ ";" ++ s) "" cs
     paren par s = if par then "(" ++ s ++ ")" else s
     prettyNat expr = case doNat expr of
       (n, Nothing) -> Just (show n)
@@ -103,14 +103,13 @@ lookupAlt tag ((Pat pattag patvars, expr):alts) = if pattag == tag
 freeVars :: Expr -> [Var]
 freeVars expr = case expr of
   Var var -> [var]
-  Con _ args -> concatMap freeVars args
-  Lam var lamexpr -> del var (freeVars lamexpr)
-  Let var valexpr inexpr -> del var (freeVars valexpr ++ freeVars inexpr)
-  App funexpr valexpr -> freeVars funexpr ++ freeVars valexpr
-  Case scexpr alts -> freeVars scexpr ++
-    concatMap (\(Pat p vars, e) -> dels vars (freeVars e)) alts
-  where del var xs = [x | x <- xs, x /= var]
-        dels vars xs = [x | x <- xs, x `notElem` vars]
+  Con _ args -> nub (concatMap freeVars args)
+  Lam var lamexpr -> delete var (freeVars lamexpr)
+  Let var valexpr inexpr ->
+    delete var (nub (freeVars inexpr ++ freeVars valexpr))
+  App funexpr valexpr -> nub (freeVars funexpr ++ freeVars valexpr)
+  Case scexpr alts -> nub (freeVars scexpr ++
+    concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
 
 -- | Gets all subexpression of an expression.
 flatten :: Expr -> [Expr]

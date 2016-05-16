@@ -51,20 +51,18 @@ instance Show StackFrame where
 
 instance {-# OVERLAPPING #-} Show Conf where
   show (env, stack, expr) =
-    "Env:\n" ++ show env ++ "\n" ++
-    "Stack:\n" ++ show stack ++ "\n" ++
-    "Expr: " ++ show expr
+    show expr ++ " @ " ++ show stack ++ "\n" ++ "{" ++ show env ++ "}\n"
 
 instance {-# OVERLAPPING #-} Show Env where
-  show env = intercalate "\n" (map ((++) "  " . show) env)
+  show env = intercalate "\n " (map ((++) "" . show) env)
 
 instance {-# OVERLAPPING #-} Show (Var, Expr) where
   show (var, expr) = var ++ " |-> " ++ show expr
 
 instance {-# OVERLAPPING #-} Show Stack where
-  show stack = intercalate "\n" (map ((++) "  | " . show) stack)
+  show stack = intercalate "|" (map ((++) "" . show) stack)
 
--- | Reduce a state to Head Normal Form (HNF).
+-- | Reduce a state to Normal Form (NF).
 -- | A normal form is either a constructor (Con) or
 -- | lambda abstraction (Lam).
 hnf :: Conf -> Conf
@@ -75,6 +73,7 @@ hnf state = case reduce state of
   state' -> state'
 
 -- | Reduce a state to Weak Head Normal Form (WHNF).
+-- | Lambda abstractions are not further evaluated.
 reduce :: Conf -> Conf
 reduce state = case step state of
   Nothing -> state
