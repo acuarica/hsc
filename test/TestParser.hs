@@ -3,9 +3,9 @@ module Main where
 
 import Control.Arrow (first)
 
-import Expr
-import Parser
-import Util
+import Expr (Expr(..), Pat(Pat), app, true, false, zero, suc, cons, nil)
+import Parser (parseExpr)
+import Util (doTests)
 
 main :: IO ()
 main = doTests (first parseExpr) [

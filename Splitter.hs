@@ -1,8 +1,8 @@
 
 module Splitter (split, combine) where
 
-import Expr
-import Eval
+import Expr (Expr(Var, Con))
+import Eval (Conf, StackFrame(..), newConf, toExpr)
 
 -- | Given a state, returns where to continue the computation.
 split :: Conf -> [Conf]
