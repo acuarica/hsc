@@ -3,7 +3,6 @@
 module Supercompile where
 
 import Data.List
---import Control.Arrow
 import Debug.Trace
 import Data.Maybe (isNothing, fromJust)
 
@@ -43,10 +42,11 @@ memo state@(env, stack, expr) = do
       splits <- mapM memo (split rstate)
       let r@(env', stack', expr') = combine rstate splits
       promise v fv r
-      return (env', stack', app (Var v) (map Var fv))
+      return (env', stack', appVars (Var v) fv)
     else do
       let (var, fv) = fromJust ii
-      return (env, stack, app (Var var) (map Var fv))
+      return (env, stack, appVars (Var var) (fvs state))
+  where fvs = freeVars . envExpr
 
 -- | State monad.
 newtype State s a = State { run :: s -> (a, s) }
@@ -76,10 +76,6 @@ instance {-# OVERLAPPING #-} Show (Var, [Var], Conf) where
   show (var, args, expr) =
     var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
 
--- instance {-# OVERLAPPING #-} Show Prom where
---   show env = "" ++
---     intercalate "\n" (map ((++) "  " . show) env)
-
 instance {-# OVERLAPPING #-} Show (Var, Conf) where
   show (var, expr) = var ++ " ~> " ++ show expr
 
@@ -90,11 +86,7 @@ instance {-# OVERLAPPING #-} Show a => Show (a, (Int, Hist, Prom)) where
     "Hist: \n" ++ show hist ++ "\n" ++
     "Prom: \n" ++ show prom
 
-
 type Memo a = State (Int, Hist, Prom) a
-
--- instance {-# OVERLAPPING #-} Show (Int, Conf) where
---   show (var, expr) = var ++ " ~> " ++ show expr
 
 envExpr :: Conf -> Expr
 envExpr conf@(env, stack, expr) = rebuildEnv env (toExpr conf)
@@ -119,8 +111,17 @@ isin conf = State (
     \(next, hist, prom) -> (hist `lookupMatch` conf, (next, hist, prom))
   )
 
+-- | Not alpha-equivalence. Free variables equivalence.
+-- | Implementation not nice.
 match :: Conf -> Conf -> Bool
-match conf conf' = toExpr (reduce conf) == toExpr (reduce conf')
+match lhconf@(lenv,_,_) rhconf =
+  --traceShow (reduce (newConf env lhs)) $
+  --traceShow (reduce rhconf) $
+  toExpr (reduce (newConf lenv lhs)) == toExpr (reduce rhconf)
+  where
+    lhs = appVars (toLambda (fvs lhconf) (toExpr lhconf)) (fvs rhconf)
+    fvs = freeVars . envExpr
+
 
 lookupMatch :: Hist -> Conf -> Maybe (Var, [Var])
 lookupMatch [] _ = Nothing

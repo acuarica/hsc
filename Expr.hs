@@ -136,6 +136,9 @@ app expr args = case args of
   [] -> expr
   arg:args' -> app (App expr arg) args'
 
+appVars :: Expr -> [Var] -> Expr
+appVars expr = app expr . map Var
+
 -- | Creates a constructor with the given tag.
 con :: Tag -> Expr
 con tag = Con tag []

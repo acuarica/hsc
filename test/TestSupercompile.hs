@@ -18,14 +18,21 @@ e = "   let inc={n->Succ n}\
  \in map inc zs"
 
 parse = parseExpr
-evalsp = eval . supercompile . parse
+sp = supercompile . parse
+
+runmatch x y =
+  match (newConf emptyEnv (parseExpr x)) (newConf emptyEnv (parseExpr y))
 
 main :: IO ()
 main = do
-  --doTests (\(e, f, ar) -> (f (evalsp e), parse ar)) [
---      (e, Let "ys" (parse "[1]"), "[2]")
-    --]
-  mapM_ (print  . runMemo . parseExpr) [
+  -- mapM_ (print  . (\(x,y,v)-> runmatch x y == v) ) [
+  --     ("[1,2,3,x]", "[1,2,3,y]", True),
+  --     ("let i={n->Succ n} in i a", "let i={n->Succ n} in i b", True)
+  --   ]
+  doTests (\(e, f, ar) -> (eval (f (sp e)), (eval.parse) ar)) [
+     (e, Let "zs" (parse "[1]"), "[2]")
+    ]
+  mapM_ (print  . gp . runMemo . parseExpr) [
       e
       --"[A,B,C,D]"
     ]
