@@ -5,7 +5,7 @@ module Supercompile where
 import Data.List
 import Debug.Trace
 import Data.Maybe (isNothing, fromJust)
-
+import Control.Monad (unless, void)
 import Expr
 import Eval
 import Splitter
@@ -34,12 +34,23 @@ add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
 
 memo :: Conf -> Memo Conf
 memo state@(env, stack, expr) = do
+
+  let rstate' = reduce state
   ii <- isin state
+
   if isNothing ii
     then do
       (v, fv) <- rec state
+
       let rstate = reduce state
-      splits <- mapM memo (split rstate)
+
+      --rec rstate
+      --mapM_ rec (split rstate)
+      splits <- mapM (memo ) (split rstate)
+      --mapM_ rec splits
+      --unless (null splits) $ void (rec (head splits))
+        --else return ()
+
       let r@(env', stack', expr') = combine rstate splits
       promise v fv r
       return (env', stack', appVars (Var v) fv)

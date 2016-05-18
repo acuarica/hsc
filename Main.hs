@@ -47,7 +47,7 @@ mapinc = "let inc={n->Succ n}\
  \in let map={f->{xs->case xs of \
  \  Nil->Nil;\
  \  Cons y ys-> Cons (f y) (map f ys);}}\
- \in map inc "
+ \in map inc"
 
 mapmap = "let inc={n->Succ n}\
  \in let map={f->{xs->case xs of \
@@ -56,9 +56,6 @@ mapmap = "let inc={n->Succ n}\
  \in map inc (map inc zs)"
 
 main :: IO ()
-main = -- do
-  mapM_ (print   . runMemo . parseExpr) [
-      mapinc
-      --mapmap
-      --"[A,B,C,D]"
-    ]
+main = do
+  (print . gp . runMemo . parseExpr) mapinc
+  (print .      runMemo . parseExpr) mapinc
