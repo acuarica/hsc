@@ -17,7 +17,6 @@ split s@(env, stack, expr) = case expr of
     [] -> map (newConf env) args
     _ -> error $ "Spliting with Con and stack: " ++ show stack
   Lam var lamexpr -> case stack of
-    --[] -> [(env, [Arg (Var ("$q__"++var))], Lam var lamexpr)]
     [] -> [(env, [], lamexpr)]
     _ -> error $ "Spliting Lam and stack: " ++ show stack
   _ -> error $ "Error spliting: " ++ show s

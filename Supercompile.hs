@@ -33,9 +33,17 @@ add :: Var -> Expr -> Conf -> Conf
 add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
 
 memo :: Conf -> Memo Conf
-memo state@(env, stack, expr) = do
+memo state@(env, stack, expr) =
+  let rstate' = reduce state in
+  let splits' = split rstate' in
+  trace (show state ++ " ~~>> ") $
+  traceShow rstate' $
+  trace ("Splits: " ++ show splits') $
+  trace ("Combine: " ++ show (combine rstate' splits')) $
+  trace "" $
+  do
 
-  let rstate' = reduce state
+
   ii <- isin state
 
   if isNothing ii
@@ -46,7 +54,7 @@ memo state@(env, stack, expr) = do
 
       --rec rstate
       --mapM_ rec (split rstate)
-      splits <- mapM (memo ) (split rstate)
+      splits <- mapM memo (split rstate)
       --mapM_ rec splits
       --unless (null splits) $ void (rec (head splits))
         --else return ()
@@ -55,6 +63,7 @@ memo state@(env, stack, expr) = do
       promise v fv r
       return (env', stack', appVars (Var v) fv)
     else do
+      (v, fv) <- rec state
       let (var, fv) = fromJust ii
       return (env, stack, appVars (Var var) (fvs state))
   where fvs = freeVars . envExpr
@@ -126,11 +135,14 @@ isin conf = State (
 -- | Implementation not nice.
 match :: Conf -> Conf -> Bool
 match lhconf@(lenv,_,_) rhconf =
-  --traceShow (reduce (newConf env lhs)) $
-  --traceShow (reduce rhconf) $
+  --trace ("lhs:"++show (reduce (newConf lenv lhs))) $
+  --trace ("rhs:"++ show (reduce rhconf)) $
+  length lfv == length rfv &&
   toExpr (reduce (newConf lenv lhs)) == toExpr (reduce rhconf)
   where
-    lhs = appVars (toLambda (fvs lhconf) (toExpr lhconf)) (fvs rhconf)
+    lhs = appVars (toLambda lfv (toExpr lhconf)) rfv
+    lfv = fvs lhconf
+    rfv = fvs rhconf
     fvs = freeVars . envExpr
 
 

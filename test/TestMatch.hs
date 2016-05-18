@@ -30,7 +30,11 @@ runmatch x y =
   match (newConf emptyEnv (parseExpr x)) (newConf emptyEnv (parseExpr y))
 
 main :: IO ()
-main = doTests (\(x,y,v)-> runmatch x y == v) [
+main = doTests (\(x,y,v)-> (runmatch x y, v)) [
   ("[1,2,3,x]", "[1,2,3,y]", True),
-  ("let i={n->Succ n} in i a", "let i={n->Succ n} in i b", True)
+  ("let i={n->Succ n} in i a", "let i={n->Succ n} in i b", True),
+  ("let i={n->Succ n} in i", "let i={n->Succ n} in i", True),
+  ("let i={n->Succ n} in i", "{n->Succ n}", True),
+  ("Succ n", "let i={n->Succ n} in i", False),
+  ("{n->Succ n}", "Succ n", False)
   ]

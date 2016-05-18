@@ -43,6 +43,12 @@ executable test-rec
   hs-source-dirs:   . test
   default-language: Haskell98
 
+executable test-match
+  main-is:          TestMatch.hs
+  build-depends:    base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:   . test
+  default-language: Haskell98
+
 executable test-splitter
   main-is:          TestSplitter.hs
   build-depends:    base >= 4.8 && <4.9, HUnit
