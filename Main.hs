@@ -47,7 +47,7 @@ mapinc = "let inc={n->Succ n}\
  \in let map={f->{xs->case xs of \
  \  Nil->Nil;\
  \  Cons y ys-> Cons (f y) (map f ys);}}\
- \in map inc"
+ \in map inc zs"
 
 mapmap = "let inc={n->Succ n}\
  \in let map={f->{xs->case xs of \

@@ -38,7 +38,8 @@ freduce conf = let (env, stack, expr) = reduce conf in case expr of
   Lam var lamexpr -> assert (null stack) (freduce (env, [], lamexpr))
   _ -> (env, stack, expr)
 
-spreduce = freduce
+--spreduce = freduce
+spreduce = reduce
 
 memo :: Conf -> Memo Conf
 memo state@(env, stack, expr) =
@@ -56,7 +57,7 @@ memo state@(env, stack, expr) =
 
   if isNothing ii
     then do
-      (v, fv) <- rec $ spreduce state
+      (v, fv) <- rec $  state
 
       --let rstate = reduce state
       let rstate = spreduce state
@@ -144,16 +145,15 @@ isin conf = State (
 -- | Implementation not nice.
 match :: Conf -> Conf -> Bool
 match lhconf@(lenv,_,_) rhconf =
-  --trace ("lhs:"++show (reduce (newConf lenv lhs))) $
+  --trace ("lhs:"++show ( (newConf lenv lhs))) $
   --trace ("rhs:"++ show (reduce rhconf)) $
   --length lfv == length rfv &&
   toExpr (spreduce (newConf lenv lhs)) == toExpr (spreduce rhconf)
   where
     lhs = appVars (toLambda lfv (toExpr (spreduce lhconf))) rfv
-    lfv = fvs $ spreduce lhconf
-    rfv = fvs $ spreduce rhconf
+    lfv = fvs $ lhconf
+    rfv = fvs $  rhconf
     fvs = freeVars . envExpr
-
 
 lookupMatch :: Hist -> Conf -> Maybe (Var, [Var])
 lookupMatch [] _ = Nothing

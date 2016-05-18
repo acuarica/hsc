@@ -1,17 +1,16 @@
 
 module Main where
 
-import Control.Arrow (first, (***))
+import Test.HUnit
 
 import Expr
 import Eval
 import Parser
-import Util
 
-main :: IO ()
-main = do
-  doTests (first eval) [
-    (x, x),
+main :: IO Counts
+main = runTestTT $ test $
+  map testEval1 [
+    (var, var),
     (true, true),
     (cons, cons),
     (App suc zero, one),
@@ -82,8 +81,8 @@ main = do
         (Pat "Zero" [], zero),
         (Pat "Succ" ["n'"], App f n')
       ], App f (App f n))
-    ]
-  doTests ((eval . parseExpr) *** (eval . parseExpr)) [
+  ] ++
+  map testEval2 [
       ("let x=(let y=Succ in y 0) in y", "y"),
       ("let x=(let y=A in y 0) in x y", "A 0 y"),
       ("let x=0 in Succ x", "1"),
@@ -365,7 +364,8 @@ main = do
       \let $v_3={y->Succ ($v_4 y)} in \
       \let $v_4={y->y} in \
       \let $v_1=[] in $v_0 [1,2,3,4]", "[2,3,4,5]")
-    ] where
+    ]
+    where
     x = Var "x"
     y = Var "y"
     z = Var "z"
@@ -386,3 +386,5 @@ main = do
     three = Con "Succ" [two]
     four  = Con "Succ" [three]
     five  = Con "Succ" [four]
+    testEval1 (a, e) = "eval1" ~: eval a ~=? e
+    testEval2 (a, e) = "eval2" ~: a ~: (eval . parseExpr) a ~=? (eval . parseExpr) e

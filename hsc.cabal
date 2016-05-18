@@ -19,32 +19,20 @@ executable hsc
   hs-source-dirs:   .
   default-language: Haskell98
 
-executable test-expr
-  main-is:          TestExpr.hs
-  build-depends:    base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:   . test
-  default-language: Haskell98
-
 executable test-parser
   main-is:          TestParser.hs
   build-depends:    base >= 4.8 && <4.9, HUnit
   hs-source-dirs:   . test
   default-language: Haskell98
 
+executable test-expr
+  main-is:          TestExpr.hs
+  build-depends:    base >= 4.8 && <4.9, HUnit
+  hs-source-dirs:   . test
+  default-language: Haskell98
+
 executable test-eval
   main-is:          TestEval.hs
-  build-depends:    base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:   . test
-  default-language: Haskell98
-
-executable test-rec
-  main-is:          TestRec.hs
-  build-depends:    base >= 4.8 && <4.9, HUnit
-  hs-source-dirs:   . test
-  default-language: Haskell98
-
-executable test-match
-  main-is:          TestMatch.hs
   build-depends:    base >= 4.8 && <4.9, HUnit
   hs-source-dirs:   . test
   default-language: Haskell98

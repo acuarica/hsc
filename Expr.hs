@@ -27,6 +27,67 @@ type Tag = String
 -- | Case patterns against tag.
 data Pat = Pat Tag [Var] deriving Eq
 
+-- | Variable substitution.
+subst :: (Var, Expr) -> Expr -> Expr
+subst (var, valexpr) bodyexpr = case bodyexpr of
+  Var var' -> if var' == var then valexpr else Var var'
+  _ -> apply (subst (var, valexpr)) bodyexpr
+
+-- | Subtitutes a list of bindings in bodyexpr.
+substAlts :: [(Var, Expr)] -> Expr -> Expr
+substAlts bindings bodyexpr = foldl (flip subst) bodyexpr bindings
+
+-- | Lookup the alternative according to the constructor tag.
+lookupAlt :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
+lookupAlt tag ((Pat pattag patvars, expr):alts) = if pattag == tag
+  then (Pat pattag patvars, expr)
+  else lookupAlt tag alts
+
+-- | Free variables of an expression.
+freeVars :: Expr -> [Var]
+freeVars expr = case expr of
+  Var var -> [var]
+  Con _ args -> nub (concatMap freeVars args)
+  Lam var lamexpr -> delete var (freeVars lamexpr)
+  Let var valexpr inexpr ->
+    delete var (nub (freeVars inexpr ++ freeVars valexpr))
+  App funexpr valexpr -> nub (freeVars funexpr ++ freeVars valexpr)
+  Case scexpr alts -> nub (freeVars scexpr ++
+    concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
+
+apply :: (Expr -> Expr) -> Expr -> Expr
+apply f expr = case expr of
+  Var var -> Var var
+  Con tag args -> Con tag (map f args)
+  Lam var lamexpr -> Lam var (f lamexpr)
+  Let var valexpr inexpr -> Let var (f valexpr) (f inexpr)
+  App funexpr valexpr -> App (f funexpr) (f valexpr)
+  Case scexpr alts -> Case (f scexpr) (map (second f) alts)
+
+-- | Application of args to expr.
+app :: Expr -> [Expr] -> Expr
+app expr args = case args of
+  [] -> expr
+  arg:args' -> app (App expr arg) args'
+
+-- | Application of variables to an expression.
+appVars :: Expr -> [Var] -> Expr
+appVars expr = app expr . map Var
+
+-- | Creates a constructor with the given tag.
+con :: Tag -> Expr
+con tag = Con tag []
+
+-- | Some common used expressions for easy write of expressions.
+-- | These expressions are pretty printed accordingly.
+zero, suc, nil, cons :: Expr
+true = con "True"
+false = con "False"
+zero = con "Zero"
+suc = con "Succ"
+nil = con "Nil"
+cons = con "Cons"
+
 instance Show Expr where
   show = show' False
     where
@@ -82,63 +143,3 @@ instance Show Pat where
 
 instance {-# OVERLAPPING #-} Show (Pat, Expr) where
   show (pat, alt) = show pat ++ " -> " ++ show alt
-
--- | Variable substitution.
-subst :: (Var, Expr) -> Expr -> Expr
-subst (var, valexpr) bodyexpr = case bodyexpr of
-  Var var' -> if var' == var then valexpr else Var var'
-  _ -> apply (subst (var, valexpr)) bodyexpr
-
--- | Subtitutes a list of bindings in bodyexpr.
-substAlts :: [(Var, Expr)] -> Expr -> Expr
-substAlts bindings bodyexpr = foldl (flip subst) bodyexpr bindings
-
--- | Lookup the alternative according to the constructor tag.
-lookupAlt :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
-lookupAlt tag ((Pat pattag patvars, expr):alts) = if pattag == tag
-  then (Pat pattag patvars, expr)
-  else lookupAlt tag alts
-
--- | Free variables of an expression.
-freeVars :: Expr -> [Var]
-freeVars expr = case expr of
-  Var var -> [var]
-  Con _ args -> nub (concatMap freeVars args)
-  Lam var lamexpr -> delete var (freeVars lamexpr)
-  Let var valexpr inexpr ->
-    delete var (nub (freeVars inexpr ++ freeVars valexpr))
-  App funexpr valexpr -> nub (freeVars funexpr ++ freeVars valexpr)
-  Case scexpr alts -> nub (freeVars scexpr ++
-    concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts) 
-
-apply :: (Expr -> Expr) -> Expr -> Expr
-apply f expr = case expr of
-  Var var -> Var var
-  Con tag args -> Con tag (map f args)
-  Lam var lamexpr -> Lam var (f lamexpr)
-  Let var valexpr inexpr -> Let var (f valexpr) (f inexpr)
-  App funexpr valexpr -> App (f funexpr) (f valexpr)
-  Case scexpr alts -> Case (f scexpr) (map (second f) alts)
-
--- | Function application of args to expr.
-app :: Expr -> [Expr] -> Expr
-app expr args = case args of
-  [] -> expr
-  arg:args' -> app (App expr arg) args'
-
-appVars :: Expr -> [Var] -> Expr
-appVars expr = app expr . map Var
-
--- | Creates a constructor with the given tag.
-con :: Tag -> Expr
-con tag = Con tag []
-
--- | Some common used expressions for easy write of expressions.
--- | These expressions are pretty printed accordingly.
-zero, suc, nil, cons :: Expr
-true = con "True"
-false = con "False"
-zero = con "Zero"
-suc = con "Succ"
-nil = con "Nil"
-cons = con "Cons"

@@ -1,14 +1,14 @@
 
 module Main where
 
-import Control.Arrow (first)
+import Test.HUnit
 
 import Expr (Expr(..), Pat(Pat), app, true, false, zero, suc, cons, nil)
 import Parser (parseExpr)
-import Util (doTests)
 
-main :: IO ()
-main = doTests (first parseExpr) [
+main :: IO Counts
+main = runTestTT $ test $
+  map testParseExpr [
     ("x", Var "x"),
     ("$x", Var "$x"),
     ("$x__", Var "$x__"),
@@ -99,3 +99,5 @@ main = doTests (first parseExpr) [
           App (App cons (Var "y")) (
             App (App cons (Con "Two" [])) nil))) )
   ]
+  where
+    testParseExpr (a, e) = "parseExpr" ~: a ~: parseExpr a ~=? e
