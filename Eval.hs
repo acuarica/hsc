@@ -63,6 +63,18 @@ instance {-# OVERLAPPING #-} Show (Var, Expr) where
 instance {-# OVERLAPPING #-} Show Stack where
   show stack = intercalate "|" (map ((++) "" . show) stack)
 
+-- | Free variables of an expression.
+freeVars :: Conf -> [Var]
+freeVars (env, _, expr) = case expr of
+  Var var -> isDefined var then [] else [var]
+  Con _ args -> nub (concatMap freeVars args)
+  Lam var lamexpr -> delete var (freeVars lamexpr)
+  Let var valexpr inexpr ->
+    delete var (nub (freeVars inexpr ++ freeVars valexpr))
+  App funexpr valexpr -> nub (freeVars funexpr ++ freeVars valexpr)
+  Case scexpr alts -> nub (freeVars scexpr ++
+    concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts) 
+
 -- | Reduce a state to Normal Form (NF).
 -- | A normal form is either a constructor (Con) or
 -- | lambda abstraction (Lam).
@@ -87,6 +99,10 @@ put var expr [] = [(var, expr)]
 put var expr ((var',expr'):env) = if var' == var
   then (var,expr):env
   else (var',expr'):put var expr env
+
+-- | Tells whether a variable is defined in the given environment.
+isDefined :: Var -> Env -> Bool
+isDefined var env = isJust (lookup var env)
 
 -- | Operational semantics with one-step reduction.
 step :: Conf -> Maybe Conf
