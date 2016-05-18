@@ -4,6 +4,7 @@ module Supercompile where
 
 import Data.List
 import Debug.Trace
+import Control.Exception (assert)
 import Data.Maybe (isNothing, fromJust)
 import Control.Monad (unless, void)
 import Expr
@@ -32,15 +33,22 @@ toLambda (v:vs) expr = Lam v (toLambda vs expr)
 add :: Var -> Expr -> Conf -> Conf
 add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
 
+freduce :: Conf -> Conf
+freduce conf = let (env, stack, expr) = reduce conf in case expr of
+  Lam var lamexpr -> assert (null stack) (freduce (env, [], lamexpr))
+  _ -> (env, stack, expr)
+
+spreduce = freduce
+
 memo :: Conf -> Memo Conf
 memo state@(env, stack, expr) =
-  let rstate' = reduce state in
-  let splits' = split rstate' in
-  trace (show state ++ " ~~>> ") $
-  traceShow rstate' $
-  trace ("Splits: " ++ show splits') $
-  trace ("Combine: " ++ show (combine rstate' splits')) $
-  trace "" $
+  -- let rstate' = reduce state in
+  -- let splits' = split rstate' in
+  -- trace (show state ++ " ~~>> ") $
+  -- traceShow rstate' $
+  -- trace ("Splits: " ++ show splits') $
+  -- trace ("Combine: " ++ show (combine rstate' splits')) $
+  -- trace "" $
   do
 
 
@@ -48,9 +56,10 @@ memo state@(env, stack, expr) =
 
   if isNothing ii
     then do
-      (v, fv) <- rec state
+      (v, fv) <- rec $ spreduce state
 
-      let rstate = reduce state
+      --let rstate = reduce state
+      let rstate = spreduce state
 
       --rec rstate
       --mapM_ rec (split rstate)
@@ -63,7 +72,7 @@ memo state@(env, stack, expr) =
       promise v fv r
       return (env', stack', appVars (Var v) fv)
     else do
-      (v, fv) <- rec state
+      --(v, fv) <- rec state
       let (var, fv) = fromJust ii
       return (env, stack, appVars (Var var) (fvs state))
   where fvs = freeVars . envExpr
@@ -137,12 +146,12 @@ match :: Conf -> Conf -> Bool
 match lhconf@(lenv,_,_) rhconf =
   --trace ("lhs:"++show (reduce (newConf lenv lhs))) $
   --trace ("rhs:"++ show (reduce rhconf)) $
-  length lfv == length rfv &&
-  toExpr (reduce (newConf lenv lhs)) == toExpr (reduce rhconf)
+  --length lfv == length rfv &&
+  toExpr (spreduce (newConf lenv lhs)) == toExpr (spreduce rhconf)
   where
-    lhs = appVars (toLambda lfv (toExpr lhconf)) rfv
-    lfv = fvs lhconf
-    rfv = fvs rhconf
+    lhs = appVars (toLambda lfv (toExpr (spreduce lhconf))) rfv
+    lfv = fvs $ spreduce lhconf
+    rfv = fvs $ spreduce rhconf
     fvs = freeVars . envExpr
 
 

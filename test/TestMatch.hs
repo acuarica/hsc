@@ -23,11 +23,10 @@ mapmap = "let inc={n->Succ n}\
  \  Cons y ys-> Cons (f y) (map f ys);}}\
  \in map inc (map inc zs)"
 
-parse = parseExpr
-sp = supercompile . parse
+--parse = parseExpr
+--sp = supercompile . parse
 
-runmatch x y =
-  match (newConf emptyEnv (parseExpr x)) (newConf emptyEnv (parseExpr y))
+runmatch x y = match (s x) (s y) where s = newConf emptyEnv . parseExpr
 
 main :: IO ()
 main = doTests (\(x,y,v)-> (runmatch x y, v)) [
@@ -35,6 +34,8 @@ main = doTests (\(x,y,v)-> (runmatch x y, v)) [
   ("let i={n->Succ n} in i a", "let i={n->Succ n} in i b", True),
   ("let i={n->Succ n} in i", "let i={n->Succ n} in i", True),
   ("let i={n->Succ n} in i", "{n->Succ n}", True),
-  ("Succ n", "let i={n->Succ n} in i", False),
-  ("{n->Succ n}", "Succ n", False)
+  ("Succ n", "let i={n->Succ n} in i", True),
+  ("{n->Succ n}", "Succ n", True),
+  ("let i={n->Succ n} in i",
+    "let i={n->Succ n} in let id={x->x} in i m", True)
   ]

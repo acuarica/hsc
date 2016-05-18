@@ -112,6 +112,7 @@ freeVars expr = case expr of
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
 
 -- | Gets all subexpression of an expression.
+
 flatten :: Expr -> [Expr]
 flatten expr = expr:case expr of
   Var _ -> []
@@ -120,6 +121,7 @@ flatten expr = expr:case expr of
   Let _ valexpr inexpr -> flatten valexpr ++ flatten inexpr
   App funexpr valexpr -> flatten funexpr ++ flatten valexpr
   Case scexpr alts -> flatten scexpr ++ concatMap (flatten . snd) alts
+  
 
 apply :: (Expr -> Expr) -> Expr -> Expr
 apply f expr = case expr of

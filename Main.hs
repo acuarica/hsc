@@ -58,5 +58,5 @@ mapmap = "let inc={n->Succ n}\
 main :: IO ()
 main = do
   --(print . gp . runMemo . parseExpr) mapinc
-  --(print .      runMemo . parseExpr) mapinc
   (print . runMemo . parseExpr) mapinc
+  --(print . freduce . newConf emptyEnv . parseExpr) mapinc

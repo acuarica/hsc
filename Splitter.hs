@@ -16,10 +16,10 @@ split s@(env, stack, expr) = case expr of
   Con tag args -> case stack of
     [] -> map (newConf env) args
     _ -> error $ "Spliting with Con and stack: " ++ show stack
-  Lam var lamexpr -> case stack of
-    [] -> [(env, [], lamexpr)]
-    _ -> error $ "Spliting Lam and stack: " ++ show stack
-  _ -> error $ "Error spliting: " ++ show s
+  -- Lam var lamexpr -> case stack of
+  --   [] -> [(env, [], lamexpr)]
+  --   _ -> error $ "Spliting Lam and stack: " ++ show stack
+  -- _ -> error $ "Error spliting: " ++ show s
 
 -- | Combines the expression replacing the alternatives.
 combine :: Conf -> [Conf] -> Conf
@@ -35,11 +35,11 @@ combine s@(env, stack, expr) ss = case expr of
       then (env, [], Con tag (map toExpr ss))
       else error $ "Args and ss difer: " ++ show args ++ show ss
     _ -> error $ "Stack not empty with " ++ show expr
-  Lam var _ -> case stack of
-    [] -> if length ss == 1
-      then (env, [], Lam var (toExpr (head ss)))
-      else error $ "Ss length not 1: " ++ show ss
-    _ -> error $ "Error: lambda and stack not empty: " ++ show s
+  -- Lam var _ -> case stack of
+  --   [] -> if length ss == 1
+  --     then (env, [], Lam var (toExpr (head ss)))
+  --     else error $ "Ss length not 1: " ++ show ss
+  --   _ -> error $ "Error: lambda and stack not empty: " ++ show s
   _ -> error $ "Error in combine with: " ++ show s
 
   where rb (p, _) s = (p, toExpr s)
