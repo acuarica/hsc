@@ -2,13 +2,11 @@
 
 module Supercompile where
 
-import Data.List
-import Debug.Trace
+import Data.List (intercalate)
 import Control.Exception (assert)
 import Data.Maybe (isNothing, fromJust)
-import Control.Monad (unless, void)
-import Expr
-import Eval
+import Expr (Expr(..), Var, app, appVars, freeVars)
+import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, reduce, put)
 import Splitter
 
 supercompile :: Expr -> Expr
@@ -49,38 +47,17 @@ freduce args conf =
 spreduce = reduce
 
 memo :: Conf -> Memo Conf
-memo state@(env, stack, expr) =
-  -- let rstate' = reduce state in
-  -- let splits' = split rstate' in
-  --trace (show state ++ " ~~>> ") $
-  -- traceShow rstate' $
-  -- trace ("Splits: " ++ show splits') $
-  -- trace ("Combine: " ++ show (combine rstate' splits')) $
-  -- trace "" $
-  do
-
-
+memo state@(env, stack, expr) = do
   ii <- isin state
-
   if isNothing ii
     then do
-      (v, fv) <- rec $   state
-
-      --let rstate = reduce state
+      (v, fv) <- rec state
       let rstate = spreduce state
-
-      --rec rstate
-      --mapM_ rec (split rstate)
       splits <- mapM memo (split rstate)
-      --mapM_ rec splits
-      --unless (null splits) $ void (rec (head splits))
-        --else return ()
-
       let r@(env', stack', expr') = combine rstate splits
       promise v fv r
       return (env', stack', appVars (Var v) fv)
     else do
-      --(v, fv) <- rec state
       let (var, fv) = fromJust ii
       return (env, stack, appVars (Var var) (fvs state))
   where fvs = freeVars . envExpr

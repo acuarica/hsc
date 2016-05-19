@@ -1,10 +1,29 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
-module Eval where
+module Eval (
+  Conf, Env, StackFrame(..),
+  eval, emptyEnv, newConf, toExpr, reduce, put
+) where
 
 import Data.List (intercalate)
 
 import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt)
+
+-- | Configuration of the step machine.
+type Conf = (Env, Stack, Expr)
+
+-- | Environment that binds variables to values.
+type Env = [(Var, Expr)]
+
+-- | Stack for application calls.
+type Stack = [StackFrame]
+
+-- Stack frame for stack.
+data StackFrame
+  = Alts [(Pat, Expr)]
+  | Arg Expr
+  | Update Var
+  deriving Eq
 
 -- | Evaluates the given expression to normal form.
 eval :: Expr -> Expr
@@ -13,9 +32,6 @@ eval = toExpr . nf . newConf emptyEnv
 -- | Creates an empty environment.
 emptyEnv :: Env
 emptyEnv = []
-
--- | Configuration of the step machine.
-type Conf = (Env, Stack, Expr)
 
 -- | Given an environment,
 -- | creates a new configuration with an empty stack.
@@ -31,18 +47,6 @@ toExpr s@(env, stack, expr) = go expr stack
         go expr (Alts alts:stack') = go (Case expr alts) stack'
         go _ _ = error $ "toExpr error: " ++ show s
 
--- | Environment that binds variables to values.
-type Env = [(Var, Expr)]
-
--- | Stack for application calls.
-type Stack = [StackFrame]
-
--- Stack frame for stack.
-data StackFrame
-  = Alts [(Pat, Expr)]
-  | Arg Expr
-  | Update Var
-  deriving Eq
 
 -- | Reduce a state to Normal Form (NF).
 -- | A normal form is either a constructor (Con) or

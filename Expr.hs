@@ -7,7 +7,6 @@ module Expr (
   zero, suc, nil, cons
 ) where
 
-import Control.Arrow (second)
 import Data.Maybe (fromMaybe)
 import Control.Exception (assert)
 import Data.List (nub, delete, (\\), union, intercalate)
@@ -47,6 +46,7 @@ appVars :: Expr -> [Var] -> Expr
 appVars expr = app expr . map Var
 
 -- | Variable substitution.
+-- | It substitutes var in bodyexpr only if var is a free variable.
 -- | It does not substitute bound variables.
 subst :: (Var, Expr) -> Expr -> Expr
 subst (var, valexpr) bodyexpr = case bodyexpr of
