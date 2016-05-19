@@ -2,7 +2,7 @@
 
 module Expr (
   Expr(..), Var, Pat (Pat),
-  con, app, appVars,
+  con, app, appVars, isVar,
   subst, substAlts, lookupAlt, freeVars,
   zero, suc, nil, cons
 ) where
@@ -44,6 +44,12 @@ app expr args = case args of
 -- | Application of variables to an expression.
 appVars :: Expr -> [Var] -> Expr
 appVars expr = app expr . map Var
+
+-- | Returns True if expr is a variable.
+-- | False otherwise.
+isVar :: Expr -> Bool
+isVar (Var _) = True
+isVar _ = False
 
 -- | Variable substitution.
 -- | It substitutes var in bodyexpr only if var is a free variable.

@@ -40,9 +40,11 @@ main = runTestTT $ test $
     (mapinczs, Let "zs" (parse "[]"), "[]"),
     (mapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
     (mapinc, \e-> App e (parse "[]"), "[]"),
-    (mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]")--,
-    --(mapincmapinczs, Let "zs" (parse "[]"), "[]"),
-    --(mapincmapinczs, Let "zs" (parse "[1]"), "[3]")
+    (mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
+    (mapincmapinczs, Let "zs" (parse "[]"), "[]"),
+    (mapincmapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
+    (mapincmapinc, \e-> App e (parse "[]"), "[]"),
+    (mapincmapinc, \e-> App e (parse "[1,2,3,4,5]"), "[3,4,5,6,7]")
   ]
   where
     inc = ("inc", "{n->Succ n}")
@@ -73,3 +75,10 @@ main = runTestTT $ test $
       \  Nil->Nil;\
       \  Cons y ys-> Cons (f y) (map f ys);}}\
       \in map inc (map inc zs)"
+    mapincmapinc =
+      "let inc={n->Succ n}\
+      \in let map={f->{xs->case xs of \
+      \  Nil->Nil;\
+      \  Cons y ys-> Cons (f y) (map f ys);}}\
+      \in let mimi={zs->map inc (map inc zs)} \
+      \in mimi"

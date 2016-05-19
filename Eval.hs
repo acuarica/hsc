@@ -2,7 +2,7 @@
 
 module Eval (
   Conf, Env, StackFrame(..),
-  eval, emptyEnv, newConf, toExpr, reduce, put
+  eval, emptyEnv, newConf, toExpr, nf, reduce, put
 ) where
 
 import Data.List (intercalate)

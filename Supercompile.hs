@@ -3,10 +3,12 @@
 module Supercompile where
 
 import Data.List (intercalate)
-import Control.Exception (assert)
 import Data.Maybe (isNothing, fromJust)
-import Expr (Expr(..), Var, app, appVars, freeVars)
-import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, reduce, put)
+import Control.Exception (assert)
+import Control.Monad.State (State, state, runState)
+
+import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, freeVars)
+import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, nf, reduce, put)
 import Splitter (split, combine)
 
 import Debug.Trace
@@ -20,7 +22,7 @@ gp m@((_, _, expr0), (next, hist, prom)) = --traceShow conf $
     fromMemo prom expr0
 
 runMemo expr = let s = memo (newConf emptyEnv expr)
-  in run s (0, [], [])
+  in runState s (0, [], [])
 
 fromMemo :: [(Var, [Var], Conf)] -> Expr -> Expr
 fromMemo [] expr = expr
@@ -36,7 +38,7 @@ envToLet [] expr = expr
 envToLet ((var, valexpr):env) expr = Let var valexpr (envToLet env expr)
 
 add :: Var -> Expr -> Conf -> Conf
-add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
+add var valexpr (env, stack, expr) = (Eval.put var valexpr env, stack, expr)
 
 freduce :: [Expr] -> Conf -> Conf
 freduce args conf =
@@ -47,14 +49,27 @@ freduce args conf =
         (freduce (tail args) (env, [Arg (head args)], Lam var lamexpr))
     _ -> (env, stack, expr)
 
+simp :: Conf -> Conf
+simp conf@(env, stack, expr) = case expr of
+  Var var -> case stack of
+    Alts alts:Alts alts':stack' ->
+      (env, stack', Case (Var var) (map (al alts') alts))
+    _ -> conf
+  _ -> conf
+  where al als (Pat tag vars, altexpr) = (Pat tag vars, Case altexpr als)
+
 memo :: Conf -> Memo Conf
-memo state@(env, stack, expr) = do
+memo state@(env, stack, expr) =
+  if null stack && isVar expr then return state else
+  do
   ii <- isin state
   if isNothing ii
     then do
       (v, fv) <- rec state
-      let rstate' = reduce state
-      let rstate = freduce (map (Var . (++) "$m_" . show) [1..10]) rstate'
+      let rstate'' = reduce state
+      let rstate' = freduce (map (Var . (++) "$m_" . show) [1..10]) rstate''
+      let rstate = reduce $ simp rstate'
+      --let rstate = nf $ simp rstate'
       splits <- mapM memo (split rstate)
       let r@(env', stack', expr') = combine rstate splits
       --promise v fv r
@@ -64,22 +79,6 @@ memo state@(env, stack, expr) = do
       let (var, _) = fromJust ii
       return (env, stack, appVars (Var var) (fvs state))
   where fvs = freeVars . envExpr
-
--- | State monad.
-newtype State s a = State { run :: s -> (a, s) }
-
-instance Functor (State s) where
-  fmap f (State m) = State (\s -> let (a, s') = m s in (f a, s))
-
-instance Applicative (State s) where
-  pure a = State (\s -> (a, s))
-  f <*> x = error "Applicative Memo not defined"
-
-instance Monad (State s) where
-  return = pure
-  (State m) >>= f = State (\s ->
-    let (a, s') = m s in
-    let State m' = f a in m' s' )
 
 type Hist = [(Var, [Var], Conf)]
 
@@ -112,19 +111,19 @@ envExpr conf@(env, stack, expr) = rebuildEnv env (toExpr conf)
           Let var valexpr (rebuildEnv env expr)
 
 rec :: Conf -> Memo (Var, [Var])
-rec conf = State (\(next, hist, prom) ->
+rec conf = state (\(next, hist, prom) ->
   let var = "$v_" ++ show next in
   let fv = (freeVars . envExpr) conf in
     ((var, fv), (next+1, (var, fv, conf):hist, prom))
   )
 
 promise :: Var -> [Var] -> Conf -> Memo ()
-promise var fv conf = State (\(next, hist, prom) -> ((),
+promise var fv conf = state (\(next, hist, prom) -> ((),
     (next, hist, (var, fv, conf):prom))
   )
 
 isin :: Conf -> Memo (Maybe (Var, [Var]))
-isin conf = State (
+isin conf = state (
     \(next, hist, prom) -> (hist `lookupMatch` conf, (next, hist, prom))
   )
 

@@ -70,7 +70,5 @@ r = (env, [], appVars (Var "map") ["inc", "ys"])
 
 main :: IO ()
 main = do
-  --print $ l `match` r
-  (print . gp . runMemo . parseExpr) mapinc
-  (print . runMemo . parseExpr) mapinc
-  --(print . freduce . newConf emptyEnv . parseExpr) mapinc
+  (print . gp . runMemo . parseExpr) mapincmapinczs
+  (print . runMemo . parseExpr) mapincmapinczs
