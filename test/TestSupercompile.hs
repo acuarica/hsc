@@ -39,10 +39,10 @@ main = runTestTT $ test $
   map testSupercompile [
     (mapinczs, Let "zs" (parse "[]"), "[]"),
     (mapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
-    --(mapinc, \e-> App e (parse "[]"), "[]"),
-    --(mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
-    (mapincmapinczs, Let "zs" (parse "[]"), "[]"),
-    (mapincmapinczs, Let "zs" (parse "[1]"), "[3]")
+    (mapinc, \e-> App e (parse "[]"), "[]"),
+    (mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]")--,
+    --(mapincmapinczs, Let "zs" (parse "[]"), "[]"),
+    --(mapincmapinczs, Let "zs" (parse "[1]"), "[3]")
   ]
   where
     inc = ("inc", "{n->Succ n}")

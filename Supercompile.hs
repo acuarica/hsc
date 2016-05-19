@@ -7,14 +7,17 @@ import Control.Exception (assert)
 import Data.Maybe (isNothing, fromJust)
 import Expr (Expr(..), Var, app, appVars, freeVars)
 import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, reduce, put)
-import Splitter
+import Splitter (split, combine)
+
+import Debug.Trace
 
 supercompile :: Expr -> Expr
 supercompile = gp . runMemo
 
-gp m@(conf, (next, hist, prom)) =
-  let (var, fv, expr) = head prom in
-    fromMemo prom (app (Var var) (map Var fv))
+gp m@((_, _, expr0), (next, hist, prom)) = --traceShow conf $
+  --let (var, fv, expr) = head prom in
+    --fromMemo prom (app (Var var) (map Var fv))
+    fromMemo prom expr0
 
 runMemo expr = let s = memo (newConf emptyEnv expr)
   in run s (0, [], [])
@@ -44,21 +47,21 @@ freduce args conf =
         (freduce (tail args) (env, [Arg (head args)], Lam var lamexpr))
     _ -> (env, stack, expr)
 
-spreduce = reduce
-
 memo :: Conf -> Memo Conf
 memo state@(env, stack, expr) = do
   ii <- isin state
   if isNothing ii
     then do
       (v, fv) <- rec state
-      let rstate = spreduce state
+      let rstate' = reduce state
+      let rstate = freduce (map (Var . (++) "$m_" . show) [1..10]) rstate'
       splits <- mapM memo (split rstate)
       let r@(env', stack', expr') = combine rstate splits
-      promise v fv r
+      --promise v fv r
+      promise v (fvs rstate) r
       return (env', stack', appVars (Var v) fv)
     else do
-      let (var, fv) = fromJust ii
+      let (var, _) = fromJust ii
       return (env, stack, appVars (Var var) (fvs state))
   where fvs = freeVars . envExpr
 
@@ -126,7 +129,8 @@ isin conf = State (
   )
 
 -- | Not alpha-equivalence. Free variables equivalence.
--- | Implementation not nice. Support only up to 10 arguments!!!
+-- | Implementation not nice, but nices.
+-- | Support only up to 10 arguments!!!
 match :: Conf -> Conf -> Bool
 match lhs rhs = toExpr lred == toExpr rred
   where
