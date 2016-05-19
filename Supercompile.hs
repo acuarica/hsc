@@ -30,22 +30,29 @@ toLambda :: [Var] -> Expr -> Expr
 toLambda [] expr = expr
 toLambda (v:vs) expr = Lam v (toLambda vs expr)
 
+envToLet :: Env -> Expr -> Expr
+envToLet [] expr = expr
+envToLet ((var, valexpr):env) expr = Let var valexpr (envToLet env expr)
+
 add :: Var -> Expr -> Conf -> Conf
 add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
 
-freduce :: Conf -> Conf
-freduce conf = let (env, stack, expr) = reduce conf in case expr of
-  Lam var lamexpr -> assert (null stack) (freduce (env, [], lamexpr))
-  _ -> (env, stack, expr)
+freduce :: [Expr] -> Conf -> Conf
+freduce args conf =
+  let (env, stack, expr) = reduce conf in
+  case expr of
+    Lam var lamexpr ->
+      assert (null stack)
+        (freduce (tail args) (env, [Arg (head args)], Lam var lamexpr))
+    _ -> (env, stack, expr)
 
---spreduce = freduce
 spreduce = reduce
 
 memo :: Conf -> Memo Conf
 memo state@(env, stack, expr) =
   -- let rstate' = reduce state in
   -- let splits' = split rstate' in
-  -- trace (show state ++ " ~~>> ") $
+  --trace (show state ++ " ~~>> ") $
   -- traceShow rstate' $
   -- trace ("Splits: " ++ show splits') $
   -- trace ("Combine: " ++ show (combine rstate' splits')) $
@@ -57,7 +64,7 @@ memo state@(env, stack, expr) =
 
   if isNothing ii
     then do
-      (v, fv) <- rec $  state
+      (v, fv) <- rec $   state
 
       --let rstate = reduce state
       let rstate = spreduce state
@@ -142,18 +149,19 @@ isin conf = State (
   )
 
 -- | Not alpha-equivalence. Free variables equivalence.
--- | Implementation not nice.
+-- | Implementation not nice. Support only up to 10 arguments!!!
 match :: Conf -> Conf -> Bool
-match lhconf@(lenv,_,_) rhconf =
-  --trace ("lhs:"++show ( (newConf lenv lhs))) $
-  --trace ("rhs:"++ show (reduce rhconf)) $
-  --length lfv == length rfv &&
-  toExpr (spreduce (newConf lenv lhs)) == toExpr (spreduce rhconf)
+match lhs rhs = toExpr lred == toExpr rred
   where
-    lhs = appVars (toLambda lfv (toExpr (spreduce lhconf))) rfv
-    lfv = fvs $ lhconf
-    rfv = fvs $  rhconf
-    fvs = freeVars . envExpr
+    lexpr = envExpr lhs
+    rexpr = envExpr rhs
+    lfv   = freeVars lexpr
+    rfv   = freeVars rexpr
+    llam  = toLambda lfv lexpr
+    rlam  = toLambda rfv rexpr
+    lred  = freduce args (newConf emptyEnv llam)
+    rred  = freduce args (newConf emptyEnv rlam)
+    args  = map (Var . (++) "$a_" . show) [1..10]
 
 lookupMatch :: Hist -> Conf -> Maybe (Var, [Var])
 lookupMatch [] _ = Nothing

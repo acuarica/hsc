@@ -7,9 +7,17 @@ import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 import Eval (eval)
 
+inc = ("inc", "{n->Succ n}")
+mp = ("map", "")
+
 main :: IO Counts
 main = runTestTT $ test $
-  map testEval1 [
+  -- map testReduce
+  -- [
+  --   ((inc))
+  -- ] ++
+  map (\(a, e) -> "eval1" ~: eval a ~?= e)
+  [
     (var, var),
     (con "True", con "True"),
     (cons, cons),
@@ -82,7 +90,8 @@ main = runTestTT $ test $
         (Pat "Succ" ["n'"], App f n')
       ], App f (App f n))
   ] ++
-  map testEval2 [
+  map (\(a, e) -> "eval2" ~: a ~: (eval . parseExpr) a ~?= (eval . parseExpr) e)
+  [
       ("let x=(let y=Succ in y 0) in y", "y"),
       ("let x=(let y=A in y 0) in x y", "A 0 y"),
       ("let x=0 in Succ x", "1"),
@@ -386,5 +395,3 @@ main = runTestTT $ test $
     three = Con "Succ" [two]
     four  = Con "Succ" [three]
     five  = Con "Succ" [four]
-    testEval1 (a, e) = "eval1" ~: eval a ~?= e
-    testEval2 (a, e) = "eval2" ~: a ~: (eval . parseExpr) a ~?= (eval . parseExpr) e

@@ -1,6 +1,8 @@
 
 module Main where
 
+import Control.Arrow (second)
+
 import System.Exit
 
 import Expr
@@ -45,7 +47,7 @@ mapinc = "let inc={n->Succ n}\
  \in let map={f->{xs->case xs of \
  \  Nil->Nil;\
  \  Cons y ys-> Cons (f y) (map f ys);}}\
- \in map inc zs"
+ \in map inc "
 
 mapmap = "let inc={n->Succ n}\
  \in let map={f->{xs->case xs of \
@@ -53,8 +55,22 @@ mapmap = "let inc={n->Succ n}\
  \  Cons y ys-> Cons (f y) (map f ys);}}\
  \in map inc (map inc zs)"
 
+mapincmapinczs = "let inc={n->Succ n}\
+ \in let map={f->{xs->case xs of \
+ \  Nil->Nil;\
+ \  Cons y ys-> Cons (f y) (map f ys);}}\
+ \in map inc (map inc zs)"
+
+inc = ("inc", "{n->Succ n}")
+mp = ("map", "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
+env = map (second parseExpr) [inc, mp]
+l = ([], [], envToLet env (appVars (Var "map") ["inc", "zs"]))
+r = (env, [], appVars (Var "map") ["inc", "ys"])
+
+
 main :: IO ()
 main = do
-  --(print . gp . runMemo . parseExpr) mapinc
-  (print . runMemo . parseExpr) mapinc
+  --print $ l `match` r
+  (print . gp . runMemo . parseExpr) mapincmapinczs
+  (print . runMemo . parseExpr) mapincmapinczs
   --(print . freduce . newConf emptyEnv . parseExpr) mapinc

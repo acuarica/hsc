@@ -47,10 +47,28 @@ appVars :: Expr -> [Var] -> Expr
 appVars expr = app expr . map Var
 
 -- | Variable substitution.
+-- | It does not substitute bound variables.
 subst :: (Var, Expr) -> Expr -> Expr
 subst (var, valexpr) bodyexpr = case bodyexpr of
-  Var var' -> if var' == var then valexpr else Var var'
-  _ -> apply (subst (var, valexpr)) bodyexpr
+  Var var' ->
+    if var' == var
+      then valexpr
+      else Var var'
+  Con tag args -> Con tag (map goSubst args)
+  Lam var' lamexpr' ->
+    if var' == var
+      then Lam var' lamexpr'
+      else Lam var' (goSubst lamexpr')
+  Let var' valexpr' inexpr' ->
+    if var' == var
+      then Let var' valexpr' inexpr'
+      else Let var' (goSubst valexpr') (goSubst inexpr')
+  App funexpr' valexpr' -> App (goSubst funexpr') (goSubst valexpr')
+  Case scexpr' alts -> Case (goSubst scexpr') (map goSubstAlt alts)
+  where
+    goSubst = subst (var, valexpr)
+    goSubstAlt (Pat tag vars, altexpr) =
+      (Pat tag vars, if var `elem ` vars then altexpr else goSubst altexpr)
 
 -- | Subtitutes a list of bindings in bodyexpr.
 substAlts :: [(Var, Expr)] -> Expr -> Expr
@@ -73,15 +91,6 @@ freeVars expr = case expr of
   App funexpr valexpr -> freeVars funexpr `union` freeVars valexpr
   Case scexpr alts -> nub (freeVars scexpr ++
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
-
-apply :: (Expr -> Expr) -> Expr -> Expr
-apply f expr = case expr of
-  Var var -> Var var
-  Con tag args -> Con tag (map f args)
-  Lam var lamexpr -> Lam var (f lamexpr)
-  Let var valexpr inexpr -> Let var (f valexpr) (f inexpr)
-  App funexpr valexpr -> App (f funexpr) (f valexpr)
-  Case scexpr alts -> Case (f scexpr) (map (second f) alts)
 
 -- | Some common used expressions for easy write of expressions.
 -- | These expressions are pretty printed accordingly.
