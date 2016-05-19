@@ -1,7 +1,7 @@
 
 module Main where
 
-import Test.HUnit
+import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
 
 import Expr (app, appVars, freeVars)
 import Parser (parseExpr)
@@ -18,6 +18,9 @@ main = runTestTT $ test $
     ("x", ["x"]),
     ("f x", ["f", "x"]),
     ("f (g x) (h x y)", ["f", "g", "x", "h", "y"]),
+    ("{n->Succ n}", []),
+    ("Succ n", ["n"]),
+    ("Branch t t", ["t"]),
     ("let inc={n->S n} in inc m", ["m"]),
     ("let inc={n->S n} in inc n", ["n"]),
     ("let inc={n->S m} in inc n", ["n", "m"]),
@@ -27,7 +30,7 @@ main = runTestTT $ test $
   ]
   where
     testApp (f, args, e) = "app" ~: f ~:
-      app (parseExpr f) (map parseExpr args) ~=? parseExpr e
+      app (parseExpr f) (map parseExpr args) ~?= parseExpr e
     testAppVars (f, args, e) = "appVars" ~: f ~:
-      appVars (parseExpr f) args ~=? parseExpr e
-    testFreeVars (a, e) = "freeVars" ~: a ~: (freeVars . parseExpr) a ~=? e
+      appVars (parseExpr f) args ~?= parseExpr e
+    testFreeVars (a, e) = "freeVars" ~: a ~: (freeVars . parseExpr) a ~?= e

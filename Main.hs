@@ -6,8 +6,6 @@ import System.Exit
 import Expr
 import Parser
 import Eval
-import Language.Haskell.Exts
-import HSE
 import Supercompile
 
 --fileText <- readFile "Setup.hs"

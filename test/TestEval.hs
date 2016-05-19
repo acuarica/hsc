@@ -1,17 +1,17 @@
 
 module Main where
 
-import Test.HUnit
+import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
 
-import Expr
-import Eval
-import Parser
+import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
+import Parser (parseExpr)
+import Eval (eval)
 
 main :: IO Counts
 main = runTestTT $ test $
   map testEval1 [
     (var, var),
-    (true, true),
+    (con "True", con "True"),
     (cons, cons),
     (App suc zero, one),
     (App suc (App suc zero), two),
@@ -29,28 +29,28 @@ main = runTestTT $ test $
     (App (Lam "x" x) zero, zero),
     (Let "x" zero x, zero),
     (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
-    (Let "x" true (Case x [
-        (Pat "False" [], true),
-        (Pat "True" [], false)
-      ]), false),
+    (Let "x" (con "True") (Case x [
+        (Pat "False" [], con "True"),
+        (Pat "True" [], con "False")
+      ]), con "False"),
     (Let "x" (Lam "y" (Case y [
-        (Pat "False" [], true),
-        (Pat "True" [], false)
-      ])) (Let "z" true (App x z)), false),
+        (Pat "False" [], con "True"),
+        (Pat "True" [], con "False")
+      ])) (Let "z" (con "True") (App x z)), con "False"),
     (Let "iszero" (Lam "n" (Case n [
-        (Pat "Zero" [], true),
-        (Pat "Succ" ["m"], false)
-      ])) (Let "x" two (App iszero x)), false),
+        (Pat "Zero" [], con "True"),
+        (Pat "Succ" ["m"], con "False")
+      ])) (Let "x" two (App iszero x)), con "False"),
     (Let "iszero" (Lam "n" (Case n [
-        (Pat "Zero" [], true),
-        (Pat "Succ" ["m"], false)
-      ])) (Let "x" zero (App iszero x)), true),
+        (Pat "Zero" [], con "True"),
+        (Pat "Succ" ["m"], con "False")
+      ])) (Let "x" zero (App iszero x)), con "True"),
     (Let "plus1" (Lam "n" (App suc n)) (Let "x" one (App plus1 x)), two),
     (Let "and" (Lam "n" (Lam "m" (Case n [
-        (Pat "False" [], false),
+        (Pat "False" [], con "False"),
         (Pat "True" [], m)
-      ]))) (App (App (Var "and") true) true),
-      true),
+      ]))) (app (Var "and") [con "True", con "True"]),
+      con "True"),
     (Let "pred" (Lam "n" (Case n [
         (Pat "Zero" [], zero),
         (Pat "Succ" ["n'"], n')
@@ -386,5 +386,5 @@ main = runTestTT $ test $
     three = Con "Succ" [two]
     four  = Con "Succ" [three]
     five  = Con "Succ" [four]
-    testEval1 (a, e) = "eval1" ~: eval a ~=? e
-    testEval2 (a, e) = "eval2" ~: a ~: (eval . parseExpr) a ~=? (eval . parseExpr) e
+    testEval1 (a, e) = "eval1" ~: eval a ~?= e
+    testEval2 (a, e) = "eval2" ~: a ~: (eval . parseExpr) a ~?= (eval . parseExpr) e

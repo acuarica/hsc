@@ -4,7 +4,7 @@ module Eval where
 
 import Data.List (intercalate)
 
-import Expr
+import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt)
 
 -- | Evaluates the given expression to normal form.
 eval :: Expr -> Expr
@@ -43,25 +43,6 @@ data StackFrame
   | Arg Expr
   | Update Var
   deriving Eq
-
-instance Show StackFrame where
-  show frame = case frame of
-    Alts alts -> "Alts:" ++ show alts
-    Arg expr -> "#(" ++ show expr ++ ")"
-    Update var -> "Update:" ++ var
-
-instance {-# OVERLAPPING #-} Show Conf where
-  show (env, stack, expr) =
-    "<#" ++ show env ++ "#>" ++ " <%" ++ show stack ++ "%> " ++ show expr
-
-instance {-# OVERLAPPING #-} Show Env where
-  show env = intercalate " " (map ((++) "" . show) env)
-
-instance {-# OVERLAPPING #-} Show (Var, Expr) where
-  show (var, expr) = var ++ ":->" ++ show expr
-
-instance {-# OVERLAPPING #-} Show Stack where
-  show stack = intercalate "|" (map ((++) "" . show) stack)
 
 -- | Reduce a state to Normal Form (NF).
 -- | A normal form is either a constructor (Con) or
@@ -111,3 +92,22 @@ step (env, stack, expr) = case expr of
   App funexpr valexpr ->
     Just (env, Arg valexpr:stack, funexpr)
   Case scexpr alts -> Just (env, Alts alts:stack, scexpr)
+
+instance Show StackFrame where
+  show frame = case frame of
+    Alts alts -> "Alts:" ++ show alts
+    Arg expr -> "#(" ++ show expr ++ ")"
+    Update var -> "Update:" ++ var
+
+instance {-# OVERLAPPING #-} Show Conf where
+  show (env, stack, expr) =
+    "<#" ++ show env ++ " |" ++ show stack ++ " | " ++ show expr ++ " #>"
+
+instance {-# OVERLAPPING #-} Show Env where
+  show env = intercalate " &" (map ((++) " " . show) env)
+
+instance {-# OVERLAPPING #-} Show (Var, Expr) where
+  show (var, expr) = var ++ ":->" ++ show expr
+
+instance {-# OVERLAPPING #-} Show Stack where
+  show stack = intercalate "|" (map ((++) " " . show) stack)

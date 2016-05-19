@@ -1,11 +1,16 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Expr where
+module Expr (
+  Expr(..), Var, Pat (Pat),
+  con, app, appVars,
+  subst, substAlts, lookupAlt, freeVars,
+  zero, suc, nil, cons
+) where
 
 import Control.Arrow (second)
 import Data.Maybe (fromMaybe)
 import Control.Exception (assert)
-import Data.List (nub, delete, (\\), intercalate)
+import Data.List (nub, delete, (\\), union, intercalate)
 
 -- | The expression type.
 data Expr
@@ -26,6 +31,20 @@ type Tag = String
 
 -- | Case patterns against tag.
 data Pat = Pat Tag [Var] deriving Eq
+
+-- | Creates a constructor with the given tag.
+con :: Tag -> Expr
+con tag = Con tag []
+
+-- | Application of args to expr.
+app :: Expr -> [Expr] -> Expr
+app expr args = case args of
+  [] -> expr
+  arg:args' -> app (App expr arg) args'
+
+-- | Application of variables to an expression.
+appVars :: Expr -> [Var] -> Expr
+appVars expr = app expr . map Var
 
 -- | Variable substitution.
 subst :: (Var, Expr) -> Expr -> Expr
@@ -50,8 +69,8 @@ freeVars expr = case expr of
   Con _ args -> nub (concatMap freeVars args)
   Lam var lamexpr -> delete var (freeVars lamexpr)
   Let var valexpr inexpr ->
-    delete var (nub (freeVars inexpr ++ freeVars valexpr))
-  App funexpr valexpr -> nub (freeVars funexpr ++ freeVars valexpr)
+    delete var (freeVars inexpr `union` freeVars valexpr)
+  App funexpr valexpr -> freeVars funexpr `union` freeVars valexpr
   Case scexpr alts -> nub (freeVars scexpr ++
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
 
@@ -64,25 +83,9 @@ apply f expr = case expr of
   App funexpr valexpr -> App (f funexpr) (f valexpr)
   Case scexpr alts -> Case (f scexpr) (map (second f) alts)
 
--- | Application of args to expr.
-app :: Expr -> [Expr] -> Expr
-app expr args = case args of
-  [] -> expr
-  arg:args' -> app (App expr arg) args'
-
--- | Application of variables to an expression.
-appVars :: Expr -> [Var] -> Expr
-appVars expr = app expr . map Var
-
--- | Creates a constructor with the given tag.
-con :: Tag -> Expr
-con tag = Con tag []
-
 -- | Some common used expressions for easy write of expressions.
 -- | These expressions are pretty printed accordingly.
 zero, suc, nil, cons :: Expr
-true = con "True"
-false = con "False"
 zero = con "Zero"
 suc = con "Succ"
 nil = con "Nil"

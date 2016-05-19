@@ -3,7 +3,7 @@ module Main where
 
 import Test.HUnit
 
-import Expr (Expr(..), Pat(Pat), app, true, false, zero, suc, cons, nil)
+import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 
 main :: IO Counts
@@ -18,8 +18,6 @@ main = runTestTT $ test $
     ("var234", Var "var234"),
     ("$var", Var "$var"),
     ("veryverylonglongvar", Var "veryverylonglongvar"),
-    ("$veryverylonglongvar", Var "$veryverylonglongvar"),
-    ("$1234veryverylonglongvar", Var "$1234veryverylonglongvar"),
     ("0", zero),
     ("Zero", zero),
     ("1", App suc zero),
@@ -42,7 +40,7 @@ main = runTestTT $ test $
     ("{$x->$x}", Lam "$x" (Var "$x")),
     ("{$x0->$x0}", Lam "$x0" (Var "$x0")),
     ("{var->var}", Lam "var" (Var "var")),
-    ("{x->True}", Lam "x" true),
+    ("{x->True}", Lam "x" (Con "True" [])),
     ("{x->2}", Lam "x" (App suc (App suc zero))),
     ("{f->{x->f x}}", Lam "f" (Lam "x" (App (Var "f") (Var "x")))),
     ("let x={y->y} in x", Let "x" (Lam "y" (Var "y")) (Var "x")),
@@ -51,53 +49,45 @@ main = runTestTT $ test $
     ("let id={y->y} in id", Let "id" (Lam "y" (Var "y")) (Var "id")),
     ("let x=0 in Succ x", Let "x" zero (App suc (Var "x"))),
     ("let cp={a->case a of Zero->0; Succ aa->Succ (cp aa);} in cp",
-      Let "cp"(Lam "a" (Case (Var "a") [
+      Let "cp" (Lam "a" (Case (Var "a") [
         (Pat "Zero" [],
           Con "Zero" []),
         (Pat "Succ" ["aa"],
           App (Con "Succ" []) (App (Var "cp") (Var "aa")))
       ])) (Var "cp")),
-    ("case x of True -> False;",
-      Case (Var "x") [
-        (Pat "True" [], false)
-      ]),
     ("case var of True -> False;",
       Case (Var "var") [
-        (Pat "True" [], false)
+        (Pat "True" [], con "False")
       ]),
     ("case var of True -> False; False -> True;",
       Case (Var "var") [
-        (Pat "True" [], false),
-        (Pat "False" [], true)
+        (Pat "True" [], con "False"),
+        (Pat "False" [], con "True")
       ]),
     ("case var of True -> False; False -> True; Just n -> m;",
       Case (Var "var") [
-        (Pat "True" [], Con "False" []),
-        (Pat "False" [], Con "True" []),
+        (Pat "True" [], con "False"),
+        (Pat "False" [], con "True"),
         (Pat "Just" ["n"], Var "m")
       ]),
     ("[]", nil),
     ("  [  ]  ", nil),
-    ("[True]", App (App cons true) nil),
-    ("[False, True]", App (App cons false) (App (App cons true) nil)),
-    ("[False, True, False]",
-      App (App cons false) (
-        App (App cons true) (
-          App (App cons false) nil))  ),
+    ("[True]", app cons [con "True", nil]),
+    ("[A, B]", app cons [con "A", app cons [con "B", nil]]),
     ("[False, True, False, True]",
-      App (App cons false) (
-        App (App cons true) (
-          App (App cons false) (
-            App (App cons true) nil))) ),
+      App (App cons (con "False")) (
+        App (App cons (con "True")) (
+          App (App cons (con "False")) (
+            App (App cons (con "True")) nil))) ),
     ("[x]", App (App cons (Var "x")) nil),
     ("[x,y]",
       App (App cons (Var "x")) (
         App (App cons (Var "y")) nil)),
     ("[x,One,y,Two]",
       App (App cons (Var "x")) (
-        App (App cons (Con "One" [])) (
+        App (App cons (con "One")) (
           App (App cons (Var "y")) (
-            App (App cons (Con "Two" [])) nil))) )
+            App (App cons (con "Two")) nil))) )
   ]
   where
     testParseExpr (a, e) = "parseExpr" ~: a ~: parseExpr a ~=? e

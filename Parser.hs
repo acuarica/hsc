@@ -3,11 +3,10 @@ module Parser (
   parseExpr
 ) where
 
-import Expr
-import Data.Char
-import Control.Monad
-import Control.Applicative
-import Text.Printf
+import Expr (Expr(..), Var, Pat(Pat), con, app, zero, suc, nil, cons)
+import Data.Char (isDigit, isAlpha, isLower, isUpper)
+import Control.Applicative (Alternative, empty, (<|>), some, many)
+import Text.Printf (printf)
 
 -- | Represents how many characters are consumed within the parsed string.
 type Chars = Int
@@ -60,7 +59,7 @@ instance Alternative Parser where
         done -> done
     )
 
--- | Parses a char
+-- | Parses a char.
 item :: Parser Char
 item = Parser (\s -> case s of
     []     -> Error "Reached EOF"
