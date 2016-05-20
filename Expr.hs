@@ -2,7 +2,7 @@
 
 module Expr (
   Expr(..), Var, Pat (Pat),
-  con, app, appVars, isVar,
+  con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars,
   zero, suc, nil, cons
 ) where
@@ -50,6 +50,12 @@ appVars expr = app expr . map Var
 isVar :: Expr -> Bool
 isVar (Var _) = True
 isVar _ = False
+
+-- | Returns True if expr is a constructor with no arguments.
+-- | False otherwise.
+isEmptyCon :: Expr -> Bool
+isEmptyCon (Con _ []) = True
+isEmptyCon _ = False
 
 -- | Variable substitution.
 -- | It substitutes var in bodyexpr only if var is a free variable.

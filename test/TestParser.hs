@@ -1,14 +1,15 @@
 
-module Main where
+module Main (main) where
 
-import Test.HUnit
+import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
 
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 
 main :: IO Counts
 main = runTestTT $ test $
-  map testParseExpr [
+  map (\(a, e) -> "parseExpr" ~: a ~: parseExpr a ~?= e)
+  [
     ("x", Var "x"),
     ("$x", Var "$x"),
     ("$x__", Var "$x__"),
@@ -89,5 +90,3 @@ main = runTestTT $ test $
           App (App cons (Var "y")) (
             App (App cons (con "Two")) nil))) )
   ]
-  where
-    testParseExpr (a, e) = "parseExpr" ~: a ~: parseExpr a ~=? e

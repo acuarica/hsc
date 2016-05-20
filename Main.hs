@@ -61,6 +61,27 @@ mapincmapinczs = "let inc={n->Succ n}\
  \  Cons y ys-> Cons (f y) (map f ys);}}\
  \in map inc (map inc zs)"
 
+append =
+ "let append={xs->{ys->case xs of \
+  \  Nil->ys;\
+  \  Cons z zs -> Cons z (append zs ys) ; }}\
+  \in append (append as bs) cs"
+
+rev =
+  "let cat={xs->{ys->case xs of\
+  \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\
+  \in let rev={rs->case rs of\
+  \  Nil->Nil; Cons s ss->cat (rev ss) [s]; }\
+  \in rev"
+
+revAccum =
+  "let revAccum={xs->{as->case xs of \
+  \  Nil -> as;\
+  \  Cons y ys -> revAccum ys (Cons y as); }}\
+  \in let reverse={rs->revAccum rs []}\
+  \in reverse zs"
+
+
 inc = ("inc", "{n->Succ n}")
 mp = ("map", "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
 env = map (second parseExpr) [inc, mp]
@@ -70,5 +91,6 @@ r = (env, [], appVars (Var "map") ["inc", "ys"])
 
 main :: IO ()
 main = do
+  putStrLn mapincmapinczs
   (print . gp . runMemo . parseExpr) mapincmapinczs
-  (print . runMemo . parseExpr) mapincmapinczs
+  --(print . runMemo . parseExpr) rev

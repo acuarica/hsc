@@ -7,7 +7,7 @@ import Data.Maybe (isNothing, fromJust)
 import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 
-import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, freeVars)
+import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, nf, reduce, put)
 import Splitter (split, combine)
 
@@ -60,24 +60,29 @@ simp conf@(env, stack, expr) = case expr of
 
 memo :: Conf -> Memo Conf
 memo state@(env, stack, expr) =
+  --trace (show (stack, expr) ) $
   if null stack && isVar expr then return state else
+  if null stack && isEmptyCon expr then return state else
   do
-  ii <- isin state
-  if isNothing ii
-    then do
-      (v, fv) <- rec state
-      let rstate'' = reduce state
-      let rstate' = freduce (map (Var . (++) "$m_" . show) [1..10]) rstate''
-      let rstate = reduce $ simp rstate'
-      --let rstate = nf $ simp rstate'
-      splits <- mapM memo (split rstate)
-      let r@(env', stack', expr') = combine rstate splits
-      --promise v fv r
-      promise v (fvs rstate) r
-      return (env', stack', appVars (Var v) fv)
-    else do
-      let (var, _) = fromJust ii
-      return (env, stack, appVars (Var var) (fvs state))
+  next <- getNext
+  if next > 10 then return state else
+    do
+    ii <- isin state
+    if isNothing ii
+      then do
+        (v, fv) <- rec state
+        let rstate'' = reduce state
+        let rstate' = freduce (map (Var . (++) "$m_" . show) [1..10]) rstate''
+        let rstate = reduce $ simp rstate'
+        --let rstate = nf $ simp rstate'
+        splits <- mapM memo (split rstate)
+        let r@(env', stack', expr') = combine rstate splits
+        --promise v fv r
+        promise v (fvs rstate) r
+        return (env', stack', appVars (Var v) fv)
+      else do
+        let (var, _) = fromJust ii
+        return (env, stack, appVars (Var var) (fvs state))
   where fvs = freeVars . envExpr
 
 type Hist = [(Var, [Var], Conf)]
@@ -125,6 +130,11 @@ promise var fv conf = state (\(next, hist, prom) -> ((),
 isin :: Conf -> Memo (Maybe (Var, [Var]))
 isin conf = state (
     \(next, hist, prom) -> (hist `lookupMatch` conf, (next, hist, prom))
+  )
+
+getNext :: Memo Int
+getNext = state (
+    \(next, hist, prom) -> (next, (next, hist, prom))
   )
 
 -- | Not alpha-equivalence. Free variables equivalence.

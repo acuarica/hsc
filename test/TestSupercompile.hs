@@ -1,5 +1,5 @@
 
-module Main where
+module Main (main) where
 
 import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
 import Control.Arrow (second)

@@ -107,6 +107,10 @@ instance {-# OVERLAPPING #-} Show Conf where
   show (env, stack, expr) =
     "<#" ++ show env ++ " |" ++ show stack ++ " | " ++ show expr ++ " #>"
 
+instance {-# OVERLAPPING #-} Show (Stack, Expr) where
+  show (stack, expr) =
+    "<%" ++ show stack ++ " | " ++ show expr ++ " %>"
+
 instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)
 
