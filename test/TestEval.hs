@@ -1,7 +1,8 @@
 
 module Main (main) where
 
-import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
+import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
@@ -10,13 +11,13 @@ import Eval (eval)
 inc = ("inc", "{n->Succ n}")
 mp = ("map", "")
 
-main :: IO Counts
-main = runTestTT $ test $
+main :: IO ()
+main = defaultMain $ testGroup "eval str ~~> expr" $
   -- map testReduce
   -- [
   --   ((inc))
   -- ] ++
-  map (\(a, e) -> "eval1" ~: eval a ~?= e)
+  map (\(a, e) -> testCase (show a) $ eval a @?= e)
   [
     (var, var),
     (con "True", con "True"),
@@ -90,7 +91,7 @@ main = runTestTT $ test $
         (Pat "Succ" ["n'"], App f n')
       ], App f (App f n))
   ] ++
-  map (\(a, e) -> "eval2" ~: a ~: (eval . parseExpr) a ~?= (eval . parseExpr) e)
+  map (\(a, e) -> testCase "" $ (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
       ("let x=(let y=Succ in y 0) in y", "y"),
       ("let x=(let y=A in y 0) in x y", "A 0 y"),

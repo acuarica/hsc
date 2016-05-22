@@ -1,14 +1,16 @@
 
 module Main (main) where
 
-import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
+import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 
-main :: IO Counts
-main = runTestTT $ test $
-  map (\(a, e) -> "parseExpr" ~: a ~: parseExpr a ~?= e)
+main :: IO ()
+main = defaultMain $
+  testGroup "Parser.parseExpr str ~~> expr" $
+  map (\(a, e) -> testCase (a ++ " ~~> " ++ show e) $ parseExpr a @?= e)
   [
     ("x", Var "x"),
     ("$x", Var "$x"),
@@ -49,12 +51,12 @@ main = runTestTT $ test $
     ("let $x0={y->y} in $x0", Let "$x0" (Lam "y" (Var "y")) (Var "$x0")),
     ("let id={y->y} in id", Let "id" (Lam "y" (Var "y")) (Var "id")),
     ("let x=0 in Succ x", Let "x" zero (App suc (Var "x"))),
-    ("let cp={a->case a of Zero->0; Succ aa->Succ (cp aa);} in cp",
+    ("let cp={a->case a of Z->Z; S aa->S (cp aa);} in cp",
       Let "cp" (Lam "a" (Case (Var "a") [
-        (Pat "Zero" [],
-          Con "Zero" []),
-        (Pat "Succ" ["aa"],
-          App (Con "Succ" []) (App (Var "cp") (Var "aa")))
+        (Pat "Z" [],
+          Con "Z" []),
+        (Pat "S" ["aa"],
+          App (Con "S" []) (App (Var "cp") (Var "aa")))
       ])) (Var "cp")),
     ("case var of True -> False;",
       Case (Var "var") [

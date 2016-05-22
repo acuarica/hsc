@@ -1,16 +1,19 @@
 
 module Main (main) where
 
-import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
+import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+
 import Control.Arrow (second)
 
 import Expr (Expr(..), appVars)
 import Parser (parseExpr)
 import Eval (newConf, emptyEnv, eval)
-import Supercompile (envToLet, match, supercompile)
+import Supercompiler (envToLet, match, supercompile)
 
-main :: IO Counts
-main = runTestTT $ test $
+main :: IO ()
+main = defaultMain $
+  testGroup "parseExpr str ~~> expr" $
   map testMatch1 [
     ("x", "y", True),
     ("f x", "f y", True),
@@ -51,10 +54,10 @@ main = runTestTT $ test $
     mp = ("map", "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
     env = map (second parseExpr) [inc, mp]
 
-    testMatch1 (x,y,v) = "match1" ~: x ++ " =~= " ++ y ~: match (s x) (s y) ~?= v
-    testMatch2 (l,r,v) = "match1" ~: show l ++ " =~= " ++ show r ~: l `match` r ~?= v
+    testMatch1 (x,y,v) = testCase (x ++ " =~= " ++ y) $ match (s x) (s y) @?= v
+    testMatch2 (l,r,v) = testCase (show l ++ " =~= " ++ show "") $ l `match` r @?= v
     s = newConf emptyEnv . parseExpr
-    testSupercompile (e, f, ar) = eval (f (sp e)) ~?= (eval . parse) ar
+    testSupercompile (e, f, ar) = testCase "" $ eval (f (sp e)) @?= (eval . parse) ar
     parse = parseExpr
     sp = supercompile . parse
     mapinczs =

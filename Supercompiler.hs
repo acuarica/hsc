@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Supercompile where
+module Supercompiler where
 
 import Data.List (intercalate)
 import Data.Maybe (isNothing, fromJust)

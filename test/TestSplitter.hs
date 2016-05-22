@@ -1,21 +1,23 @@
 
 module Main (main) where
 
-import Test.HUnit (Counts, runTestTT, test, (~:), (~?=))
+import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+
 import Control.Arrow (second)
 
 import Parser (parseExpr)
 import Eval (newConf, emptyEnv, reduce)
 import Splitter (split)
 
-main :: IO Counts
-main = runTestTT $ test $
-  map (\(s, ss) -> "split1" ~: s ~: split (reduceExpr s) ~?= map toConf ss)
+main :: IO ()
+main = defaultMain $ testGroup "eval str ~~> expr" $
+  map (\(s, ss) -> testCase s $ split (reduceExpr s) @?= map toConf ss)
   [
     ("x", []),
     ("Cons x xs", ["x", "xs"])
   ] ++
-  map (\(s, ss) -> "split2" ~: show s ~: split ((reduce.toConf') s) ~?= map toConf' ss)
+  map (\(s, ss) -> testCase (show s) $ split ((reduce.toConf') s) @?= map toConf' ss)
   [
     ((env, [], "map inc zs"), [
       (env, [], "[]"),
