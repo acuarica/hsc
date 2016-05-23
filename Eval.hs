@@ -2,7 +2,7 @@
 
 module Eval (
   Conf, Env, StackFrame(..),
-  eval, emptyEnv, newConf, toExpr, nf, reduce, put
+  eval, whnf, emptyEnv, newConf, toExpr, nf, reduce, put, step
 ) where
 
 import Data.List (intercalate)
@@ -25,9 +25,13 @@ data StackFrame
   | Update Var
   deriving Eq
 
--- | Evaluates the given expression to normal form.
+-- | Evaluates the given expression to Normal Form (NF).
 eval :: Expr -> Expr
 eval = toExpr . nf . newConf emptyEnv
+
+-- | Evaluates the given expression to Weak Head Normal Form (WHNF).
+whnf :: Expr -> Expr
+whnf = toExpr . reduce . newConf emptyEnv
 
 -- | Creates an empty environment.
 emptyEnv :: Env
@@ -40,13 +44,14 @@ newConf env = (,,) env []
 
 -- | Selects the expr from a given configuration:
 -- | That is, it uses the expr and the stack.
+-- | It does not use the environment.
 toExpr :: Conf -> Expr
-toExpr s@(env, stack, expr) = go expr stack
+toExpr conf@(env, stack, expr) = go expr stack
   where go expr [] = expr
         go expr (Arg arg:stack') = go (App expr arg) stack'
         go expr (Alts alts:stack') = go (Case expr alts) stack'
-        go _ _ = error $ "toExpr error: " ++ show s
-
+        go _ _ = error $ "toExpr: " ++ show conf
+        --go expr (Update var:stack') = go (Let var expr (Var var)) stack'
 
 -- | Reduce a state to Normal Form (NF).
 -- | A normal form is either a constructor (Con) or
@@ -58,13 +63,13 @@ nf state = case reduce state of
   (env, stack, Con _ _) -> error "Stack/Con"
   state' -> state'
 
--- | Reduce a state to Weak Head Normal Form (WHNF).
+-- | Reduce a conf. to Weak Head Normal Form (WHNF).
 -- | Lambda abstractions are not further evaluated as in
 -- | Head Normal Form (HNF).
 reduce :: Conf -> Conf
-reduce state = case step state of
-  Nothing -> state
-  Just state' -> reduce state'
+reduce conf = case step conf of
+  Nothing -> conf
+  Just conf' -> reduce conf'
 
 -- | Puts var bind with expr in the given environment.
 put :: Var -> Expr -> Env -> Env

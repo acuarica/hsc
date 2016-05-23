@@ -6,17 +6,22 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
-import Eval (eval)
+import Eval (eval, whnf)
 
 inc = ("inc", "{n->Succ n}")
 mp = ("map", "")
 
 main :: IO ()
 main = defaultMain $ testGroup "eval str ~~> expr" $
-  -- map testReduce
-  -- [
-  --   ((inc))
-  -- ] ++
+  map (\(a, e) -> testCase a $ (whnf . parseExpr) a @?= parseExpr e)
+  [
+    (
+    "let cat={xs->{ys->case xs of \
+    \Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
+    \let rev={rs->case rs of \
+    \Nil->[];Cons s ss->cat (rev ss) (Cons s []);} in \
+    \rev vs", "y")
+  ] ++
   map (\(a, e) -> testCase (show a) $ eval a @?= e)
   [
     (var, var),

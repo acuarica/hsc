@@ -8,7 +8,7 @@ import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 
 import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
-import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, nf, reduce, put)
+import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, nf, reduce, put, step)
 import Splitter (split, combine)
 
 import Debug.Trace
@@ -16,10 +16,7 @@ import Debug.Trace
 supercompile :: Expr -> Expr
 supercompile = gp . runMemo
 
-gp m@((_, _, expr0), (next, hist, prom)) = --traceShow conf $
-  --let (var, fv, expr) = head prom in
-    --fromMemo prom (app (Var var) (map Var fv))
-    fromMemo prom expr0
+gp m@((_, _, expr0), (next, hist, prom)) = fromMemo prom expr0
 
 runMemo expr = let s = memo (newConf emptyEnv expr)
   in runState s (0, [], [])
@@ -58,31 +55,48 @@ simp conf@(env, stack, expr) = case expr of
   _ -> conf
   where al als (Pat tag vars, altexpr) = (Pat tag vars, Case altexpr als)
 
+memoStep :: Conf -> Memo Conf
+memoStep conf@(env, stack, _) = do
+  ii <- isin conf
+  if isNothing ii
+    then do
+      (v, fv) <- rec conf
+      case step conf of
+        Nothing -> do --return conf
+          let rconf = conf
+          splits <- trace (show (toExpr rconf) ) $ mapM memoStep (split rconf)
+          let r@(env', stack', expr') = combine rconf splits
+          return r
+
+        Just conf' -> memoStep conf'
+    else do
+      let (var, _) = fromJust ii
+      return (env, stack, appVars (Var var) (fvs conf))
+  where fvs = freeVars . envExpr
+
 memo :: Conf -> Memo Conf
-memo state@(env, stack, expr) =
-  --trace (show (stack, expr) ) $
-  if null stack && isVar expr then return state else
-  if null stack && isEmptyCon expr then return state else
+memo conf@(env, stack, expr) =
+  if null stack && isVar expr then return conf else
+  if null stack && isEmptyCon expr then return conf else
   do
   next <- getNext
-  if next > 10 then return state else
+  if next > 10 then return conf else
     do
-    ii <- isin state
+    ii <- isin conf
     if isNothing ii
       then do
-        (v, fv) <- rec state
-        let rstate'' = reduce state
-        let rstate' = freduce (map (Var . (++) "$m_" . show) [1..10]) rstate''
-        let rstate = reduce $ simp rstate'
-        --let rstate = nf $ simp rstate'
-        splits <- mapM memo (split rstate)
-        let r@(env', stack', expr') = combine rstate splits
-        --promise v fv r
-        promise v (fvs rstate) r
+        (v, fv) <- rec conf
+
+        let rconf'' = reduce conf
+        let rconf' = freduce (map (Var . (++) "$m_" . show) [1..10]) rconf''
+        let rconf = reduce $ simp rconf'
+        splits <- mapM memo (split rconf)
+        let r@(env', stack', expr') = combine rconf splits
+        promise v (fvs rconf) r
         return (env', stack', appVars (Var v) fv)
       else do
         let (var, _) = fromJust ii
-        return (env, stack, appVars (Var var) (fvs state))
+        return (env, stack, appVars (Var var) (fvs conf))
   where fvs = freeVars . envExpr
 
 type Hist = [(Var, [Var], Conf)]

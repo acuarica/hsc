@@ -15,7 +15,10 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
   map (\(s, ss) -> testCase s $ split (reduceExpr s) @?= map toConf ss)
   [
     ("x", []),
-    ("Cons x xs", ["x", "xs"])
+    ("Cons x xs", ["x", "xs"]),
+    ("case vs of Nil->[];Cons s ss->cat (rev ss) (Cons s []);",
+      ["[]", "cat (rev ss) (Cons s [])"]
+      )
   ] ++
   map (\(s, ss) -> testCase (show s) $ split ((reduce.toConf') s) @?= map toConf' ss)
   [

@@ -8,7 +8,7 @@ import System.Exit
 import Expr
 import Parser
 import Eval
-import Supercompile
+import Supercompiler
 
 --fileText <- readFile "Setup.hs"
 --print fileText
@@ -72,7 +72,7 @@ rev =
   \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\
   \in let rev={rs->case rs of\
   \  Nil->Nil; Cons s ss->cat (rev ss) [s]; }\
-  \in rev"
+  \in rev vs"
 
 revAccum =
   "let revAccum={xs->{as->case xs of \
@@ -91,6 +91,6 @@ r = (env, [], appVars (Var "map") ["inc", "ys"])
 
 main :: IO ()
 main = do
-  putStrLn mapincmapinczs
-  (print . gp . runMemo . parseExpr) mapincmapinczs
-  --(print . runMemo . parseExpr) rev
+--  putStrLn rev
+  (print . gp . runMemo . parseExpr) rev
+  (print . runMemo . parseExpr) rev

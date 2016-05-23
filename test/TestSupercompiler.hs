@@ -12,8 +12,8 @@ import Eval (newConf, emptyEnv, eval)
 import Supercompiler (envToLet, match, supercompile)
 
 main :: IO ()
-main = defaultMain $
-  testGroup "parseExpr str ~~> expr" $
+main = defaultMain $ testGroup "Supercompiler: match, supercompile/eval"
+  [testGroup "match1 ~~>" $
   map testMatch1 [
     ("x", "y", True),
     ("f x", "f y", True),
@@ -30,7 +30,7 @@ main = defaultMain $
     ("let i={n->Succ n} in i", "Succ n", True),
     ("let i={n->Succ n} in i",
       "let i={n->Succ n} in let id={x->x} in i m", True)
-  ] ++
+  ], testGroup "match2 ~~>" $
   map testMatch2 [
     ( (env, [], appVars (Var "map") ["inc", "zs"]),
       (env, [], appVars (Var "map") ["inc", "ys"]), True),
@@ -38,7 +38,7 @@ main = defaultMain $
       (env, [], appVars (Var "map") ["inc", "ys"]), True),
     ( (env, [], appVars (Var "map") ["inc", "ys"]),
       ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])), True)
-  ] ++
+  ], testGroup "supercompile" $
   map testSupercompile [
     (mapinczs, Let "zs" (parse "[]"), "[]"),
     (mapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
@@ -49,6 +49,7 @@ main = defaultMain $
     (mapincmapinc, \e-> App e (parse "[]"), "[]"),
     (mapincmapinc, \e-> App e (parse "[1,2,3,4,5]"), "[3,4,5,6,7]")
   ]
+  ]
   where
     inc = ("inc", "{n->Succ n}")
     mp = ("map", "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
@@ -57,7 +58,7 @@ main = defaultMain $
     testMatch1 (x,y,v) = testCase (x ++ " =~= " ++ y) $ match (s x) (s y) @?= v
     testMatch2 (l,r,v) = testCase (show l ++ " =~= " ++ show "") $ l `match` r @?= v
     s = newConf emptyEnv . parseExpr
-    testSupercompile (e, f, ar) = testCase "" $ eval (f (sp e)) @?= (eval . parse) ar
+    testSupercompile (e, f, ar) = testCase (e ++ "/" ++ ar) $ eval (f (sp e)) @?= (eval . parseExpr) ar
     parse = parseExpr
     sp = supercompile . parse
     mapinczs =
