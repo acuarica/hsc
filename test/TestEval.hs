@@ -22,7 +22,9 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
     \Nil->[];Cons s ss->cat (rev ss) (Cons s []);} in \
     \rev vs", "y")
   ] ++
-  map (\(a, e) -> testCase (show a) $ eval a @?= e)
+  map (\(a, e) ->
+    testCase (show a ++ " ~~> " ++ show e) $
+      eval a @?= e)
   [
     (var, var),
     (con "True", con "True"),
@@ -96,7 +98,9 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
         (Pat "Succ" ["n'"], App f n')
       ], App f (App f n))
   ] ++
-  map (\(a, e) -> testCase "" $ (eval . parseExpr) a @?= (eval . parseExpr) e)
+  map (\(a, e) ->
+    testCase ((show . id) a ++ " ~~> " ++ (show . id) e) $
+      (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
       ("let x=(let y=Succ in y 0) in y", "y"),
       ("let x=(let y=A in y 0) in x y", "A 0 y"),
