@@ -50,8 +50,8 @@ toExpr conf@(env, stack, expr) = go expr stack
   where go expr [] = expr
         go expr (Arg arg:stack') = go (App expr arg) stack'
         go expr (Alts alts:stack') = go (Case expr alts) stack'
-        go _ _ = error $ "toExpr: " ++ show conf
-        --go expr (Update var:stack') = go (Let var expr (Var var)) stack'
+        --go _ _ = error $ "toExpr: " ++ show conf
+        go expr (Update var:stack') = go (Let var expr (Var var)) stack'
 
 -- | Reduce a state to Normal Form (NF).
 -- | A normal form is either a constructor (Con) or

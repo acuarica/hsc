@@ -10,7 +10,9 @@ import Parser (parseExpr)
 main :: IO ()
 main = defaultMain $
   testGroup "Parser.parseExpr str ~~> expr" $
-  map (\(a, e) -> testCase (a ++ " ~~> " ++ show e) $ parseExpr a @?= e)
+  map (\(a, e) ->
+    testCase (show a ++ " ~~> " ++ show e) $
+      parseExpr a @?= e)
   [
     ("x", Var "x"),
     ("$x", Var "$x"),

@@ -9,14 +9,16 @@ import Parser (parseExpr)
 
 main :: IO ()
 main = defaultMain $ testGroup "Expr: app/appVars/subst/freeVars"
-  [testGroup "app" $
-  map (\(f, args, e) -> testCase (f ++ " " ++ unwords args) $
-    app (parseExpr f) (map parseExpr args) @?= parseExpr e)
+  [testGroup "app expr [expr] ~~> expr" $
+  map (\(f, args, e) ->
+    testCase (f ++ " [" ++ unwords args ++ "] ~~> " ++ e) $
+      app (parseExpr f) (map parseExpr args) @?= parseExpr e)
   [
     ("{f->{x->f x}}", ["g", "y"], "{f->{x->f x}} g y")
-  ], testGroup "appVars" $
-  map (\(f, args, e) -> testCase (f ++ " " ++ unwords args) $
-    appVars (parseExpr f) args @?= parseExpr e) [
+  ], testGroup "appVars expr [var] ~~> expr" $
+  map (\(f, args, e) ->
+    testCase (f ++ " [" ++ unwords args ++ "] ~~> " ++ e) $
+      appVars (parseExpr f) args @?= parseExpr e) [
     ("{f->{x->f x}}", ["g", "y"], "{f->{x->f x}} g y")
   ], testGroup "subst (var, expr) expr ~~> expr" $
   map (\(a,s,e)-> testCase (a ++ show s ++ " ~~> " ++ e) $

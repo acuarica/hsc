@@ -86,3 +86,62 @@ main = defaultMain $ testGroup "Supercompiler: match, supercompile/eval"
       \  Cons y ys-> Cons (f y) (map f ys);}}\
       \in let mimi={zs->map inc (map inc zs)} \
       \in mimi"
+
+
+
+
+
+      --
+      -- mapinczs = "let inc={n->Succ n}\
+      --  \in let map={f->{xs->case xs of \
+      --  \  Nil->Nil;\
+      --  \  Cons y ys-> Cons (f y) (map f ys);}}\
+      --  \in map inc zs"
+      --
+      -- mapinc = "let inc={n->Succ n}\
+      --  \in let map={f->{xs->case xs of \
+      --  \  Nil->Nil;\
+      --  \  Cons y ys-> Cons (f y) (map f ys);}}\
+      --  \in map inc "
+      --
+      -- mapmap = "let inc={n->Succ n}\
+      --  \in let map={f->{xs->case xs of \
+      --  \  Nil->Nil;\
+      --  \  Cons y ys-> Cons (f y) (map f ys);}}\
+      --  \in map inc (map inc zs)"
+      --
+      -- mapincmapinczs = "let inc={n->Succ n}\
+      --  \in let map={f->{xs->case xs of \
+      --  \  Nil->Nil;\
+      --  \  Cons y ys-> Cons (f y) (map f ys);}}\
+      --  \in map inc (map inc zs)"
+      --
+      -- append =
+      --  "let append={xs->{ys->case xs of \
+      --   \  Nil->ys;\
+      --   \  Cons z zs -> Cons z (append zs ys) ; }}\
+      --   \in append (append as bs) cs"
+      --
+      -- rev =
+      --   "let cat={xs->{ys->case xs of\
+      --   \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\
+      --   \in let rev={rs->case rs of\
+      --   \  Nil->Nil; Cons s ss->cat (rev ss) [s]; }\
+      --   \in rev vs"
+      --
+      -- revAccum =
+      --   "let revAccum={xs->{as->case xs of \
+      --   \  Nil -> as;\
+      --   \  Cons y ys -> revAccum ys (Cons y as); }}\
+      --   \in let reverse={rs->revAccum rs []}\
+      --   \in reverse zs"
+      --
+      --
+      -- inc = ("inc", "{n->Succ n}")
+      -- mp = ("map", "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
+      -- env = map (second parseExpr) [inc, mp]
+      -- l = ([], [], envToLet env (appVars (Var "map") ["inc", "zs"]))
+      -- r = (env, [], appVars (Var "map") ["inc", "ys"])
+      --  putStrLn rev
+      --  (print . gp . runMemo . parseExpr) append
+        --(print . runMemo . parseExpr) rev
