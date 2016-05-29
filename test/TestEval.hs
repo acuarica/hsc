@@ -12,16 +12,7 @@ inc = ("inc", "{n->Succ n}")
 mp = ("map", "")
 
 main :: IO ()
-main = defaultMain $ testGroup "eval str ~~> expr" $
-  map (\(a, e) -> testCase a $ (whnf . parseExpr) a @?= parseExpr e)
-  [
-    (
-    "let cat={xs->{ys->case xs of \
-    \Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
-    \let rev={rs->case rs of \
-    \Nil->[];Cons s ss->cat (rev ss) (Cons s []);} in \
-    \rev vs", "y")
-  ] ++
+main = defaultMain $ testGroup "eval expr ~~> expr" $
   map (\(a, e) ->
     testCase (show a ++ " ~~> " ++ show e) $
       eval a @?= e)
@@ -99,7 +90,7 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
       ], App f (App f n))
   ] ++
   map (\(a, e) ->
-    testCase ((show . id) a ++ " ~~> " ++ (show . id) e) $
+    testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
       ("let x=(let y=Succ in y 0) in y", "y"),
@@ -115,17 +106,6 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
       ("{f->{x->f x}}", "{f->{x->f x}}"),
       ("let a={f->{x->f x}} in a", "{f->{x->f x}}"),
       ("{f->{x->f x}} {b->T} F", "T"),
-      (
-      "let head={xs->case xs of Cons y ys -> y; } \
-      \in let inf=Cons A inf in head inf", "A"),
-      (
-      "let head={xs->case xs of Cons y ys -> y; } \
-      \in let inf={n->Cons n (inf (Succ n))} in head (inf 1)", "1"),
-      (
-      "let head={xs->case xs of Cons y ys -> y; } \
-      \ in let tail={xs->case xs of Cons y ys -> ys; } \
-      \ in let inf={n->Cons n (inf (Succ n))} \
-      \ in head (tail (tail (tail (inf 1))))", "4"),
       ("let a={f->{x->f x}} in a {b->T} F", "T"),
       ("let a={f->{x->f x}} in a {b->T}", "{x->{b->T} x}"),
       ("let a={f->{x->f x}} in a {b->Succ b}", "{x->{b->Succ b} x}"),
@@ -146,6 +126,12 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
       \in let app={f->{x->f x}}\
       \in app id [1,2,3,4,5]", "[1,2,3,4,5]"),
       ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
+      ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1")
+  ] ++
+  map (\(a, e) ->
+    testCase ( " ~~> " ++ "") $
+      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  [
       (
       "let cp={a->case a of \
       \  Zero->0;\
@@ -199,6 +185,11 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
       \  Nil->ys;\
       \  Cons z zs -> Cons z (append zs ys) ; }}\
       \in append [One,Two,Three] []", "[One,Two,Three]"),
+      (
+      "let append={xs->{ys->case xs of \
+      \  Nil->ys;\
+      \  Cons z zs -> Cons z (append zs ys) ; }}\
+      \in append (append [1,2] [3]) [4,5,6]", "[1,2,3,4,5,6]"),
       (
       "let cat={xs->{ys->case xs of\
       \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\
@@ -382,8 +373,54 @@ main = defaultMain $ testGroup "eval str ~~> expr" $
       \let $v_2={y->{ys->(Cons ($v_3 y) ($v_0 ys))}} in \
       \let $v_3={y->Succ ($v_4 y)} in \
       \let $v_4={y->y} in \
-      \let $v_1=[] in $v_0 [1,2,3,4]", "[2,3,4,5]")
-    ]
+      \let $v_1=[] in $v_0 [1,2,3,4]", "[2,3,4,5]"),
+      (
+      "let inc={n->Succ n}\
+      \in let map={f->{xs-> case xs of \
+      \  Nil->Nil;\
+      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
+      \in map inc zs", "x"),
+      (
+      "let inc={n->Succ n}\
+      \in let map={f->{xs-> case xs of \
+      \  Nil->Nil;\
+      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
+      \in Cons (inc y) (map inc ys)", "x")
+      
+  ] ++
+  map (\(a, e) ->
+    testCase ("" ++ " ~~> " ++ "") $
+      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  [
+      (
+      "let head={xs->case xs of Cons y ys -> y; } \
+      \in let inf=Cons A inf in head inf", "A"),
+      (
+      "let head={xs->case xs of Cons y ys -> y; } \
+      \in let inf={n->Cons n (inf (Succ n))} in head (inf 1)", "1"),
+      (
+      "let head={xs->case xs of Cons y ys -> y; } \
+      \ in let tail={xs->case xs of Cons y ys -> ys; } \
+      \ in let inf={n->Cons n (inf (Succ n))} \
+      \ in head (tail (tail (tail (inf 1))))", "4")
+    ] ++
+  map (\(a, e) ->
+    testCase "" $
+      (whnf . parseExpr) a @?= parseExpr e)
+  [
+    (
+    "let cat={xs->{ys->case xs of \
+    \Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
+    \let rev={rs->case rs of \
+    \Nil->[];Cons s ss->cat (rev ss) (Cons s []);} in \
+    \rev vs", "y"),
+    (
+    "let inc={n->Succ n}\
+    \in let map={f->{xs-> case xs of \
+    \  Nil->Nil;\
+    \  Cons y ys -> Cons (f y) (map f ys) ; }}\
+    \in Cons (inc y) (map inc ys)", "x")
+  ]
     where
     x = Var "x"
     y = Var "y"

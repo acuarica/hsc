@@ -18,7 +18,7 @@ supercompile = gp . runMemo
 
 gp m@((_, _, expr0), (next, hist, prom)) = fromMemo prom expr0
 
-runMemo expr = let s = memoStep (newConf emptyEnv expr)
+runMemo expr = let s = memo (newConf emptyEnv expr)
   in runState s (0, [], [])
 
 fromMemo :: [(Var, [Var], Conf)] -> Expr -> Expr
@@ -65,6 +65,7 @@ memoStep conf@(env, stack, expr) =
 --  if next > 100 then return conf else
   do
     ii <- isin conf textualMatch
+    --ii <- isin conf match
     if isNothing ii
       then do
         (v, fv) <- rec conf
@@ -99,8 +100,7 @@ memo conf@(env, stack, expr) =
         (v, fv) <- rec conf
 
         let rconf'' = reduce conf
-        --let rconf' = freduce (map (Var . (++) "$m_" . show) [1..10]) rconf''
-        let rconf' = traceShow rconf'' $ rconf''
+        let rconf' = freduce (map (Var . (++) "$m_" . show) [1..10]) rconf''
         let rconf = reduce $ simp rconf'
         splits <- mapM memo (split rconf)
         let r@(env', stack', expr') = combine rconf splits
