@@ -3,6 +3,7 @@ module Main where
 
 import System.Exit (exitFailure)
 import System.Environment (getArgs)
+import System.FilePath
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 import Data.List
 
@@ -40,5 +41,5 @@ main = do
       --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
       putStrLn $ res
-      writeFile "hola.dot" res
+      writeFile (replaceExtensions fileName "dot") res
       return ()

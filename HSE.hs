@@ -1,7 +1,7 @@
 
 module HSE where
 
-import Language.Haskell.Exts hiding (Pat,Var,Let,App,Case,Con,name)
+import Language.Haskell.Exts hiding (Pat,Var,Let,App,Case,Con,app,name)
 import qualified Language.Haskell.Exts as H
 
 import Expr
@@ -47,12 +47,16 @@ fromExp (H.Con (Special Cons)) = con "Cons"
 fromExp (Paren x) = fromExp x
 fromExp (H.Case sc alts) = Case (fromExp sc) (map fromAlt alts)
 fromExp (List []) = con "Nil"
-fromExp (List [x]) = fromExp $ InfixApp x (QConOp (Special Cons)) $ List []
--- fromExp o@(InfixApp x (QConOp (Special Cons)) y) =
---   Let noname [(f1,fromExp x),(f2,fromExp y),(f3,Con noname ":" [f1,f2])] f3
---     where f1:f2:f3:_ = freshNames o
+fromExp (List (x:xs)) = fromExp $ InfixApp x (QConOp (Special Cons)) $ List xs
+
+--fromExp (List (x:xs)) = fromExp $ InfixApp x (QConOp (Special Cons)) $ List []
+
+fromExp (InfixApp x (QConOp (Special Cons)) y) = Con "Cons" [fromExp x, fromExp y]
 fromExp (InfixApp a (QVarOp b) c) = fromExp $ H.App (H.App (H.Var b) a) c
--- fromExp (Lit x) = Con noname (prettyPrint x) []
+fromExp (Lit (Int n)) | n >= 0 = f n
+  where f n = if n == 0 then zero else (Con "Succ" [(f (n-1))])
+
+--fromExp (Lit x) = Con noname (prettyPrint x) []
 -- fromExp x@(NegApp _) = Con noname (prettyPrint x) []
 -- fromExp (If a b c) = fromExp $ H.Case a [f "True" b, f "False" c]
 --     where f con x = Alt sl (PApp (UnQual $ Ident con) []) (UnGuardedRhs x) (Just (BDecls []))
