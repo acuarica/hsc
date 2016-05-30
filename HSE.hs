@@ -54,7 +54,11 @@ fromExp (List (x:xs)) = fromExp $ InfixApp x (QConOp (Special Cons)) $ List xs
 fromExp (InfixApp x (QConOp (Special Cons)) y) = Con "Cons" [fromExp x, fromExp y]
 fromExp (InfixApp a (QVarOp b) c) = fromExp $ H.App (H.App (H.Var b) a) c
 fromExp (Lit (Int n)) | n >= 0 = f n
-  where f n = if n == 0 then zero else (Con "Succ" [(f (n-1))])
+  where f n = if n == 0 then zero else Con "Succ" [f (n-1)]
+fromExp (Lit (Char c)) = con $ "$C" ++ [c]
+fromExp (Lit (String "")) = con "Nil"
+fromExp (Lit (String (x:xs))) =
+  Con "Cons" [fromExp (Lit (Char x)), fromExp (Lit (String xs))]
 
 --fromExp (Lit x) = Con noname (prettyPrint x) []
 -- fromExp x@(NegApp _) = Con noname (prettyPrint x) []

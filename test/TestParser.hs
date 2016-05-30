@@ -11,7 +11,7 @@ main :: IO ()
 main = defaultMain $
   testGroup "Parser.parseExpr str ~~> expr" $
   map (\(a, e) ->
-    testCase (show a ++ " ~~> " ++ show e) $
+    testCase a $
       parseExpr a @?= e)
   [
     ("x", Var "x"),

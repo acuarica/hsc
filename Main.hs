@@ -37,9 +37,9 @@ main = do
       fileText <- readFile fileName
       let hse = fromParseResult (parseFileContents fileText)
       let expr = fromHSE hse
-      --print $ expr
+      print $ expr
       --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
-      putStrLn $ res
+      putStrLn res
       writeFile (replaceExtensions fileName "dot") res
       return ()

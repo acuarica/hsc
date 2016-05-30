@@ -126,7 +126,8 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
       \in let app={f->{x->f x}}\
       \in app id [1,2,3,4,5]", "[1,2,3,4,5]"),
       ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
-      ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1")
+      ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
+      ("let x=A B in Tup x x", "Tup (A B) (A B)")
   ] ++
   map (\(a, e) ->
     testCase ( " ~~> " ++ "") $
