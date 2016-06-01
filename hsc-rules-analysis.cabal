@@ -1,0 +1,19 @@
+name:               hsc-rules-analysis
+version:            0.1
+synopsis:           Haskell Supercompiler Project
+description:        The Haskell Supercompiler Project uses supercompilation
+                    techniques to optimize Haskell applications.
+                    Also uses supercompilation to prove properties
+                    of Haskell programs.
+author:             Luis Mastrangelo
+maintainer:         luis.mastrangelo@usi.ch
+category:           Language
+build-type:         Simple
+extra-source-files: README.md
+cabal-version:      >=1.10
+
+executable hasrules
+  main-is:          HasRules.hs
+  build-depends:    base >=4.8, mtl >= 2.2.1, haskell-src-exts >=1.17, filepath, directory
+  hs-source-dirs:   .
+  default-language: Haskell98
