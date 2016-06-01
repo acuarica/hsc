@@ -22,8 +22,8 @@ fromDecl (FunBind [Match _ f vars Nothing (UnGuardedRhs x) (Just (BDecls []))]) 
 fromDecl (FunBind [Match _ f vars Nothing (UnGuardedRhs x) Nothing]) =
   Just (fromName f, fromExp $ Lambda sl vars x)
 
-fromDecl (FunBind ms) =
-  Just ("$$", Lam "$scvar" (Case (Var "$scvar") (map fromMatch ms)))
+fromDecl d@(FunBind ms) = unhandle "fromDecl:test" d
+--  Just ("$$", Lam "$scvar" (Case (Var "$scvar") (map fromMatch ms)))
 
 fromDecl TypeSig{} = Nothing
 fromDecl DataDecl{} = Nothing

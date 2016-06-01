@@ -8,7 +8,8 @@ import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 
 import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
-import Eval (Conf, Env, StackFrame(..), newConf, emptyEnv, toExpr, nf, reduce, put, step)
+import Eval (Conf, Env, StackFrame(..), 
+  newConf, emptyEnv, toExpr, nf, reduce, put, step)
 import Splitter (split, combine)
 
 import Debug.Trace

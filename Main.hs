@@ -8,6 +8,7 @@ import Language.Haskell.Exts (parseFileContents, fromParseResult)
 import Data.List
 
 import Eval
+import Supercompiler
 import HSE
 
 usage :: String
@@ -24,6 +25,9 @@ dot' cs = "digraph G {" ++ tolist cs ++ "}"
     tolist cs = intercalate "->" (map tostr cs)
     tostr conf = "\"" ++ show (toExpr conf) ++ "\""
 
+fromFileName :: FilePath -> String -> FilePath
+fromFileName fileName ext = fileName ++ "." ++ ext
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -38,8 +42,11 @@ main = do
       let hse = fromParseResult (parseFileContents fileText)
       let expr = fromHSE hse
       print $ expr
+      print $ runMemo expr
+      let sexpr = supercompile expr
       --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
       putStrLn res
-      writeFile (replaceExtensions fileName "dot") res
+      let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
+      writeFile (fromFileName fileName "dot") dotsexpr
       return ()
