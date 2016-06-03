@@ -7,6 +7,7 @@ import System.FilePath
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 import Data.List
 
+import Expr
 import Eval
 import Supercompiler
 import HSE
@@ -40,7 +41,7 @@ main = do
       putStrLn $ "Processing " ++ fileName
       fileText <- readFile fileName
       let hse = fromParseResult (parseFileContents fileText)
-      let expr = fromHSE hse
+      let expr = fromHSE hse (Var "root")
       print $ expr
       print $ runMemo expr
       let sexpr = supercompile expr

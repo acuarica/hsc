@@ -20,8 +20,8 @@ type Stack = [StackFrame]
 
 -- Stack frame for stack.
 data StackFrame
-  = Alts [(Pat, Expr)]
-  | Arg Expr
+  = Arg Expr
+  | Alts [(Pat, Expr)]
   | Update Var
   deriving Eq
 

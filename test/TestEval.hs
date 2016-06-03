@@ -420,7 +420,12 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
     \in let map={f->{xs-> case xs of \
     \  Nil->Nil;\
     \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-    \in Cons (inc y) (map inc ys)", "x")
+    \in Cons (inc y) (map inc ys)", "x"),
+    (
+    "let append={xs->{ys->case xs of \
+    \  Nil->ys;\
+    \  Cons z zs->Cons z (cat zs ys);}} in \
+    \append (append as bs) cs", "y")
   ]
     where
     x = Var "x"

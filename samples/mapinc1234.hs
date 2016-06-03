@@ -5,6 +5,10 @@ data Nat = Zero | Succ Nat
 
 data List a = Nil | Cons a (List a)
 
+n :: Int -> Nat
+n 0 = Zero
+n s = Succ (n (s-1))
+
 inc :: Nat -> Nat
 inc n = Succ n
 
@@ -13,7 +17,7 @@ lmap f xs = case xs of
   Nil -> Nil
   Cons y ys -> Cons (f y) (lmap f ys)
 
-mapinc :: List Nat -> List Nat
-mapinc zs = lmap inc zs
+mapinc1234 :: List Nat
+mapinc1234 = lmap inc $ Cons (n 1) (Cons (n 2) (Cons (n 3) (Cons (n 4) Nil)))
 
-root = mapinc
+root = mapinc1234

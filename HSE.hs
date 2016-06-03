@@ -6,8 +6,9 @@ import qualified Language.Haskell.Exts as H
 
 import Expr
 
-fromHSE :: Module -> Expr
-fromHSE (Module _ _ _ _ _ _ decls) = foldr foldExpr (Var "root") decls
+fromHSE :: Module -> Expr -> Expr
+fromHSE (Module _ _ _ _ _ _ decls) rootExpr =
+  foldr foldExpr rootExpr decls
   where foldExpr decl expr = case fromDecl decl of
           Nothing -> expr
           Just (v, d) -> Let v d expr
@@ -28,6 +29,7 @@ fromDecl d@(FunBind ms) = unhandle "fromDecl:test" d
 fromDecl TypeSig{} = Nothing
 fromDecl DataDecl{} = Nothing
 fromDecl TypeDecl{} = Nothing
+fromDecl RulePragmaDecl{} = Nothing
 fromDecl decl = unhandle "fromDecl" decl
 
 fromMatch (Match _ f [pat] Nothing (UnGuardedRhs x) Nothing) =

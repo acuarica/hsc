@@ -10,12 +10,14 @@ data Nat = Zero | Succ Nat
 data List a = Nil | Cons a (List a)
 
 inc :: Nat -> Nat
-inc = Succ
+inc n = Succ n
 
 lmap :: (a -> b) -> List a -> List b
 lmap f xs = case xs of
   Nil -> Nil
   Cons y ys -> Cons (f y) (lmap f ys)
 
-root :: (b -> c) -> (a -> b) -> List a -> List c
-root f g xs = lmap f (lmap g xs)
+mapmap :: (b -> c) -> (a -> b) -> List a -> List c
+mapmap f g xs = lmap f (lmap g xs)
+
+root = mapmap
