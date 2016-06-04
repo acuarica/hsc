@@ -1,6 +1,6 @@
 
 module Parser (
-  parseExpr
+  parseExpr, isVar
 ) where
 
 import Expr (Expr(..), Var, Pat(Pat), con, app, zero, suc, nil, cons)
@@ -150,16 +150,6 @@ chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 p `chainl1` op = do {a <- p; rest a}
   where rest a = (do {f <- op; b <- p; rest (f a b)}) <|> return a
 
-parseWith :: Show a => Parser a -> String -> a
-parseWith p s =
-  case parse (do { spaces; p }) s of
-    Done a _ [] -> a
-    Done a chars rest -> error $
-      "Parser didn't consume entire stream: <<" ++ rest ++ ">> " ++
-      " in <<" ++ s ++ ">> at " ++ show chars ++
-                   " with " ++ show a
-    Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s
-
 parseExpr :: String -> Expr
 parseExpr = parseWith exprp
 
@@ -242,3 +232,18 @@ varid = do
   cs <- many (alpha <|> digit <|> underscore)
   spaces
   return (c:cs)
+
+parseWith :: Show a => Parser a -> String -> a
+parseWith p s =
+  case parse (do { spaces; p }) s of
+    Done a _ [] -> a
+    Done a chars rest -> error $
+      "Parser didn't consume entire stream: <<" ++ rest ++ ">> " ++
+      " in <<" ++ s ++ ">> at " ++ show chars ++
+                   " with " ++ show a
+    Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s
+
+isVar :: Var -> Bool
+isVar var = case parse varid var of
+  Done a _ [] -> True
+  _ -> False

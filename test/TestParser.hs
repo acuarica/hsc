@@ -8,8 +8,7 @@ import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 
 main :: IO ()
-main = defaultMain $
-  testGroup "Parser.parseExpr str ~~> expr" $
+main = defaultMain $ testGroup "Parser.parseExpr str ~~> expr" $
   map (\(a, e) ->
     testCase a $
       parseExpr a @?= e)

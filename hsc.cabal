@@ -20,7 +20,8 @@ executable hsc
 
 executable test-parser
   main-is:          TestParser.hs
-  build-depends:    base >= 4.8, tasty >= 0.11, tasty-hunit >= 0.9.2
+  build-depends:    base >= 4.8, tasty >= 0.11, tasty-hunit >= 0.9.2,
+                    tasty-smallcheck >= 0.8.1
   hs-source-dirs:   . test
   default-language: Haskell98
 
