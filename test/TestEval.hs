@@ -8,9 +8,6 @@ import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 import Eval (eval, whnf)
 
-inc = ("inc", "{n->Succ n}")
-mp = ("map", "")
-
 evalTest :: TestTree
 evalTest = testGroup "eval expr ~~> expr" $
   map (\(a, e) ->
@@ -119,7 +116,6 @@ evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
       (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
     ("let x=(let y=Succ in y 0) in y", "y"),
-    ("let x=(let y=A in y 0) in x y", "A 0 y"),
     ("let x=0 in Succ x", "1"),
     ("let x=True in [x]", "[True]"),
     ("let id={a->a} in id [1,2,3,4,5]", "[1,2,3,4,5]"),
@@ -148,8 +144,8 @@ evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
     ("let x=A B in Tup x x", "Tup (A B) (A B)")
   ] 
 
-evalRecTest :: TestTree
-evalRecTest = testGroup ("evalRecTest with prelude") $
+evalWithPreludeTest :: TestTree
+evalWithPreludeTest = testGroup ("evalPreludeTest") $
   map (\(a, e) ->
     testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr . (++) prelude) a @?= (eval . parseExpr) e)
@@ -160,15 +156,15 @@ evalRecTest = testGroup ("evalRecTest with prelude") $
     ("len [1,2,3,4,5,6,7]", "7"),
     ("plus 2 3", "5"),
     ("mult 4 5", "20"),
-    ("append [1,2,3,4] [5,6,7]", "[1,2,3,4,5,6,7]"),
-    ("append [] [One,Two,Three]", "[One,Two,Three]"),
-    ("append [One,Two,Three] []", "[One,Two,Three]"),
-    ("append (append [1,2] [3]) [4,5,6]", "[1,2,3,4,5,6]"),
+    ("cat [1,2,3,4] [5,6,7]", "[1,2,3,4,5,6,7]"),
+    ("cat [] [One,Two,Three]", "[One,Two,Three]"),
+    ("cat [One,Two,Three] []", "[One,Two,Three]"),
+    ("cat (cat [1,2] [3]) [4,5,6]", "[1,2,3,4,5,6]"),
     ("rev [A,B,C,D]", "[D,C,B,A]"),
     ("rev []", "[]"),
     ("rev [One]", "[One]"),
-    ("let reverse={rs->revAccum rs []} in reverse [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
-    ("revAccum [A,B,C,D,E,F,G] []", "[G,F,E,D,C,B,A]"),
+    ("let reverse={rs->revA rs []} in reverse [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
+    ("revA [A,B,C,D,E,F,G] []", "[G,F,E,D,C,B,A]"),
     ("map id [A,B,C,D,E]", "[A,B,C,D,E]"),
     ("rev (map rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
     ("let plus2={n -> plus 2 n} in plus2 1", "3"),
@@ -195,32 +191,15 @@ evalRecTest = testGroup ("evalRecTest with prelude") $
       "let id={a->a} in \
       \let app={p->{q->p q}} in \
       \let inc={n->Succ n} in \
-      \let cp={a->case a of \
-      \  Zero->0;\
-      \  Succ aa -> Succ (cp aa); } in \
-      \let append={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs -> Cons z (append zs ys) ; }} in \
-      \let rev={rs-> case rs of \
-      \  Nil->Nil;\
-      \  Cons s ss -> append (rev ss) [s] ; } in \
-      \let revAccum={xs->{as->case xs of \
-      \  Nil -> as;\
-      \  Cons y ys -> revAccum ys (Cons y as); }} in \
-      \let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }} in \
-      \let mult={n->{m->case n of \
-      \  Zero->0;\
-      \  Succ nn -> plus (mult nn m) m;}} in \
-      \let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn -> plus nn (Succ m); }} in \
-      \let len={xs->case xs of \
-      \  Nil->0;\
-      \  Cons y ys -> Succ (len ys);} in "
+      \let cp={a->case a of Zero->0;Succ aa->Succ (cp aa);} in \
+      \let cat={xs->{ys->case xs of Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
+      \let rev={rs-> case rs of Nil->Nil;Cons s ss->cat (rev ss) [s];} in \
+      \let revA={xs->{as->case xs of Nil->as;Cons y ys->revA ys (Cons y as);}} in \
+      \let map={f->{xs->case xs of Nil->Nil;Cons y ys->Cons (f y) (map f ys);}} in \
+      \let mult={n->{m->case n of Zero->0; Succ nn->plus (mult nn m) m;}} in \
+      \let plus={n->{m->case n of Zero->m; Succ nn->plus nn (Succ m);}} in \
+      \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in "
 
- 
 evalLazyTest :: TestTree
 evalLazyTest = testGroup ("eval lazy with prelude") $
   map (\(a, e) ->
@@ -237,6 +216,14 @@ evalLazyTest = testGroup ("eval lazy with prelude") $
       \let tail={xs->case xs of Cons y ys -> ys; } in \
       \let inf={n->Cons n (inf (Succ n))} in \
       \let infA=Cons A inf in "
+
+evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
+  map (\(a, e) ->
+    testCase (a ++ " ~~> " ++ e) $
+      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  [
+    ("let x=(let y=A in y 0) in x y", "A 0 y")
+  ]
 
 whnfTest :: TestTree
 whnfTest = testGroup "whnf" $
@@ -283,5 +270,7 @@ whnfTest = testGroup "whnf" $
 
 main :: IO ()
 main = defaultMain $ testGroup "Eval::eval/whnf" $
-  [evalTest, evalWithParseTest, evalRecTest, evalLazyTest, whnfTest]
+  [evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest, 
+  evalNameCaptureTest, whnfTest]
+
 
