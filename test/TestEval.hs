@@ -1,7 +1,7 @@
 
 module Main (main) where
 
-import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
@@ -11,8 +11,8 @@ import Eval (eval, whnf)
 inc = ("inc", "{n->Succ n}")
 mp = ("map", "")
 
-main :: IO ()
-main = defaultMain $ testGroup "eval expr ~~> expr" $
+evalTest :: TestTree
+evalTest = testGroup "eval expr ~~> expr" $
   map (\(a, e) ->
     testCase (show a ++ " ~~> " ++ show e) $
       eval a @?= e)
@@ -34,6 +34,8 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
     (App (App cons five) (App (App cons one) (App (App cons zero) xs)),
       Con "Cons" [five, Con "Cons" [one, Con "Cons" [zero, xs]]]),
     (App (Lam "x" x) zero, zero),
+    (Lam "x" x, Lam "x" x),
+    (Lam "f" (Lam "x" (App f x)), Lam "f" (Lam "x" (App f x))),
     (Let "x" zero x, zero),
     (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
     (Let "x" (con "True") (Case x [
@@ -41,17 +43,17 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
         (Pat "True" [], con "False")
       ]), con "False"),
     (Let "x" (Lam "y" (Case y [
-        (Pat "False" [], con "True"),
-        (Pat "True" [], con "False")
-      ])) (Let "z" (con "True") (App x z)), con "False"),
+        (Pat "F" [], con "T"),
+        (Pat "T" [], con "F")
+      ])) (Let "z" (con "T") (App x z)), con "F"),
     (Let "iszero" (Lam "n" (Case n [
-        (Pat "Zero" [], con "True"),
-        (Pat "Succ" ["m"], con "False")
-      ])) (Let "x" two (App iszero x)), con "False"),
+        (Pat "Zero" [], con "T"),
+        (Pat "Succ" ["m"], con "F")
+      ])) (Let "x" two (App iszero x)), con "F"),
     (Let "iszero" (Lam "n" (Case n [
-        (Pat "Zero" [], con "True"),
-        (Pat "Succ" ["m"], con "False")
-      ])) (Let "x" zero (App iszero x)), con "True"),
+        (Pat "Zero" [], con "T"),
+        (Pat "Succ" ["m"], con "F")
+      ])) (Let "x" zero (App iszero x)), con "T"),
     (Let "plus1" (Lam "n" (App suc n)) (Let "x" one (App plus1 x)), two),
     (Let "and" (Lam "n" (Lam "m" (Case n [
         (Pat "False" [], con "False"),
@@ -68,10 +70,10 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
         (Pat "Succ" ["n'"], n')
       ])) (App (Var "pred") two),
       one),
-    (Let "plus" (Lam "n" (Lam "m" (Case n [
+    (Let "pl" (Lam "n" (Lam "m" (Case n [
         (Pat "Zero" [], m),
-        (Pat "Succ" ["n'"], App (App plus n') (App suc m))
-      ]))) (App (App plus three) two),
+        (Pat "Succ" ["x"], App (App (Var "pl") x) (App suc m))
+      ]))) (App (App (Var "pl") three) two),
       five),
     (Let "x" (Con "Zero" []) (App (Con "Succ" []) (Var "x")),
       Con "Succ" [Con "Zero" []]),
@@ -88,346 +90,8 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
         (Pat "Zero" [], zero),
         (Pat "Succ" ["n'"], App f n')
       ], App f (App f n))
-  ] ++
-  map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ e) $
-      (eval . parseExpr) a @?= (eval . parseExpr) e)
-  [
-      ("let x=(let y=Succ in y 0) in y", "y"),
-      ("let x=(let y=A in y 0) in x y", "A 0 y"),
-      ("let x=0 in Succ x", "1"),
-      ("let x=True in [x]", "[True]"),
-      ("let id={a->a} in id [1,2,3,4,5]", "[1,2,3,4,5]"),
-      ("let two={a->{b->a}} in two True False", "True"),
-      ("{a->{b->a}}", "{a->{b->a}}"),
-      ("{b->{a->b} A} B", "B"),
-      ("{a->{x->x} A} B", "A"),
-      ("{x->x} {a->{b->a}}", "{a->{b->a}}"),
-      ("{f->{x->f x}}", "{f->{x->f x}}"),
-      ("let a={f->{x->f x}} in a", "{f->{x->f x}}"),
-      ("{f->{x->f x}} {b->T} F", "T"),
-      ("let a={f->{x->f x}} in a {b->T} F", "T"),
-      ("let a={f->{x->f x}} in a {b->T}", "{x->{b->T} x}"),
-      ("let a={f->{x->f x}} in a {b->Succ b}", "{x->{b->Succ b} x}"),
-      ("{a->Succ (Succ a)} 1", "3"),
-      ("let sumtwo={a->Succ (Succ a)} in sumtwo 1", "3"),
-      ("let a={f->{x->f x}} in a {n->Succ n} 0", "1"),
-      ("let two={a->{b->a}} in {x->x} (two A) ", "{b->A}"),
-      ("let two={a->{b->a}} in let id={c->c} in id two", "{a->{b->a}}"),
-      ("let fst={a->{b->a}} in let id={b->b} in id fst", "{a->{b->a}}"),
-      ("let fst={a->{b->a}} in let id={a->a} in id fst", "{a->{b->a}}"),
-      (
-      "let fst={a->{b->a}} \
-      \in let p=fst True \
-      \in let app={f->{x->f x}}\
-      \in app p False", "True"),
-      (
-      "let id={a-> a}\
-      \in let app={f->{x->f x}}\
-      \in app id [1,2,3,4,5]", "[1,2,3,4,5]"),
-      ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
-      ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
-      ("let x=A B in Tup x x", "Tup (A B) (A B)")
-  ] ++
-  map (\(a, e) ->
-    testCase ( " ~~> " ++ "") $
-      (eval . parseExpr) a @?= (eval . parseExpr) e)
-  [
-      (
-      "let cp={a->case a of \
-      \  Zero->0;\
-      \  Succ aa -> Succ (cp aa); }\
-      \in {x->x} (cp 5)", "5"),
-      ("{f->{x->f x}}", "{f->{x->f x}}"),
-      (
-      "let cp={a->case a of Zero->0; Succ aa->Succ (cp aa);} \
-      \in {f->{x->f x}}", "{f->{x->f x}}"),
-      (
-      "let cp={a->case a of Zero->0; Succ aa->Succ (cp aa);} \
-      \in cp 5", "5"),
-      (
-      "let len={xs->case xs of \
-      \  Nil->0;\
-      \  Cons y ys -> Succ (len ys);}\
-      \in len [1,2,3,4,5,6,7]", "7"),
-      (
-      "let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ l -> plus l (Succ m); }}\
-      \in plus 2 3", "5"),
-      (
-      "let len={xs->case xs of \
-      \  Nil->0;\
-      \  Cons y ys -> Succ (len ys);}\
-      \in let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ l -> plus l (Succ m); }}\
-      \in len [1,2,3,4,5,6,7]", "7"),
-      (
-      "let mult={n->{m->case n of \
-      \  Zero->0;\
-      \  Succ nn -> plus (mult nn m) m;}}\
-      \in let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn -> plus nn (Succ m); }}\
-      \in mult 4 5", "20"),
-      (
-      "let append={xs->{ys->case xs of \
-       \  Nil->ys;\
-       \  Cons z zs -> Cons z (append zs ys) ; }}\
-       \in append [1,2,3,4] [5,6,7]", "[1,2,3,4,5,6,7]"),
-      (
-      "let append={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs -> Cons z (append zs ys) ; }}\
-      \in append [] [One,Two,Three]", "[One,Two,Three]"),
-      (
-      "let append={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs -> Cons z (append zs ys) ; }}\
-      \in append [One,Two,Three] []", "[One,Two,Three]"),
-      (
-      "let append={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs -> Cons z (append zs ys) ; }}\
-      \in append (append [1,2] [3]) [4,5,6]", "[1,2,3,4,5,6]"),
-      (
-      "let cat={xs->{ys->case xs of\
-      \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\
-      \in let rev={rs->case rs of\
-      \  Nil->Nil; Cons s ss->cat (rev ss) [s]; }\
-      \in rev [A,B,C,D]", "[D,C,B,A]"),
-      (
-      "let cat={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs -> Cons z (cat zs ys) ; }}\
-      \in let rev={rs-> case rs of \
-      \  Nil->Nil;\
-      \  Cons s ss -> cat (rev ss) [s] ; }\
-      \in rev []", "[]"),
-      (
-      "let cat={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs -> Cons z (cat zs ys) ; }}\
-      \in let rev={rs-> case rs of \
-      \  Nil->Nil;\
-      \  Cons s ss -> cat (rev ss) [s] ; }\
-      \in rev [One]", "[One]"),
-      (
-      "let revAccum={xs->{as->case xs of \
-      \  Nil -> as;\
-      \  Cons y ys -> revAccum ys (Cons y as); }}\
-      \in let reverse={rs->revAccum rs []}\
-      \in reverse [A,B,C,D,E,F,G]", "[G,F,E,D,C,B,A]"),
-      (
-      "let revAccum={xs->{as->case xs of \
-      \  Nil -> as;\
-      \  Cons y ys -> revAccum ys (Cons y as); }}\
-      \in revAccum [A,B,C,D,E,F,G] []", "[G,F,E,D,C,B,A]"),
-      (
-      "let id={a->a}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in map id [A,B,C,D,E]", "[A,B,C,D,E]"),
-      (
-      "let append={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs -> Cons z (append zs ys) ; }}\
-      \in let rev={rs-> case rs of \
-      \  Nil->Nil;\
-      \  Cons s ss -> append (rev ss) [s] ; }\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in rev (map rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
-      (
-      "let mult={n->{m->case n of \
-      \  Zero->0;\
-      \  Succ nn -> plus (mult nn m) m;}}\
-      \in let multten={n -> plus 2 n}\
-      \in let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn -> plus nn (Succ m); }}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in multten 1", "3"),
-      (
-      "let mult={n->{m->case n of \
-      \  Zero->0;\
-      \  Succ nn -> plus (mult nn m) m;}}\
-      \in let multten=mult 10 \
-      \in let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn -> plus nn (Succ m); }}\
-      \in multten 1", "10"),
-      (
-      "let map={f->{xs->case xs of \
-      \  Nil->Nil; \
-      \  Cons y ys->Cons (f y) (map f ys);}}\
-      \in map {a->A} [1,2,3,4,5]", "[A,A,A,A,A]"),
-      (
-      "let map={f->{xs-> case xs of \
-      \  Nil->Nil; \
-      \  Cons y ys -> Cons (f y) (map f ys);}}\
-      \in map {a->a} [1,2,3,4,5]", "[1,2,3,4,5]"),
-      (
-      "let map={f->{xs-> case xs of \
-      \  Nil->Nil; \
-      \  Cons y ys -> Cons (f y) (map f ys); }}\
-      \in map {a->Succ (Succ a)} [1]", "[3]"),
-      (
-      "let map={f->{xs-> case xs of \
-      \  Nil->Nil; \
-      \  Cons y ys -> Cons (f y) (map f ys); }}\
-      \in map {a->Succ (Succ a)} [1,2,3,4,5]", "[3,4,5,6,7]"),
-      (
-      "let plus={a->{b->case a of \
-      \  Zero->b;\
-      \  Succ aa -> plus aa (Succ b); }}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in map {q->plus 10 q} [1,2,3,4,5]", "[11,12,13,14,15]"),
-      (
-      "let plus={a->{b->case a of \
-      \  Zero->b;\
-      \  Succ aa -> plus aa (Succ b); }}\
-      \in let plusten={q->plus 10 q}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in map plusten [1,2,3,4,5]", "[11,12,13,14,15]"),
-      (
-      "let plus={a->{b->case a of \
-      \  Zero->b;\
-      \  Succ aa -> plus aa (Succ b); }}\
-      \in let two={a->{b->a}}\
-      \in let plusten=two 10 \
-      \in let app={p->{q->p q}}\
-      \in app plusten 10", "10"),
-      (
-      "let plus={a->{b->case a of Zero->b;Succ aa -> (Succ b); }}\
-      \in {x->x} (plus 1) 1", "2"),
-      (
-      "let plus={a->{b->case a of \
-      \  Zero->b;\
-      \  Succ aa -> (Succ b); }}\
-      \in {f->{x->f x}} (plus 1) 1", "2"),
-      (
-      "let plus={a->{b->case a of \
-      \  Zero->b;\
-      \  Succ aa -> plus aa (Succ b); }}\
-      \in plus 0 1", "1"),
-      (
-      "let f={a->{b->case a of \
-      \  False -> a ;\
-      \  True  -> Succ b; }}\
-      \in f False True", "False"),
-      (
-      "let plus={a->{b->case b of \
-      \  Zero->a;\
-      \  Succ bb -> plus (Succ a) bb; }}\
-      \in plus 4 3", "7"),
-      (
-      "let plus={a->{b->case a of \
-      \  Zero->b;\
-      \  Succ aa -> plus aa (Succ b); }}\
-      \in ({f->{x->f x}} (plus 1)) 1", "2"),
-      (
-      "let plustwo=plus 2 \
-      \in let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn -> plus nn (Succ m); }}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in map plustwo [1,2,3,4,5]", "[3,4,5,6,7]"),
-      (
-      "let mult={p->{q->case p of \
-      \  Zero->0;\
-      \  Succ pp -> plus (mult pp q) q;}}\
-      \in let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn -> plus nn (Succ m); }}\
-      \in let multtwo=mult 2 \
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in map multtwo [1,2,3,4,5]", "[2,4,6,8,10]"),
-      (
-      "let mult={n->{m->case n of \
-      \  Zero->0;\
-      \  Succ nn -> plus (mult nn m) m;}}\
-      \in let multtwo=mult 2 \
-      \in let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn -> plus nn (Succ m); }}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in let app={f->{x-> f x}}\
-      \in app multtwo 1", "2"),
-      (
-      "let $v_0={zs->case zs of Nil->$v_1;Cons y ys->$v_2 y ys;} in \
-      \let $v_2={y->{ys->(Cons ($v_3 y) ($v_0 ys))}} in \
-      \let $v_3={y->Succ ($v_4 y)} in \
-      \let $v_4={y->y} in \
-      \let $v_1=[] in $v_0 [1,2,3,4]", "[2,3,4,5]"),
-      (
-      "let inc={n->Succ n}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in map inc zs", "x"),
-      (
-      "let inc={n->Succ n}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in Cons (inc y) (map inc ys)", "x")
-      
-  ] ++
-  map (\(a, e) ->
-    testCase ("" ++ " ~~> " ++ "") $
-      (eval . parseExpr) a @?= (eval . parseExpr) e)
-  [
-      (
-      "let head={xs->case xs of Cons y ys -> y; } \
-      \in let inf=Cons A inf in head inf", "A"),
-      (
-      "let head={xs->case xs of Cons y ys -> y; } \
-      \in let inf={n->Cons n (inf (Succ n))} in head (inf 1)", "1"),
-      (
-      "let head={xs->case xs of Cons y ys -> y; } \
-      \ in let tail={xs->case xs of Cons y ys -> ys; } \
-      \ in let inf={n->Cons n (inf (Succ n))} \
-      \ in head (tail (tail (tail (inf 1))))", "4")
-    ] ++
-  map (\(a, e) ->
-    testCase "" $
-      (whnf . parseExpr) a @?= parseExpr e)
-  [
-    (
-    "let cat={xs->{ys->case xs of \
-    \Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
-    \let rev={rs->case rs of \
-    \Nil->[];Cons s ss->cat (rev ss) (Cons s []);} in \
-    \rev vs", "y"),
-    (
-    "let inc={n->Succ n}\
-    \in let map={f->{xs-> case xs of \
-    \  Nil->Nil;\
-    \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-    \in Cons (inc y) (map inc ys)", "x"),
-    (
-    "let append={xs->{ys->case xs of \
-    \  Nil->ys;\
-    \  Cons z zs->Cons z (cat zs ys);}} in \
-    \append (append as bs) cs", "y")
   ]
-    where
+  where
     x = Var "x"
     y = Var "y"
     z = Var "z"
@@ -448,3 +112,176 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
     three = Con "Succ" [two]
     four  = Con "Succ" [three]
     five  = Con "Succ" [four]
+
+evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
+  map (\(a, e) ->
+    testCase (a ++ " ~~> " ++ e) $
+      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  [
+    ("let x=(let y=Succ in y 0) in y", "y"),
+    ("let x=(let y=A in y 0) in x y", "A 0 y"),
+    ("let x=0 in Succ x", "1"),
+    ("let x=True in [x]", "[True]"),
+    ("let id={a->a} in id [1,2,3,4,5]", "[1,2,3,4,5]"),
+    ("let two={a->{b->a}} in two True False", "True"),
+    ("{a->{b->a}}", "{a->{b->a}}"),
+    ("{b->{a->b} A} B", "B"),
+    ("{a->{x->x} A} B", "A"),
+    ("{x->x} {a->{b->a}}", "{a->{b->a}}"),
+    ("{f->{x->f x}}", "{f->{x->f x}}"),
+    ("let a={f->{x->f x}} in a", "{f->{x->f x}}"),
+    ("{f->{x->f x}} {b->T} F", "T"),
+    ("let a={f->{x->f x}} in a {b->T} F", "T"),
+    ("let a={f->{x->f x}} in a {b->T}", "{x->{b->T} x}"),
+    ("let a={f->{x->f x}} in a {b->Succ b}", "{x->{b->Succ b} x}"),
+    ("{a->Succ (Succ a)} 1", "3"),
+    ("let sumtwo={a->Succ (Succ a)} in sumtwo 1", "3"),
+    ("let a={f->{x->f x}} in a {n->Succ n} 0", "1"),
+    ("let two={a->{b->a}} in {x->x} (two A) ", "{b->A}"),
+    ("let two={a->{b->a}} in let id={c->c} in id two", "{a->{b->a}}"),
+    ("let fst={a->{b->a}} in let id={b->b} in id fst", "{a->{b->a}}"),
+    ("let fst={a->{b->a}} in let id={a->a} in id fst", "{a->{b->a}}"),
+    ("let fst={a->{b->a}} in let p=fst T in let app={f->{x->f x}} in app p F", "T"),
+    ("let id={a-> a} in let app={f->{x->f x}} in app id [1,2,3,4]", "[1,2,3,4]"),
+    ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
+    ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
+    ("let x=A B in Tup x x", "Tup (A B) (A B)")
+  ] 
+
+evalRecTest :: TestTree
+evalRecTest = testGroup ("evalRecTest with prelude") $
+  map (\(a, e) ->
+    testCase (a ++ " ~~> " ++ e) $
+      (eval . parseExpr . (++) prelude) a @?= (eval . parseExpr) e)
+  [
+    ("x", "x"), 
+    ("cp 5", "5"),
+    ("{x->x} (cp 5)", "5"),
+    ("len [1,2,3,4,5,6,7]", "7"),
+    ("plus 2 3", "5"),
+    ("mult 4 5", "20"),
+    ("append [1,2,3,4] [5,6,7]", "[1,2,3,4,5,6,7]"),
+    ("append [] [One,Two,Three]", "[One,Two,Three]"),
+    ("append [One,Two,Three] []", "[One,Two,Three]"),
+    ("append (append [1,2] [3]) [4,5,6]", "[1,2,3,4,5,6]"),
+    ("rev [A,B,C,D]", "[D,C,B,A]"),
+    ("rev []", "[]"),
+    ("rev [One]", "[One]"),
+    ("let reverse={rs->revAccum rs []} in reverse [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
+    ("revAccum [A,B,C,D,E,F,G] []", "[G,F,E,D,C,B,A]"),
+    ("map id [A,B,C,D,E]", "[A,B,C,D,E]"),
+    ("rev (map rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
+    ("let plus2={n -> plus 2 n} in plus2 1", "3"),
+    ("let multten=mult 10 in multten 1", "10"),
+    ("map {a->A} [1,2,3,4,5]", "[A,A,A,A,A]"),
+    ("map {a->a} [1,2,3,4,5]", "[1,2,3,4,5]"),
+    ("map {a->Succ (Succ a)} [1]", "[3]"),
+    ("map {a->Succ (Succ a)} [1,2,3,4,5]", "[3,4,5,6,7]"),
+    ("map {q->plus 10 q} [1,2,3,4,5]", "[11,12,13,14,15]"),
+    ("let plusten={q->plus 10 q} in map plusten [1,2,3,4,5]", "[11,12,13,14,15]"),
+    ("let two={a->{b->a}} in let plusten=two 10 in app plusten 10", "10"),
+    ("{x->x} (plus 1) 1", "2"),
+    ("{f->{x->f x}} (plus 1) 1", "2"),
+    ("plus 0 1", "1"),
+    ("let f={a->{b->case a of F-> a;T->Succ b;}} in f F T", "F"),
+    ("plus 4 3", "7"),
+    ("({f->{x->f x}} (plus 1)) 1", "2"),
+    ("let plustwo=plus 2 in map plustwo [1,2,3,4,5]", "[3,4,5,6,7]"),
+    ("let multtwo=mult 2 in map multtwo [1,2,3,4,5]", "[2,4,6,8,10]"),
+    ("let multtwo=mult 2 in app multtwo 1", "2")
+  ]
+  where
+    prelude =
+      "let id={a->a} in \
+      \let app={p->{q->p q}} in \
+      \let inc={n->Succ n} in \
+      \let cp={a->case a of \
+      \  Zero->0;\
+      \  Succ aa -> Succ (cp aa); } in \
+      \let append={xs->{ys->case xs of \
+      \  Nil->ys;\
+      \  Cons z zs -> Cons z (append zs ys) ; }} in \
+      \let rev={rs-> case rs of \
+      \  Nil->Nil;\
+      \  Cons s ss -> append (rev ss) [s] ; } in \
+      \let revAccum={xs->{as->case xs of \
+      \  Nil -> as;\
+      \  Cons y ys -> revAccum ys (Cons y as); }} in \
+      \let map={f->{xs-> case xs of \
+      \  Nil->Nil;\
+      \  Cons y ys -> Cons (f y) (map f ys) ; }} in \
+      \let mult={n->{m->case n of \
+      \  Zero->0;\
+      \  Succ nn -> plus (mult nn m) m;}} in \
+      \let plus={n->{m->case n of \
+      \  Zero->m;\
+      \  Succ nn -> plus nn (Succ m); }} in \
+      \let len={xs->case xs of \
+      \  Nil->0;\
+      \  Cons y ys -> Succ (len ys);} in "
+
+ 
+evalLazyTest :: TestTree
+evalLazyTest = testGroup ("eval lazy with prelude") $
+  map (\(a, e) ->
+    testCase (a ++ " ~~> " ++ e) $
+      (eval . parseExpr . (++) prelude) a @?= (eval . parseExpr) e)
+  [
+    ("head infA", "A"),
+    ("head (inf 1)", "1"),
+    ("head (tail (tail (tail (inf 1))))", "4")
+  ]
+  where
+    prelude = 
+      "let head={xs->case xs of Cons y ys -> y; } in \
+      \let tail={xs->case xs of Cons y ys -> ys; } in \
+      \let inf={n->Cons n (inf (Succ n))} in \
+      \let infA=Cons A inf in "
+
+whnfTest :: TestTree
+whnfTest = testGroup "whnf" $
+  map (\(a, e) ->
+    testCase "" $
+      (whnf . parseExpr) a @?= parseExpr e)
+  [
+      (
+      "let $v_0={zs->case zs of Nil->$v_1;Cons y ys->$v_2 y ys;} in \
+      \let $v_2={y->{ys->(Cons ($v_3 y) ($v_0 ys))}} in \
+      \let $v_3={y->Succ ($v_4 y)} in \
+      \let $v_4={y->y} in \
+      \let $v_1=[] in $v_0 [1,2,3,4]", "[2,3,4,5]"), 
+    (
+    "let cat={xs->{ys->case xs of \
+    \Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
+    \let rev={rs->case rs of \
+    \Nil->[];Cons s ss->cat (rev ss) (Cons s []);} in \
+    \rev vs", "y"),
+    (
+    "let inc={n->Succ n}\
+    \in let map={f->{xs-> case xs of \
+    \  Nil->Nil;\
+    \  Cons y ys -> Cons (f y) (map f ys) ; }}\
+    \in Cons (inc y) (map inc ys)", "x"),
+    (
+    "let append={xs->{ys->case xs of \
+    \  Nil->ys;\
+    \  Cons z zs->Cons z (cat zs ys);}} in \
+    \append (append as bs) cs", "y"),
+      (
+      "let inc={n->Succ n}\
+      \in let map={f->{xs-> case xs of \
+      \  Nil->Nil;\
+      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
+      \in map inc zs", "x"),
+      (
+      "let inc={n->Succ n}\
+      \in let map={f->{xs-> case xs of \
+      \  Nil->Nil;\
+      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
+      \in Cons (inc y) (map inc ys)", "x")
+  ]
+
+main :: IO ()
+main = defaultMain $ testGroup "Eval::eval/whnf" $
+  [evalTest, evalWithParseTest, evalRecTest, evalLazyTest, whnfTest]
+

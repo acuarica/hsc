@@ -1,16 +1,16 @@
 
 module Main (main) where
 
-import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 
-main :: IO ()
-main = defaultMain $ testGroup "Parser.parseExpr str ~~> expr" $
-  map (\(a, e) ->
-    testCase a $
+testParser :: TestTree
+testParser = testGroup "Parser.parseExpr str ~~> expr" $
+  map (\(a, e) -> 
+    testCase (a ++ " ~~> " ++ show e) $
       parseExpr a @?= e)
   [
     ("x", Var "x"),
@@ -93,3 +93,6 @@ main = defaultMain $ testGroup "Parser.parseExpr str ~~> expr" $
           App (App cons (Var "y")) (
             App (App cons (con "Two")) nil))) )
   ]
+
+main :: IO ()
+main = defaultMain testParser 
