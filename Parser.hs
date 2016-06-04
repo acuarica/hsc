@@ -1,7 +1,5 @@
 
-module Parser (
-  parseExpr, isVar
-) where
+module Parser (parseExpr) where
 
 import Expr (Expr(..), Var, Pat(Pat), con, app, zero, suc, nil, cons)
 import Data.Char (isDigit, isAlpha, isLower, isUpper)
@@ -150,9 +148,6 @@ chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 p `chainl1` op = do {a <- p; rest a}
   where rest a = (do {f <- op; b <- p; rest (f a b)}) <|> return a
 
-parseExpr :: String -> Expr
-parseExpr = parseWith exprp
-
 exprp :: Parser Expr
 exprp = termp `chainl1` return App
 
@@ -243,7 +238,5 @@ parseWith p s =
                    " with " ++ show a
     Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s
 
-isVar :: Var -> Bool
-isVar var = case parse varid var of
-  Done a _ [] -> True
-  _ -> False
+parseExpr :: String -> Expr
+parseExpr = parseWith exprp
