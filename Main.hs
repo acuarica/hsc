@@ -29,6 +29,14 @@ dot' cs = "digraph G {" ++ tolist cs ++ "}"
 fromFileName :: FilePath -> String -> FilePath
 fromFileName fileName ext = fileName ++ "." ++ ext
 
+dotFromHist :: Hist -> String
+dotFromHist [] = ""
+dotFromHist ((parentVar, var, fvs, conf):hist) = 
+  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"\n"
+
+wrapDot :: String -> String
+wrapDot gr = "digraph G {\n" ++ gr ++ "}\n"
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -44,10 +52,13 @@ main = do
       let expr = fromHSE hse (Var "root")
       print $ expr
       print $ runMemo expr
+      
       let sexpr = supercompile expr
       --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
       putStrLn res
       let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
-      writeFile (fromFileName fileName "dot") dotsexpr
+      let (_, (_, hist, _)) = runMemo expr
+      let dotmm = wrapDot $ dotFromHist hist 
+      writeFile (fromFileName fileName "dot") dotmm --dotsexpr
       return ()

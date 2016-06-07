@@ -11,6 +11,7 @@ import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (Conf, Env, StackFrame(..),
   newConf, emptyEnv, toExpr, nf, reduce, put, step)
 import Splitter (split, combine)
+import Simplifier
 import Match
 
 import Debug.Trace
@@ -20,7 +21,7 @@ supercompile = gp . runMemo
 
 gp m@((_, _, expr0), (next, hist, prom)) = fromMemo prom expr0
 
-runMemo expr = let s = memo (newConf emptyEnv expr)
+runMemo expr = let s = memo "$root" (newConf emptyEnv expr)
   in runState s (0, [], [])
 
 fromMemo :: [(Var, [Var], Conf)] -> Expr -> Expr
@@ -31,47 +32,8 @@ fromMemo ((var, fv, valconf):env) expr =
 add :: Var -> Expr -> Conf -> Conf
 add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
 
-simp :: Conf -> Conf
-simp conf@(env, stack, expr) = case expr of
-  Var var -> case stack of
-    Alts alts:Alts alts':stack' ->
-      (env, stack', Case (Var var) (map (al alts') alts))
-    _ -> conf
-  _ -> conf
-  where al als (Pat tag vars, altexpr) = (Pat tag vars, Case altexpr als)
-
-memoStep :: Conf -> Memo Conf
-memoStep conf@(env, stack, expr) =
---  traceShow (stack, expr) $
-  ---traceShow (toExpr conf) $
-  if null stack && isVar expr then return conf else
-  do
-  next <- getNext
---  if next > 100 then return conf else
-  do
-    ii <- isin conf textualMatch
-    --ii <- isin conf match
-    if isNothing ii
-      then do
-        (v, fv) <- rec conf
-        case step conf of
-          Nothing -> do --return conf
-            let rconf = conf
-            --splits <- trace (show (toExpr rconf) ) $ mapM memoStep (split rconf)
-            splits <- mapM memoStep (split rconf)
-            let r@(env', stack', expr') = combine rconf splits
-            --return r
-            promise v (fvs rconf) r
-            return (env', stack', appVars (Var v) fv)
-
-          Just conf' -> memoStep conf'
-      else do
-        let (var, _) = fromJust ii
-        return (env, stack, appVars (Var var) (fvs conf))
-  where fvs = freeVars . envExpr
-
-memo :: Conf -> Memo Conf
-memo conf@(env, stack, expr) =
+memo :: Var -> Conf -> Memo Conf
+memo parentVar conf@(env, stack, expr) =
   --traceShow expr $
   if null stack && isVar expr then return conf else
   if null stack && isEmptyCon expr then return conf else
@@ -82,13 +44,16 @@ memo conf@(env, stack, expr) =
     ii <- isin conf match
     if isNothing ii
       then do
-        (v, fv) <- rec conf
+        (v, fv) <- rec parentVar conf
 
-        let rconf'' = reduce conf
-        let rconf' = freduce (map (Var . (++) "$m_" . show) [1..10]) rconf''
-        let rconf = reduce $ simp rconf'
+        -- let rconf'' = reduce conf
+        -- let rconf' = freduce (map (Var . (++) "$m_" . show) [1..10]) rconf''
+        -- let rconf = reduce $ simp rconf'
+        let rconf = doSimp conf
 
-        splits <- mapM memo (split rconf)
+        let sps = split rconf
+        --recProc conf sps
+        splits <- mapM (memo parentVar) sps
         let r@(env', stack', expr') = combine rconf splits
         promise v (fvs rconf) r
         return (env', stack', appVars (Var v) fv)
@@ -97,31 +62,39 @@ memo conf@(env, stack, expr) =
         return (env, stack, appVars (Var var) (fvs conf))
   where fvs = freeVars . envExpr
 
+type Hist = [(Var, Var, [Var], Conf)]
+
 type Prom = [(Var, [Var], Conf)]
 
 type Memo a = State (Int, Hist, Prom) a
 
-rec :: Conf -> Memo (Var, [Var])
-rec conf = state (\(next, hist, prom) ->
+rec :: Var -> Conf -> Memo (Var, [Var])
+rec parentVar conf = state $ \(next, hist, prom) ->
   let var = "$v_" ++ show next in
   let fv = (freeVars . envExpr) conf in
-    ((var, fv), (next+1, (var, fv, conf):hist, prom))
-  )
+    ((var, fv), (next+1, (parentVar, var, fv, conf):hist, prom))
 
 promise :: Var -> [Var] -> Conf -> Memo ()
-promise var fv conf = state (\(next, hist, prom) -> ((),
-    (next, hist, (var, fv, conf):prom))
-  )
+promise var fv conf = state $ \(next, hist, prom) ->
+  ((), (next, hist, (var, fv, conf):prom))
 
 isin :: Conf -> Match -> Memo (Maybe (Var, [Var]))
-isin conf m = state (
-    \(next, hist, prom) -> (lookupMatch m hist conf, (next, hist, prom))
-  )
+isin conf m = state $ \(next, hist, prom) ->
+  (lookupMatch m hist conf, (next, hist, prom))
 
 getNext :: Memo Int
-getNext = state (
-    \(next, hist, prom) -> (next, (next, hist, prom))
-  )
+getNext = state $ \(next, hist, prom) -> (next, (next, hist, prom))
+
+
+
+
+lookupMatch :: Match -> Hist -> Conf -> Maybe (Var, [Var])
+lookupMatch _ [] _ = Nothing
+lookupMatch m ((parentVar, var, vars, conf'):hist) conf = if conf `m` conf'
+  then Just (var, vars)
+  else lookupMatch m hist conf
+
+
 
 instance {-# OVERLAPPING #-} Show Hist where
   show hist = "" ++

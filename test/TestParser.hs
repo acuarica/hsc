@@ -52,12 +52,18 @@ testParser = testGroup "Parser.parseExpr str ~~> expr" $
     ("let $x0={y->y} in $x0", Let "$x0" (Lam "y" (Var "y")) (Var "$x0")),
     ("let id={y->y} in id", Let "id" (Lam "y" (Var "y")) (Var "id")),
     ("let x=0 in Succ x", Let "x" zero (App suc (Var "x"))),
+    ("[]", nil),
+    ("  [  ]  ", nil),
+    ("[True]", app cons [con "True", nil]),
+    ("[A, B]", app cons [con "A", app cons [con "B", nil]]),
+    ("[A,B,C]", app cons [con "A", app cons [con "B", app cons [con "C", nil]]]),
+    ("[x]", app cons [Var "x", nil]),
+    ("[x,y]", app cons [Var "x", app cons [Var "y", nil]]),
+    ("[x,A,y]", app cons [Var "x", app cons [con "A", app cons [Var "y", nil]]]),
     ("let f={a->case a of Z->A;S b->B;} in f",
       Let "f" (Lam "a" (Case (Var "a") [
-        (Pat "Z" [],
-          Con "A" []),
-        (Pat "S" ["b"],
-          Con "B" [])
+        (Pat "Z" [], Con "A" []),
+        (Pat "S" ["b"], Con "B" [])
       ])) (Var "f")),
     ("case var of True -> False;",
       Case (Var "var") [
@@ -73,25 +79,7 @@ testParser = testGroup "Parser.parseExpr str ~~> expr" $
         (Pat "T" [], con "F"),
         (Pat "F" [], con "T"),
         (Pat "Just" ["n"], Var "m")
-      ]),
-    ("[]", nil),
-    ("  [  ]  ", nil),
-    ("[True]", app cons [con "True", nil]),
-    ("[A, B]", app cons [con "A", app cons [con "B", nil]]),
-    ("[False, True, False, True]",
-      App (App cons (con "False")) (
-        App (App cons (con "True")) (
-          App (App cons (con "False")) (
-            App (App cons (con "True")) nil))) ),
-    ("[x]", App (App cons (Var "x")) nil),
-    ("[x,y]",
-      App (App cons (Var "x")) (
-        App (App cons (Var "y")) nil)),
-    ("[x,One,y,Two]",
-      App (App cons (Var "x")) (
-        App (App cons (con "One")) (
-          App (App cons (Var "y")) (
-            App (App cons (con "Two")) nil))) )
+      ])
   ]
 
 main :: IO ()

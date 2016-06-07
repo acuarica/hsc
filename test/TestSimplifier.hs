@@ -7,6 +7,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 import Eval --(eval, whnf)
+import Splitter
 import Simplifier
 
 inc = ("inc", "{n->Succ n}")
@@ -16,7 +17,7 @@ main :: IO ()
 main = defaultMain $ testGroup "eval expr ~~> expr" $
   map (\(a, e) ->
     testCase "" $
-      (toExpr . doSimp . toConf) a @?= parseExpr e)
+      (toExpr . splitAndCombine . doSimp . toConf) a @?= parseExpr e)
   [
     -- (
     -- "let cat={xs->{ys->case xs of \
@@ -37,5 +38,6 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
     \append (append as bs) cs", "y")
   ]
   where
+    splitAndCombine e = combine e $ map doSimp (split e)
     toConf = newConf emptyEnv . parseExpr
     reduceExpr = reduce . toConf

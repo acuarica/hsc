@@ -8,11 +8,30 @@ as well.
 
 ## Modules
 
-* Expr
-* Parser
-* Eval
-* Spliiter
-* Supercompile
+### Expr
+
+This module defines the Expr type, 
+which is the core language used for all transformations.
+
+### Parser
+
+The parser is a textual representation of Expr.
+
+### Eval
+
+The eval module defines the language semantics of the language.
+This module supports two alternatives to reduce expressions,
+one is to normal form, and the other to weak head normal form.
+
+### Spliiter
+
+The splitter contains two function, one splits an stucked expression,
+and the other, combines, reconstruct the original expression but with the 
+splitted parts.
+
+### Supercompile
+
+Supercompiles an expression.
 
 ## Testing
 

@@ -3,6 +3,7 @@ module Match where
 
 import Expr
 import Eval
+import Simplifier
 
 envToLet :: Env -> Expr -> Expr
 envToLet [] expr = expr
@@ -19,7 +20,6 @@ toLambda :: [Var] -> Expr -> Expr
 toLambda [] expr = expr
 toLambda (v:vs) expr = Lam v (toLambda vs expr)
 
-type Hist = [(Var, [Var], Conf)]
 
 type Match = Conf -> Conf -> Bool
 
@@ -44,8 +44,5 @@ match lhs rhs = toExpr lred == toExpr rred
     rred  = freduce args (newConf emptyEnv rlam)
     args  = map (Var . (++) "$a_" . show) [1..10]
 
-lookupMatch :: Match -> Hist -> Conf -> Maybe (Var, [Var])
-lookupMatch _ [] _ = Nothing
-lookupMatch m ((var, vars, conf'):hist) conf = if conf `m` conf'
-  then Just (var, vars)
-  else lookupMatch m hist conf
+
+

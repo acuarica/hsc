@@ -272,5 +272,3 @@ main :: IO ()
 main = defaultMain $ testGroup "Eval::eval/whnf" $
   [evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest, 
   evalNameCaptureTest, whnfTest]
-
-
