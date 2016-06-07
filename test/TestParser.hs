@@ -19,6 +19,9 @@ testParser = testGroup "Parser.parseExpr str ~~> expr" $
     ("$x__0", Var "$x__0"),
     ("$x1", Var "$x1"),
     ("var", Var "var"),
+    ("xs'", Var "xs'"),
+    ("xs'123'ab", Var "xs'123'ab"),
+    ("$xs'_", Var "$xs'_"),
     ("var234", Var "var234"),
     ("$var", Var "$var"),
     ("veryverylonglongvar", Var "veryverylonglongvar"),
@@ -68,6 +71,14 @@ testParser = testGroup "Parser.parseExpr str ~~> expr" $
     ("case var of True -> False;",
       Case (Var "var") [
         (Pat "True" [], con "False")
+      ]),
+    ("case var of Cons x_ xs_ -> xs_;",
+      Case (Var "var") [
+        (Pat "Cons" ["x_", "xs_"], Var "xs_")
+      ]),
+    ("case var of Cons x' xs' -> xs';",
+      Case (Var "var") [
+        (Pat "Cons" ["x'", "xs'"], Var "xs'")
       ]),
     ("case var of T -> F; F -> T;",
       Case (Var "var") [

@@ -109,6 +109,9 @@ dollar = satisfy "dollar sign" (== '$')
 underscore :: Parser Char
 underscore = satisfy "underscore" (== '_')
 
+quote :: Parser Char
+quote = satisfy "quote" (== '\'')
+
 number :: Parser Int
 number = do
   s <- string "-" <|> return []
@@ -201,7 +204,8 @@ casep = do
 altp :: Parser (Pat, Expr)
 altp = do
   tag <- upperword
-  vars <- many lowerword
+  --vars <- many lowerword
+  vars <- many varnamep
   reserved "->"
   res <- exprp
   reserved ";"
@@ -224,7 +228,7 @@ varnamep = sat (show keywords) varid (not . (`elem` keywords))
 varid :: Parser Var
 varid = do
   c  <- loweralpha <|> dollar <|> underscore
-  cs <- many (alpha <|> digit <|> underscore)
+  cs <- many (alpha <|> digit <|> underscore <|> quote)
   spaces
   return (c:cs)
 

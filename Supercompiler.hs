@@ -53,7 +53,7 @@ memo parentVar conf@(env, stack, expr) =
 
         let sps = split rconf
         --recProc conf sps
-        splits <- mapM (memo parentVar) sps
+        splits <- mapM (memo v) sps
         let r@(env', stack', expr') = combine rconf splits
         promise v (fvs rconf) r
         return (env', stack', appVars (Var v) fv)
@@ -85,24 +85,21 @@ isin conf m = state $ \(next, hist, prom) ->
 getNext :: Memo Int
 getNext = state $ \(next, hist, prom) -> (next, (next, hist, prom))
 
-
-
-
 lookupMatch :: Match -> Hist -> Conf -> Maybe (Var, [Var])
 lookupMatch _ [] _ = Nothing
 lookupMatch m ((parentVar, var, vars, conf'):hist) conf = if conf `m` conf'
   then Just (var, vars)
   else lookupMatch m hist conf
 
-
-
 instance {-# OVERLAPPING #-} Show Hist where
   show hist = "" ++
     intercalate "\n" (map ((++) "  " . show) hist)
 
+instance {-# OVERLAPPING #-} Show (Var, Var, [Var], Conf) where
+  show (parentVar, var, args, expr) = parentVar ++ "->" ++ show (var, args, expr)
+
 instance {-# OVERLAPPING #-} Show (Var, [Var], Conf) where
-  show (var, args, expr) =
-    var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
+  show (var, args, expr) = var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
 
 instance {-# OVERLAPPING #-} Show (Var, Conf) where
   show (var, expr) = var ++ " ~> " ++ show expr

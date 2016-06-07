@@ -8,6 +8,7 @@ import Language.Haskell.Exts (parseFileContents, fromParseResult)
 import Data.List
 
 import Expr
+import Parser
 import Eval
 import Supercompiler
 import HSE
@@ -31,8 +32,10 @@ fromFileName fileName ext = fileName ++ "." ++ ext
 
 dotFromHist :: Hist -> String
 dotFromHist [] = ""
-dotFromHist ((parentVar, var, fvs, conf):hist) = 
-  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"\n"
+dotFromHist ((parentVar, var, fvs, (env, stack, expr)):hist) = 
+  "\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
+  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\"hola\"]\n" ++
+  dotFromHist hist
 
 wrapDot :: String -> String
 wrapDot gr = "digraph G {\n" ++ gr ++ "}\n"
@@ -48,8 +51,9 @@ main = do
       let fileName = head args
       putStrLn $ "Processing " ++ fileName
       fileText <- readFile fileName
-      let hse = fromParseResult (parseFileContents fileText)
-      let expr = fromHSE hse (Var "root")
+      --let hse = fromParseResult (parseFileContents fileText)
+      --let expr = fromHSE hse (Var "root")
+      let expr = parseExpr fileText
       print $ expr
       print $ runMemo expr
       
