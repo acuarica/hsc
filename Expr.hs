@@ -3,7 +3,7 @@
 module Expr (
   Expr(..), Var, Pat (Pat),
   con, app, appVars, isVar, isEmptyCon,
-  subst, substAlts, lookupAlt, freeVars,
+  subst, substAlts, lookupAlt, freeVars, rename,
   zero, suc, nil, cons
 ) where
 
@@ -41,7 +41,7 @@ app expr args = case args of
   [] -> expr
   arg:args' -> app (App expr arg) args'
 
--- | Application of variables to an expression.
+-- | Application of variable names to an expression.
 appVars :: Expr -> [Var] -> Expr
 appVars expr = app expr . map Var
 
@@ -103,6 +103,28 @@ freeVars expr = case expr of
   App funexpr valexpr -> freeVars funexpr `union` freeVars valexpr
   Case scexpr alts -> nub (freeVars scexpr ++
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
+
+-- | Alpha renaming.
+-- | Renames a bound let-expr variable.
+rename :: Var -> Var -> Expr -> Expr
+rename var var' (Let letvar valexpr inexpr) =
+  if var == letvar
+    then Let var' (substVar valexpr) (substVar inexpr)
+    else Let letvar (doRen valexpr) (doRen inexpr)
+  where
+    substVar = doRen . subst (var, Var var')
+    doRen = rename var var'
+{-rename var var' expr = case expr of
+  Var var -> var
+  Con tag args -> nub (concatMap freeVars args)
+  Lam var lamexpr -> delete var (freeVars lamexpr)
+  Let var valexpr inexpr ->
+    delete var (freeVars inexpr `union` freeVars valexpr)
+  App funexpr valexpr -> freeVars funexpr `union` freeVars valexpr
+  Case scexpr alts -> nub (freeVars scexpr ++
+    concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
+-}
+
 
 -- | Some common used expressions for easy write of expressions.
 -- | These expressions are pretty printed accordingly.

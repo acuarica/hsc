@@ -4,7 +4,7 @@ module Main (main) where
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
-import Expr (Expr(Var), app, appVars, subst, freeVars)
+import Expr (Expr(Var), app, appVars, subst, freeVars, rename)
 import Parser (parseExpr)
 
 appTest :: TestTree
@@ -66,6 +66,15 @@ freeVarsTest = testGroup "freeVars expr ~~> [Var]" $
     ("let inc={n->s (let s=A in s m)} in inc m", ["m", "s"])
   ]
 
+renameTest :: TestTree
+renameTest = testGroup "rename expr ~~> [Var]" $
+  map (\(v, v', a, e) -> 
+    testCase (a ++ " ~~> " ++ e) $
+      (rename v v' . parseExpr) a @?= parseExpr e)
+  [
+    ("y", "$", "let x=(let y=A in y) in x", "let x=(let $=A in $) in x")
+  ]
+ 
 main :: IO ()
 main = defaultMain $ testGroup "Expr: app/appVars/subst/freeVars"
-  [appTest, appVarsTest, substTest, freeVarsTest]
+  [appTest, appVarsTest, substTest, freeVarsTest, renameTest]

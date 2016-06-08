@@ -5,9 +5,9 @@ module Eval (
   eval, whnf, emptyEnv, newConf, toExpr, nf, reduce, put, step
 ) where
 
-import Data.List (intercalate)
+import Data.List (intercalate, delete)
 
-import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt)
+import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt, freeVars, rename)
 
 -- | Configuration of the step machine.
 type Conf = (Env, Stack, Expr)
@@ -60,7 +60,7 @@ nf :: Conf -> Conf
 nf state = case reduce state of
   (env, [], Con tag args) ->
     (env, [], Con tag (map (toExpr . nf . newConf env) args))
-  (env, stack, Con _ _) -> error "Stack/Con"
+  (_, _, Con _ _) -> error "Stack/Con"
   state' -> state'
 
 -- | Reduce a conf. to Weak Head Normal Form (WHNF).
@@ -97,10 +97,13 @@ step (env, stack, expr) = case expr of
     Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
     Update x:stack' -> Just (put x val env, stack', val)
   Let var valexpr inexpr ->
-    Just (put var valexpr env, stack, inexpr)
+    Just (put var (alpha (delete var (freeVars inexpr)) valexpr) env, stack, inexpr)
   App funexpr valexpr ->
     Just (env, Arg valexpr:stack, funexpr)
   Case scexpr alts -> Just (env, Alts alts:stack, scexpr)
+  where
+    alpha _ expr = expr
+    --alpha (v:vs) expr = rename v "$a_0" (alpha vs expr)
 
 instance Show StackFrame where
   show frame = case frame of

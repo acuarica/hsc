@@ -8,6 +8,15 @@ import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 import Eval (eval, whnf)
 
+whnfTest :: TestTree
+whnfTest = testGroup "whnf" $
+  map (\(a, e) ->
+    testCase (a ++ " ~~> " ++ e) $
+      (whnf . parseExpr) a @?= (whnf . parseExpr) e)
+  [
+    ("let x=(let y=A in y 0) in x y", "A 0 y")
+  ]
+
 evalTest :: TestTree
 evalTest = testGroup "eval expr ~~> expr" $
   map (\(a, e) ->
@@ -137,7 +146,7 @@ evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
     ("let two={a->{b->a}} in let id={c->c} in id two", "{a->{b->a}}"),
     ("let fst={a->{b->a}} in let id={b->b} in id fst", "{a->{b->a}}"),
     ("let fst={a->{b->a}} in let id={a->a} in id fst", "{a->{b->a}}"),
-    ("let fst={a->{b->a}} in let p=fst T in let app={f->{x->f x}} in app p F", "T"),
+    ("let fst={a->{b->a}} in let p=fst T in let a={f->{x->f x}} in a p F", "T"),
     ("let id={a-> a} in let app={f->{x->f x}} in app id [1,2,3,4]", "[1,2,3,4]"),
     ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
     ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
@@ -194,8 +203,8 @@ evalWithPreludeTest = testGroup ("evalPreludeTest") $
       \let cp={a->case a of Zero->0;Succ aa->Succ (cp aa);} in \
       \let cat={xs->{ys->case xs of Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
       \let rev={rs-> case rs of Nil->Nil;Cons s ss->cat (rev ss) [s];} in \
-      \let revA={xs->{as->case xs of Nil->as;Cons y ys->revA ys (Cons y as);}} in \
-      \let map={f->{xs->case xs of Nil->Nil;Cons y ys->Cons (f y) (map f ys);}} in \
+      \let revA={xs->{as->case xs of Nil->as;Cons y ys->revA ys (Cons y as);}}in \
+      \let map={f->{xs->case xs of Nil->Nil;Cons y ys->Cons (f y)(map f ys);}}in \
       \let mult={n->{m->case n of Zero->0; Succ nn->plus (mult nn m) m;}} in \
       \let plus={n->{m->case n of Zero->m; Succ nn->plus nn (Succ m);}} in \
       \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in "
@@ -222,53 +231,12 @@ evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
     testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
-    ("let x=(let y=A in y 0) in x y", "A 0 y")
-  ]
-
-whnfTest :: TestTree
-whnfTest = testGroup "whnf" $
-  map (\(a, e) ->
-    testCase "" $
-      (whnf . parseExpr) a @?= parseExpr e)
-  [
-      (
-      "let $v_0={zs->case zs of Nil->$v_1;Cons y ys->$v_2 y ys;} in \
-      \let $v_2={y->{ys->(Cons ($v_3 y) ($v_0 ys))}} in \
-      \let $v_3={y->Succ ($v_4 y)} in \
-      \let $v_4={y->y} in \
-      \let $v_1=[] in $v_0 [1,2,3,4]", "[2,3,4,5]"), 
-    (
-    "let cat={xs->{ys->case xs of \
-    \Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
-    \let rev={rs->case rs of \
-    \Nil->[];Cons s ss->cat (rev ss) (Cons s []);} in \
-    \rev vs", "y"),
-    (
-    "let inc={n->Succ n}\
-    \in let map={f->{xs-> case xs of \
-    \  Nil->Nil;\
-    \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-    \in Cons (inc y) (map inc ys)", "x"),
-    (
-    "let append={xs->{ys->case xs of \
-    \  Nil->ys;\
-    \  Cons z zs->Cons z (cat zs ys);}} in \
-    \append (append as bs) cs", "y"),
-      (
-      "let inc={n->Succ n}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in map inc zs", "x"),
-      (
-      "let inc={n->Succ n}\
-      \in let map={f->{xs-> case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys -> Cons (f y) (map f ys) ; }}\
-      \in Cons (inc y) (map inc ys)", "x")
+    ("let x=(let y=A in y 0) in x y", "A 0 y"),
+    ("let x=(let y=A in let z=B in C y z) in x y z", "C A B y z"),
+    ("(let y=A in let z=B in C y z) y z", "C A B y z")
   ]
 
 main :: IO ()
 main = defaultMain $ testGroup "Eval::eval/whnf" $
-  [evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest, 
-  evalNameCaptureTest, whnfTest]
+  [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest, 
+  evalNameCaptureTest]
