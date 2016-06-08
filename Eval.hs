@@ -2,14 +2,14 @@
 
 module Eval (
   Conf, Env, StackFrame(..),
-  eval, whnf, emptyEnv, newConf, toExpr, nf, reduce, put, step
+  eval, whnf, emptyEnv, newConf, toExpr, nf, reduce 
 ) where
 
 import Data.List (intercalate, delete)
 
 import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt, freeVars, rename)
 
--- | Configuration of the step machine.
+-- | Represents the configuration of the abstract machine.
 type Conf = (Env, Stack, Expr)
 
 -- | Environment that binds variables to values.
@@ -67,9 +67,11 @@ nf state = case reduce state of
 -- | Lambda abstractions are not further evaluated as in
 -- | Head Normal Form (HNF).
 reduce :: Conf -> Conf
-reduce conf = case step conf of
-  Nothing -> conf
-  Just conf' -> reduce conf'
+reduce conf = reduceWithNext 0 conf
+  where
+    reduceWithNext next conf = case step next conf of
+      Nothing -> conf
+      Just conf' -> reduceWithNext (next + 1) conf'
 
 -- | Puts var bind with expr in the given environment.
 put :: Var -> Expr -> Env -> Env
@@ -79,8 +81,8 @@ put var expr ((var',expr'):env) = if var' == var
   else (var',expr'):put var expr env
 
 -- | Operational semantics with one-step reduction.
-step :: Conf -> Maybe Conf
-step (env, stack, expr) = case expr of
+step :: Int -> Conf -> Maybe Conf
+step next (env, stack, expr) = case expr of
   Var var -> case lookup var env of
     Nothing -> Nothing
     Just val -> Just (env, Update var:stack, val)
@@ -97,12 +99,13 @@ step (env, stack, expr) = case expr of
     Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
     Update x:stack' -> Just (put x val env, stack', val)
   Let var valexpr inexpr ->
-    Just (put var (alpha (delete var (freeVars inexpr)) valexpr) env, stack, inexpr)
+    Just (put nextVar (letSubst var valexpr) env, stack, letSubst var inexpr)
   App funexpr valexpr ->
     Just (env, Arg valexpr:stack, funexpr)
   Case scexpr alts -> Just (env, Alts alts:stack, scexpr)
   where
-    alpha _ expr = expr
+    letSubst var = subst (var, Var nextVar) 
+    nextVar = "$l_" ++ show next
     --alpha (v:vs) expr = rename v "$a_0" (alpha vs expr)
 
 instance Show StackFrame where
