@@ -205,8 +205,8 @@ evalWithPreludeTest = testGroup ("evalPreludeTest") $
       \let rev={rs-> case rs of Nil->Nil;Cons s ss->cat (rev ss) [s];} in \
       \let revA={xs->{as->case xs of Nil->as;Cons y ys->revA ys (Cons y as);}}in \
       \let map={f->{xs->case xs of Nil->Nil;Cons y ys->Cons (f y)(map f ys);}}in \
-      \let mult={n->{m->case n of Zero->0; Succ nn->plus (mult nn m) m;}} in \
       \let plus={n->{m->case n of Zero->m; Succ nn->plus nn (Succ m);}} in \
+      \let mult={n->{m->case n of Zero->0; Succ nn->plus (mult nn m) m;}} in \
       \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in "
 
 evalLazyTest :: TestTree
@@ -237,7 +237,15 @@ evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
     ("(let y=A in let z=B in C y z) y z", "C A B y z")
   ]
 
+evalForwardDecl = testGroup "eval w/forward declarations" $
+  map (\(a, e) ->
+    testCase (a ++ " ~~> " ++ e) $
+      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  [
+    ("let a=b in let b=B in a", "B")
+  ]
+
 main :: IO ()
 main = defaultMain $ testGroup "Eval::eval/whnf" $
   [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest, 
-  evalNameCaptureTest]
+  evalNameCaptureTest, evalForwardDecl]
