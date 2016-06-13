@@ -8,9 +8,9 @@ import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 
 testParser :: TestTree
-testParser = testGroup "Parser.parseExpr str ~~> expr" $
+testParser = testGroup "Parser.parseExpr str ~> expr" $
   map (\(a, e) -> 
-    testCase (a ++ " ~~> " ++ show e) $
+    testCase (a ++ " ~> " ++ show e) $
       parseExpr a @?= e)
   [
     ("x", Var "x"),
@@ -63,11 +63,11 @@ testParser = testGroup "Parser.parseExpr str ~~> expr" $
     ("[x]", app cons [Var "x", nil]),
     ("[x,y]", app cons [Var "x", app cons [Var "y", nil]]),
     ("[x,A,y]", app cons [Var "x", app cons [con "A", app cons [Var "y", nil]]]),
-    ("let f={a->case a of Z->A;S b->B;} in f",
-      Let "f" (Lam "a" (Case (Var "a") [
+    ("let c=case n of Z->A;S m->B; in c",
+      Let "c" (Case (Var "n") [
         (Pat "Z" [], Con "A" []),
-        (Pat "S" ["b"], Con "B" [])
-      ])) (Var "f")),
+        (Pat "S" ["m"], Con "B" [])
+      ]) (Var "c")),
     ("case var of True -> False;",
       Case (Var "var") [
         (Pat "True" [], con "False")
@@ -85,8 +85,8 @@ testParser = testGroup "Parser.parseExpr str ~~> expr" $
         (Pat "T" [], con "F"),
         (Pat "F" [], con "T")
       ]),
-    ("case var of T -> F; F -> T; Just n -> m;",
-      Case (Var "var") [
+    ("case xs of T -> F; F -> T; Just n -> m;",
+      Case (Var "xs") [
         (Pat "T" [], con "F"),
         (Pat "F" [], con "T"),
         (Pat "Just" ["n"], Var "m")
