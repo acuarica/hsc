@@ -10,6 +10,7 @@ module Expr (
 import Data.Maybe (fromMaybe)
 import Control.Exception (assert)
 import Data.List (nub, delete, (\\), union, intercalate)
+import Control.Arrow (second)
 
 -- | The expression type.
 data Expr
@@ -119,7 +120,8 @@ alpha expr = doAlpha 0 expr
         Let (nextVar next) (letSubst var next valexpr) (letSubst var next inexpr)
       App funexpr valexpr ->
         App (doAlpha (next+1) funexpr) (doAlpha (next+1) valexpr)
-      Case scexpr alts -> Case scexpr alts
+      Case scexpr alts ->
+        Case (doAlpha (next+1) scexpr) $ map (second (doAlpha (next+1))) alts
     letSubst var next = doAlpha (next+1) . subst (var, Var (nextVar next)) 
     nextVar next = "$l_" ++ show next
 

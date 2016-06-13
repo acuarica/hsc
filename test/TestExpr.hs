@@ -74,7 +74,11 @@ alphaTest = testGroup "alpha expr ~~> expr" $
   [
     ("f x", "f x"),
     ("let x=A in x", "let y=A in y"),
-    ("let x=A in let y=B in x y", "let u=A in let v=B in u v")
+    ("let x=A in let y=B in x y", "let u=A in let v=B in u v"),
+    ("(let x=F in x) (let x=X in x)", "(let y=F in y) (let z=X in z)"),
+    ("F (let x=A in x)", "F (let y=A in y)"),
+    ("case x of X -> (let y=A in y);", "case x of X -> (let z=A in z);"),
+    ("case (let x=a in x) of X->A;", "case (let y=a in y) of X->A;")
   ]
 
 main :: IO ()
