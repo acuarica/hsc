@@ -2,12 +2,12 @@
 
 module Eval (
   Conf, Env, StackFrame(..),
-  eval, whnf, emptyEnv, newConf, toExpr, nf, reduce 
+  eval, whnf, emptyEnv, newConf, toExpr, nf, reduce, put, step
 ) where
 
 import Data.List (intercalate, delete)
 
-import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt, freeVars, rename)
+import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt, freeVars, alpha)
 
 -- | Represents the configuration of the abstract machine.
 type Conf = (Env, Stack, Expr)
@@ -27,7 +27,7 @@ data StackFrame
 
 -- | Evaluates the given expression to Normal Form (NF).
 eval :: Expr -> Expr
-eval = toExpr . nf . newConf emptyEnv
+eval = toExpr . nf . newConf emptyEnv . alpha
 
 -- | Evaluates the given expression to Weak Head Normal Form (WHNF).
 whnf :: Expr -> Expr
@@ -67,11 +67,9 @@ nf state = case reduce state of
 -- | Lambda abstractions are not further evaluated as in
 -- | Head Normal Form (HNF).
 reduce :: Conf -> Conf
-reduce conf = reduceWithNext 0 conf
-  where
-    reduceWithNext next conf = case step next conf of
-      Nothing -> conf
-      Just conf' -> reduceWithNext (next + 1) conf'
+reduce conf = case step conf of
+  Nothing -> conf
+  Just conf' -> reduce conf'
 
 -- | Puts var bind with expr in the given environment.
 put :: Var -> Expr -> Env -> Env
@@ -81,8 +79,8 @@ put var expr ((var',expr'):env) = if var' == var
   else (var',expr'):put var expr env
 
 -- | Operational semantics with one-step reduction.
-step :: Int -> Conf -> Maybe Conf
-step next (env, stack, expr) = case expr of
+step :: Conf -> Maybe Conf
+step (env, stack, expr) = case expr of
   Var var -> case lookup var env of
     Nothing -> Nothing
     Just val -> Just (env, Update var:stack, val)
@@ -99,14 +97,10 @@ step next (env, stack, expr) = case expr of
     Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
     Update x:stack' -> Just (put x val env, stack', val)
   Let var valexpr inexpr ->
-    Just (put nextVar (letSubst var valexpr) env, stack, letSubst var inexpr)
+    Just (put var valexpr env, stack, inexpr)
   App funexpr valexpr ->
     Just (env, Arg valexpr:stack, funexpr)
   Case scexpr alts -> Just (env, Alts alts:stack, scexpr)
-  where
-    letSubst var = subst (var, Var nextVar) 
-    nextVar = "$l_" ++ show next
-    --alpha (v:vs) expr = rename v "$a_0" (alpha vs expr)
 
 instance Show StackFrame where
   show frame = case frame of

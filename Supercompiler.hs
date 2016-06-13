@@ -9,7 +9,7 @@ import Control.Monad.State (State, state, runState)
 
 import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (Conf, Env, StackFrame(..),
-  newConf, emptyEnv, toExpr, nf, reduce, put, step)
+  newConf, emptyEnv, toExpr, nf, reduce, put)
 import Splitter (split, combine)
 import Simplifier
 import Match

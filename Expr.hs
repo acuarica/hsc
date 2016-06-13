@@ -3,7 +3,7 @@
 module Expr (
   Expr(..), Var, Pat (Pat),
   con, app, appVars, isVar, isEmptyCon,
-  subst, substAlts, lookupAlt, freeVars, rename,
+  subst, substAlts, lookupAlt, freeVars, alpha,
   zero, suc, nil, cons
 ) where
 
@@ -104,27 +104,24 @@ freeVars expr = case expr of
   Case scexpr alts -> nub (freeVars scexpr ++
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
 
--- | Alpha renaming.
--- | Renames a bound let-expr variable.
-rename :: Var -> Var -> Expr -> Expr
-rename var var' (Let letvar valexpr inexpr) =
-  if var == letvar
-    then Let var' (substVar valexpr) (substVar inexpr)
-    else Let letvar (doRen valexpr) (doRen inexpr)
+-- | Alpha renaming of bound variables.
+-- | This property comes handy when evaluating to Normal Form, since it avoids
+-- | name capture.
+-- | NOTE: Implementation not finished: Con/Case left to implement.
+alpha :: Expr -> Expr
+alpha expr = doAlpha 0 expr
   where
-    substVar = doRen . subst (var, Var var')
-    doRen = rename var var'
-{-rename var var' expr = case expr of
-  Var var -> var
-  Con tag args -> nub (concatMap freeVars args)
-  Lam var lamexpr -> delete var (freeVars lamexpr)
-  Let var valexpr inexpr ->
-    delete var (freeVars inexpr `union` freeVars valexpr)
-  App funexpr valexpr -> freeVars funexpr `union` freeVars valexpr
-  Case scexpr alts -> nub (freeVars scexpr ++
-    concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
--}
-
+    doAlpha next expr = case expr of
+      Var var -> Var var
+      Con tag args -> Con tag args
+      Lam var lamexpr -> Lam var (doAlpha (next + 1) lamexpr)
+      Let var valexpr inexpr ->
+        Let (nextVar next) (letSubst var next valexpr) (letSubst var next inexpr)
+      App funexpr valexpr ->
+        App (doAlpha (next+1) funexpr) (doAlpha (next+1) valexpr)
+      Case scexpr alts -> Case scexpr alts
+    letSubst var next = doAlpha (next+1) . subst (var, Var (nextVar next)) 
+    nextVar next = "$l_" ++ show next
 
 -- | Some common used expressions for easy write of expressions.
 -- | These expressions are pretty printed accordingly.
