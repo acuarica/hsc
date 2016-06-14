@@ -39,7 +39,7 @@ memo parentVar conf@(env, stack, expr) =
   if null stack && isEmptyCon expr then return conf else
   do
   next <- getNext
-  if next > 7 then return conf else
+  if next > 20 then return conf else
     do
     ii <- isin conf match
     if isNothing ii

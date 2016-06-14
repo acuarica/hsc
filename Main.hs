@@ -14,7 +14,7 @@ import Supercompiler
 import HSE
 
 usage :: String
-usage = "Usage: hsc <haskell file.hs>"
+usage = "Usage: hsc <haskell file.hs | expr file.expr>"
 
 dot :: Conf -> [Conf]
 dot conf = conf:(case step conf of
@@ -40,6 +40,16 @@ dotFromHist ((parentVar, var, fvs, (env, stack, expr)):hist) =
 wrapDot :: String -> String
 wrapDot gr = "digraph G {\n" ++ gr ++ "}\n"
 
+filterByExt :: String -> String -> Expr
+filterByExt ext fileText = case lookup ext filters of
+  Nothing -> error "Extension not found"
+  Just f -> f fileText
+  where
+    filters = [
+      (".expr", parseExpr), 
+      (".hs", fromHSE (Var "root") . fromParseResult . parseFileContents)
+      ]
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -49,11 +59,10 @@ main = do
       exitFailure
     else do
       let fileName = head args
-      putStrLn $ "Processing " ++ fileName
+      let ext = takeExtension fileName
+      putStrLn $ "Processing " ++ fileName ++ " ..."
       fileText <- readFile fileName
-      --let hse = fromParseResult (parseFileContents fileText)
-      --let expr = fromHSE hse (Var "root")
-      let expr = parseExpr fileText
+      let expr = filterByExt ext fileText
       print $ expr
       print $ runMemo expr
       

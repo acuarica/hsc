@@ -108,6 +108,8 @@ freeVars expr = case expr of
 -- | Alpha renaming of bound variables.
 -- | This property comes handy when evaluating to Normal Form, since it avoids
 -- | name capture.
+-- | Forward usage:
+-- |   let a=c in let b=c in let c=X in a
 -- | NOTE: Implementation not finished: Con/Case left to implement.
 alpha :: Expr -> Expr
 alpha expr = doAlpha 0 expr
@@ -116,6 +118,7 @@ alpha expr = doAlpha 0 expr
       Var var -> Var var
       Con tag args -> Con tag args
       Lam var lamexpr -> Lam var (doAlpha (next + 1) lamexpr)
+--      Let var valexpr (Let var' valexpr' inexpr') ->
       Let var valexpr inexpr ->
         Let (nextVar next) (letSubst var next valexpr) (letSubst var next inexpr)
       App funexpr valexpr ->

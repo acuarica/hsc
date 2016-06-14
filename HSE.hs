@@ -6,8 +6,8 @@ import qualified Language.Haskell.Exts as H
 
 import Expr
 
-fromHSE :: Module -> Expr -> Expr
-fromHSE (Module _ _ _ _ _ _ decls) rootExpr =
+fromHSE :: Expr -> Module -> Expr
+fromHSE rootExpr (Module _ _ _ _ _ _ decls) =
   foldr foldExpr rootExpr decls
   where foldExpr decl expr = case fromDecl decl of
           Nothing -> expr
