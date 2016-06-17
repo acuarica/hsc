@@ -26,6 +26,7 @@ data StackFrame
   deriving Eq
 
 -- | Evaluates the given expression to Normal Form (NF).
+-- | It uses alpha to avoid name capture.
 eval :: Expr -> Expr
 eval = toExpr . nf . newConf emptyEnv . alpha
 
