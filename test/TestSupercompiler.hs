@@ -96,8 +96,4 @@ env = map (second parseExpr)
   ]
 
 main :: IO ()
-main = defaultMain $
-  testGroup "Supercompiler: match, supercompile/eval"
-    [
-      testSupercompile
-    ]
+main = defaultMain $ testGroup "Supercompiler " [testSupercompile]
