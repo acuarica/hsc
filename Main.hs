@@ -60,7 +60,7 @@ main = do
     else do
       let fileName = head args
       let ext = takeExtension fileName
-      putStrLn $ "Processing " ++ fileName ++ " ..."
+      putStrLn $ "[Supercompiling " ++ fileName ++ " ...]"
       fileText <- readFile fileName
       let expr = filterByExt ext fileText
       print $ expr

@@ -39,7 +39,7 @@ memo parentVar conf@(env, stack, expr) =
   if null stack && isEmptyCon expr then return conf else
   do
   next <- getNext
-  if next > 20 then return conf else
+  if next > 100 then return conf else
     do
     ii <- isin conf match
     if isNothing ii
@@ -94,6 +94,10 @@ lookupMatch m ((parentVar, var, vars, conf'):hist) conf = if conf `m` conf'
 instance {-# OVERLAPPING #-} Show Hist where
   show hist = "" ++
     intercalate "\n" (map ((++) "  " . show) hist)
+
+instance {-# OVERLAPPING #-} Show Prom where
+  show prom = "" ++
+    intercalate "\n" (map ((++) "  " . show) prom)
 
 instance {-# OVERLAPPING #-} Show (Var, Var, [Var], Conf) where
   show (parentVar, var, args, expr) = parentVar ++ "->" ++ show (var, args, expr)
