@@ -4,7 +4,7 @@ module HSE where
 import Language.Haskell.Exts hiding (Pat,Var,Let,App,Case,Con,app,name)
 import qualified Language.Haskell.Exts as H
 
-import Expr
+import Expr (Expr(..), Var, Pat(Pat), con, zero)
 
 fromHSE :: Expr -> Module -> Expr
 fromHSE rootExpr (Module _ _ _ _ _ _ decls) =

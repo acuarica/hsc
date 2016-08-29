@@ -27,13 +27,12 @@ testSupercompile = testGroup "supercompile" $
     (mapincmapinc, \e-> App e (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
     (appendasbs,
       Let "as" (parse "[1,2,3]") .
-        Let "bs" (parse "[4,5]"),
-       "[1,2,3,4,5]"),
+        Let "bs" (parse "[4,5]"), "[1,2,3,4,5]"),
     (append,
       Let "as" (parse "[]") .
         Let "bs" (parse "[]") .
-          Let "cs" (parse "[q, p]"),
-       "[q, p]") --,
+          Let "cs" (parse "[A]"),
+       "[A]")
     -- (revzs, Let "zs" (parse "[]"), "[]")
   ]
   where
@@ -74,7 +73,7 @@ testSupercompile = testGroup "supercompile" $
      "let append={xs->{ys->case xs of \
       \  Nil->ys;\
       \  Cons z zs -> Cons z (append zs ys) ; }}\
-      \in append (append as bs) cs"
+      \in let asbs=append as bs in append asbs cs"
     revzs =
       "let cat={xs->{ys->case xs of\
       \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\

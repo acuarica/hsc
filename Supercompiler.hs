@@ -11,10 +11,10 @@ import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (Conf, Env, StackFrame(..),
   newConf, emptyEnv, toExpr, nf, reduce, put)
 import Splitter (split, combine)
-import Simplifier
-import Match
+import Simplifier (doSimp)
+import Match (Match, match, toLambda, envExpr)
 
-import Debug.Trace
+import Debug.Trace ()
 
 supercompile :: Expr -> Expr
 supercompile = gp . runMemo
@@ -27,7 +27,7 @@ runMemo expr = let s = memo "$root" (newConf emptyEnv expr)
 fromMemo :: [(Var, [Var], Conf)] -> Expr -> Expr
 fromMemo [] expr = expr
 fromMemo ((var, fv, valconf):env) expr =
-    Let (var) (toLambda fv (toExpr valconf)) (fromMemo env expr)
+    Let var (toLambda fv (toExpr valconf)) (fromMemo env expr)
 
 add :: Var -> Expr -> Conf -> Conf
 add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)

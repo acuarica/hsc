@@ -3,15 +3,15 @@ module Main where
 
 import System.Exit (exitFailure)
 import System.Environment (getArgs)
-import System.FilePath
+import System.FilePath (takeExtension)
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
-import Data.List
+import Data.List (intercalate)
 
-import Expr
-import Parser
-import Eval
-import Supercompiler
-import HSE
+import Expr (Expr(Var), Var)
+import Parser (parseExpr)
+import Eval (Conf, eval, emptyEnv, newConf, toExpr, step)
+import Supercompiler (Hist, supercompile, runMemo)
+import HSE (fromHSE)
 
 usage :: String
 usage = "Usage: hsc <haskell file.hs | expr file.expr>"
@@ -32,7 +32,7 @@ fromFileName fileName ext = fileName ++ "." ++ ext
 
 dotFromHist :: Hist -> String
 dotFromHist [] = ""
-dotFromHist ((parentVar, var, fvs, (env, stack, expr)):hist) = 
+dotFromHist ((parentVar, var, fvs, (env, stack, expr)):hist) =
   "\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
   "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\"hola\"]\n" ++
   dotFromHist hist
@@ -46,7 +46,7 @@ filterByExt ext fileText = case lookup ext filters of
   Just f -> f fileText
   where
     filters = [
-      (".expr", parseExpr), 
+      (".expr", parseExpr),
       (".hs", fromHSE (Var "root") . fromParseResult . parseFileContents)
       ]
 
@@ -65,13 +65,13 @@ main = do
       let expr = filterByExt ext fileText
       print $ expr
       print $ runMemo expr
-      
+
       let sexpr = supercompile expr
       --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
       putStrLn res
       let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
       let (_, (_, hist, _)) = runMemo expr
-      let dotmm = wrapDot $ dotFromHist hist 
+      let dotmm = wrapDot $ dotFromHist hist
       writeFile (fromFileName fileName "dot") dotmm --dotsexpr
       return ()

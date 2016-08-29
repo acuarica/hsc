@@ -28,7 +28,7 @@ data StackFrame
 -- | Evaluates the given expression to Normal Form (NF).
 -- | It uses alpha to avoid name capture.
 eval :: Expr -> Expr
-eval = toExpr . nf . newConf emptyEnv . alpha
+eval = toExpr . nf . newConf emptyEnv -- . alpha
 
 -- | Evaluates the given expression to Weak Head Normal Form (WHNF).
 whnf :: Expr -> Expr
