@@ -6,9 +6,9 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
-import Eval --(eval, whnf)
-import Splitter
-import Simplifier
+import Eval (eval, whnf, toExpr, newConf, emptyEnv, reduce)
+import Splitter (split, combine)
+import Simplifier (doSimp)
 
 inc = ("inc", "{n->Succ n}")
 mp = ("map", "")

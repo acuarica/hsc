@@ -9,7 +9,7 @@ import Control.Arrow (second)
 import Expr (Expr(..), appVars)
 import Parser (parseExpr)
 import Eval (Env, newConf, emptyEnv, eval)
-import Supercompiler
+import Supercompiler (supercompile)
 
 testSupercompile :: TestTree
 testSupercompile = testGroup "supercompile" $

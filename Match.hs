@@ -1,8 +1,8 @@
 
 module Match where
 
-import Expr
-import Eval
+import Expr (Expr(Var, Lam, Let), Var, freeVars)
+import Eval (Env, Conf, StackFrame(Update), newConf, emptyEnv, toExpr)
 import Simplifier
 
 envToLet :: Env -> Expr -> Expr
@@ -17,9 +17,7 @@ envExpr conf@(env, stack, expr) = rebuildEnv env (toExpr conf)
 
 
 toLambda :: [Var] -> Expr -> Expr
-toLambda [] expr = expr
-toLambda (v:vs) expr = Lam v (toLambda vs expr)
-
+toLambda vs expr = foldr Lam expr vs
 
 type Match = Conf -> Conf -> Bool
 
@@ -43,6 +41,3 @@ match lhs rhs = toExpr lred == toExpr rred
     lred  = freduce args (newConf emptyEnv llam)
     rred  = freduce args (newConf emptyEnv rlam)
     args  = map (Var . (++) "$a_" . show) [1..10]
-
-
-

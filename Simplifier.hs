@@ -3,8 +3,8 @@ module Simplifier where
 
 import Control.Exception (assert)
 
-import Expr
-import Eval
+import Expr (Expr(Var, Lam, Case), Var, Pat(Pat))
+import Eval (Conf, StackFrame(Alts, Arg), reduce)
 
 doSimp :: Conf -> Conf
 doSimp conf =

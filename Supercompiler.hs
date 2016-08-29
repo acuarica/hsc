@@ -35,8 +35,8 @@ add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
 memo :: Var -> Conf -> Memo Conf
 memo parentVar conf@(env, stack, expr) =
   --traceShow expr $
-  if null stack && isVar expr then return conf else
-  if null stack && isEmptyCon expr then return conf else
+  --if null stack && isVar expr then return conf else
+  --if null stack && isEmptyCon expr then return conf else
   do
   next <- getNext
   if next > 100 then return conf else
