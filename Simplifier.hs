@@ -1,5 +1,5 @@
 
-module Simplifier where
+module Simplifier (doSimp, freduce, simp) where
 
 import Control.Exception (assert)
 

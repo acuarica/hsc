@@ -1,15 +1,11 @@
-let v_0={as->{bs->{cs->
-  case as of 
-    Nil -> case v_1 bs cs of
+let v0={bs->{cs->
+    case v1 bs cs of
       Nil       -> cs;
-      Cons z zs -> v_2 z zs cs; ;
-    Cons z zs -> v_3 z zs bs cs;
-  }}} in 
-let v_3 = {z->{zs->{bs->{cs -> (z:v_0 zs bs cs) }}}} in 
-let v_1={bs->{cs->
-  case bs of
-    Nil->cs;
-    Cons z zs->v_2 z zs cs;
+      Cons z zs -> Cons z (v1 zs cs);
   }} in 
-let v_2={z->{zs->{cs->(z:v_1 zs cs)}}} in 
-v_0 [] [] [A]
+let v1={bs->{cs->
+  case bs of
+    Nil       -> cs;
+    Cons z zs -> Cons z (v1 zs cs);
+  }} in 
+v0 [] [A]

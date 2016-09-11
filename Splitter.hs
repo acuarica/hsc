@@ -1,19 +1,23 @@
 
-module Splitter (split, combine) where
+module Splitter (Label, split, combine) where
 
 import Expr (Expr(Var, Con, Lam))
 import Eval (Conf, StackFrame(Alts), newConf, toExpr)
 
+-- |
+-- |
+type Label = String
+
 -- | Given a state, returns where to continue the computation.
 -- | The given conf must be stucked.
-split :: Conf -> [Conf]
+split :: Conf -> [(Label, Conf)]
 split s@(env, stack, expr) = case expr of
   Var var -> case stack of
     [] -> []
-    Alts alts:stack' -> map (\(pat, alt) -> (env, stack', alt)) alts
+    Alts alts:stack' -> map (\(pat, alt) -> (var ++ "=" ++ show pat, (env, stack', alt))) alts
     _ -> error $ "Error: split var: " ++ show s
   Con tag args -> case stack of
-    [] -> map (newConf env) args
+    [] -> map (\(i, e)-> (tag ++ ":" ++ show i, newConf env e)) (zip [1..length args] args)
     _ -> error $ "Spliting with Con and stack: " ++ show stack
 
 -- | Combines the expression replacing the alternatives.

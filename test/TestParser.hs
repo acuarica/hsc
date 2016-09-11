@@ -55,6 +55,8 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("let $x0={y->y} in $x0", Let "$x0" (Lam "y" (Var "y")) (Var "$x0")),
     ("let id={y->y} in id", Let "id" (Lam "y" (Var "y")) (Var "id")),
     ("let x=0 in Succ x", Let "x" zero (App suc (Var "x"))),
+    ("let $v_0=A in $v_0", Let "$v_0" (con "A") (Var "$v_0")),
+    ("let $v_0 = A in $v_0", Let "$v_0" (con "A") (Var "$v_0")),
     ("[]", nil),
     ("  [  ]  ", nil),
     ("[True]", app cons [con "True", nil]),
@@ -63,6 +65,7 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("[x]", app cons [Var "x", nil]),
     ("[x,y]", app cons [Var "x", app cons [Var "y", nil]]),
     ("[x,A,y]", app cons [Var "x", app cons [con "A", app cons [Var "y", nil]]]),
+    ("(x:xs)", app cons [Var "x", Var "xs"]),
     ("let c=case n of Z->A;S m->B; in c",
       Let "c" (Case (Var "n") [
         (Pat "Z" [], Con "A" []),

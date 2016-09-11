@@ -10,8 +10,8 @@ import Control.Monad.State (State, state, runState)
 import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (Conf, Env, StackFrame(..),
   newConf, emptyEnv, toExpr, nf, reduce, put)
-import Splitter (split, combine)
-import Simplifier (doSimp)
+import Splitter (Label, split, combine)
+import Simplifier (doSimp, freduce, simp)
 import Match (Match, match, toLambda, envExpr)
 
 import Debug.Trace ()
@@ -21,8 +21,11 @@ supercompile = gp . runMemo
 
 gp m@((_, _, expr0), (next, hist, prom)) = fromMemo prom expr0
 
-runMemo expr = let s = memo "$root" (newConf emptyEnv expr)
+runMemo expr = let s = memo "$v_start" "_" (newConf emptyEnv expr)
   in runState s (0, [], [])
+
+--histToExpr :: Hist -> Expr
+--histToExpr
 
 fromMemo :: [(Var, [Var], Conf)] -> Expr -> Expr
 fromMemo [] expr = expr
@@ -32,11 +35,10 @@ fromMemo ((var, fv, valconf):env) expr =
 add :: Var -> Expr -> Conf -> Conf
 add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
 
-memo :: Var -> Conf -> Memo Conf
-memo parentVar conf@(env, stack, expr) =
-  --traceShow expr $
-  --if null stack && isVar expr then return conf else
-  --if null stack && isEmptyCon expr then return conf else
+-- Runs the supercompiler
+-- Conf has to be WHNF?
+memo :: Var -> Label -> Conf -> Memo Conf
+memo parentVar label conf@(env, stack, expr) =
   do
   next <- getNext
   if next > 100 then return conf else
@@ -44,35 +46,36 @@ memo parentVar conf@(env, stack, expr) =
     ii <- isin conf match
     if isNothing ii
       then do
-        (v, fv) <- rec parentVar conf
+        --let rconf = reduce $ simp $ reduce conf
+        --let rconf = doSimp conf
+        let rconf = reduce conf
+        (v, fv) <- rec parentVar label rconf
 
-        -- let rconf'' = reduce conf
-        -- let rconf' = freduce (map (Var . (++) "$m_" . show) [1..10]) rconf''
-        -- let rconf = reduce $ simp rconf'
-        let rconf = doSimp conf
+
 
         let sps = split rconf
         --recProc conf sps
-        splits <- mapM (memo v) sps
+        splits <- mapM (uncurry $ memo v) sps
         let r@(env', stack', expr') = combine rconf splits
         promise v (fvs rconf) r
         return (env', stack', appVars (Var v) fv)
       else do
         let (var, _) = fromJust ii
+        --(_, _) <- rec parentVar (label ++ "->" ++ var) conf
         return (env, stack, appVars (Var var) (fvs conf))
   where fvs = freeVars . envExpr
 
-type Hist = [(Var, Var, [Var], Conf)]
+type Hist = [(Var, Label, Var, [Var], Conf)]
 
 type Prom = [(Var, [Var], Conf)]
 
 type Memo a = State (Int, Hist, Prom) a
 
-rec :: Var -> Conf -> Memo (Var, [Var])
-rec parentVar conf = state $ \(next, hist, prom) ->
+rec :: Var -> Label -> Conf -> Memo (Var, [Var])
+rec parentVar label conf = state $ \(next, hist, prom) ->
   let var = "$v_" ++ show next in
   let fv = (freeVars . envExpr) conf in
-    ((var, fv), (next+1, (parentVar, var, fv, conf):hist, prom))
+    ((var, fv), (next+1, (parentVar, label, var, fv, conf):hist, prom))
 
 promise :: Var -> [Var] -> Conf -> Memo ()
 promise var fv conf = state $ \(next, hist, prom) ->
@@ -87,7 +90,7 @@ getNext = state $ \(next, hist, prom) -> (next, (next, hist, prom))
 
 lookupMatch :: Match -> Hist -> Conf -> Maybe (Var, [Var])
 lookupMatch _ [] _ = Nothing
-lookupMatch m ((parentVar, var, vars, conf'):hist) conf = if conf `m` conf'
+lookupMatch m ((parentVar, label, var, vars, conf'):hist) conf = if conf `m` conf'
   then Just (var, vars)
   else lookupMatch m hist conf
 
@@ -99,8 +102,8 @@ instance {-# OVERLAPPING #-} Show Prom where
   show prom = "" ++
     intercalate "\n" (map ((++) "  " . show) prom)
 
-instance {-# OVERLAPPING #-} Show (Var, Var, [Var], Conf) where
-  show (parentVar, var, args, expr) = parentVar ++ "->" ++ show (var, args, expr)
+instance {-# OVERLAPPING #-} Show (Var, Label, Var, [Var], Conf) where
+  show (parentVar, label, var, args, expr) = parentVar ++ "/"++label++"/" ++ show (var, args, expr)
 
 instance {-# OVERLAPPING #-} Show (Var, [Var], Conf) where
   show (var, args, expr) = var ++ "(" ++ unwords args ++ ") ~> " ++ show expr

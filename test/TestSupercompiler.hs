@@ -19,20 +19,20 @@ testSupercompile = testGroup "supercompile" $
   [
     (mapinczs, Let "zs" (parse "[]"), "[]"),
     (mapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
-    (mapinc, \e-> App e (parse "[]"), "[]"),
-    (mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
-    (mapincmapinczs, Let "zs" (parse "[]"), "[]"),
-    (mapincmapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
-    (mapincmapinc, \e-> App e (parse "[]"), "[]"),
-    (mapincmapinc, \e-> App e (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
-    (appendasbs,
-      Let "as" (parse "[1,2,3]") .
-        Let "bs" (parse "[4,5]"), "[1,2,3,4,5]"),
+--    (mapinc, \e-> App e (parse "[]"), "[]"),
+--    (mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
+--    (mapincmapinczs, Let "zs" (parse "[]"), "[]"),
+--    (mapincmapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
+--    (mapincmapinc, \e-> App e (parse "[]"), "[]"),
+--    (mapincmapinc, \e-> App e (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
+--    (appendasbs,
+--      Let "as" (parse "[1,2,3]") .
+--        Let "bs" (parse "[4,5]"), "[1,2,3,4,5]"),
     (append,
-      Let "as" (parse "[]") .
-        Let "bs" (parse "[]") .
-          Let "cs" (parse "[A]"),
-       "[A]")
+      Let "as" (parse "[A]") .
+        Let "bs" (parse "[B]") .
+          Let "cs" (parse "[C]"),
+       "[A, B, C]")
     -- (revzs, Let "zs" (parse "[]"), "[]")
   ]
   where
@@ -73,7 +73,7 @@ testSupercompile = testGroup "supercompile" $
      "let append={xs->{ys->case xs of \
       \  Nil->ys;\
       \  Cons z zs -> Cons z (append zs ys) ; }}\
-      \in let asbs=append as bs in append asbs cs"
+      \in append (append as bs) cs"
     revzs =
       "let cat={xs->{ys->case xs of\
       \  Nil->ys; Cons z zs->Cons z (cat zs ys); }}\

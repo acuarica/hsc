@@ -111,7 +111,7 @@ instance Show StackFrame where
 
 instance {-# OVERLAPPING #-} Show Conf where
   show (env, stack, expr) =
-    "<#" ++ show env ++ " |" ++ show stack ++ " | " ++ show expr ++ " #>"
+    "<" ++ show env ++ " |" ++ show stack ++ " | " ++ show expr ++ " >"
 
 instance {-# OVERLAPPING #-} Show (Stack, Expr) where
   show (stack, expr) =
@@ -121,7 +121,7 @@ instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)
 
 instance {-# OVERLAPPING #-} Show (Var, Expr) where
-  show (var, expr) = var ++ ":->" ++ show expr
+  show (var, expr) = var -- ++ "=" ++ show expr
 
 instance {-# OVERLAPPING #-} Show Stack where
   show stack = intercalate "|" (map ((++) " " . show) stack)

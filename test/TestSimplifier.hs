@@ -16,8 +16,8 @@ mp = ("map", "")
 main :: IO ()
 main = defaultMain $ testGroup "eval expr ~~> expr" $
   map (\(a, e) ->
-    testCase "" $
-      (toExpr . splitAndCombine . doSimp . toConf) a @?= parseExpr e)
+    testCase "Simplifier test" $
+      (splitAndCombine . doSimp . toConf) a @?= toConf e)
   [
     -- (
     -- "let cat={xs->{ys->case xs of \
@@ -31,11 +31,8 @@ main = defaultMain $ testGroup "eval expr ~~> expr" $
     -- \  Nil->Nil;\
     -- \  Cons y ys -> Cons (f y) (map f ys) ; }}\
     -- \in Cons (inc y) (map inc ys)", "x"),
-    (
-    "let append={xs->{ys->case xs of \
-    \  Nil->ys;\
-    \  Cons z zs->Cons z (append zs ys);}} in \
-    \append (append as bs) cs", "y")
+    ("let app={xs->{ys->case xs of Nil->ys;Cons z zs->Cons z (app zs ys);}} in \
+     \app (app as bs) cs", "y")
   ]
   where
     splitAndCombine e = combine e $ map doSimp (split e)

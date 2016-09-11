@@ -32,9 +32,9 @@ fromFileName fileName ext = fileName ++ "." ++ ext
 
 dotFromHist :: Hist -> String
 dotFromHist [] = ""
-dotFromHist ((parentVar, var, fvs, (env, stack, expr)):hist) =
+dotFromHist ((parentVar, label, var, fvs, (env, stack, expr)):hist) =
   "\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
-  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\"hola\"]\n" ++
+  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++label++"\"]\n" ++
   dotFromHist hist
 
 wrapDot :: String -> String
@@ -63,15 +63,16 @@ main = do
       putStrLn $ "[Supercompiling " ++ fileName ++ " ...]"
       fileText <- readFile fileName
       let expr = filterByExt ext fileText
-      print $ expr
+      print expr
       print $ runMemo expr
 
       let sexpr = supercompile expr
+      print sexpr
       --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
-      putStrLn res
+      --putStrLn res
       let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
       let (_, (_, hist, _)) = runMemo expr
-      let dotmm = wrapDot $ dotFromHist hist
+      let dotmm = wrapDot $ dotFromHist $ reverse hist
       writeFile (fromFileName fileName "dot") dotmm --dotsexpr
       return ()
