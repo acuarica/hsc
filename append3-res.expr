@@ -1,0 +1,14 @@
+let $v_0={as->{bs->{cs->
+  case
+    case as of
+      Nil -> case $v_1 bs cs of
+        Nil->$v_2 cs;
+        Cons x' xs'->$v_3 x' xs' cs;;
+      Cons x' xs'->$v_4 x' xs' bs cs; of
+    Nil->cs;
+    Cons x' xs'->Cons x' ($v_1 xs' cs);}}} in
+let $v_4={x'->{xs'->{bs->{cs-> Cons ($v_2 x')($v_0 xs' bs cs)}}}} in
+let $v_1={bs->{cs->case bs of Nil->$v_2 cs;Cons x' xs'->$v_3 x' xs' cs;}} in
+let $v_3={x'->{xs'->{cs->Cons ($v_2 x')($v_1 xs' cs)}}} in
+let $v_2={cs->cs} in
+$v_0 [A] [B] [C]
