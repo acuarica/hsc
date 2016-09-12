@@ -21,18 +21,19 @@ testSupercompile = testGroup "supercompile" $
     (mapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
 --    (mapinc, \e-> App e (parse "[]"), "[]"),
 --    (mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
---    (mapincmapinczs, Let "zs" (parse "[]"), "[]"),
---    (mapincmapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
+    (mapincmapinczs, Let "zs" (parse "[]"), "[]"),
+    (mapincmapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
 --    (mapincmapinc, \e-> App e (parse "[]"), "[]"),
 --    (mapincmapinc, \e-> App e (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
 --    (appendasbs,
 --      Let "as" (parse "[1,2,3]") .
 --        Let "bs" (parse "[4,5]"), "[1,2,3,4,5]"),
-    (append,
-      Let "as" (parse "[A]") .
-        Let "bs" (parse "[B]") .
+    (append, Let "as" (parse "[A]") . Let "bs" (parse "[B]") .
           Let "cs" (parse "[C]"),
-       "[A, B, C]")
+       "[A, B, C]"),
+   (append, Let "as" (parse "[A]") . Let "bs" (parse "[B]") .
+         Let "cs" (parse "[C, D]"),
+      "[A, B, C, D]")
     -- (revzs, Let "zs" (parse "[]"), "[]")
   ]
   where

@@ -10,6 +10,7 @@ import Data.List (intercalate)
 import Expr (Expr(Var), Var)
 import Parser (parseExpr)
 import Eval (Conf, eval, emptyEnv, newConf, toExpr, step)
+import Splitter (Node, Label)
 import Supercompiler (Hist, supercompile, runMemo)
 import HSE (fromHSE)
 
@@ -30,12 +31,17 @@ dot' cs = "digraph G {" ++ tolist cs ++ "}"
 fromFileName :: FilePath -> String -> FilePath
 fromFileName fileName ext = fileName ++ "." ++ ext
 
-dotFromHist :: Hist -> String
+dotFromHist :: [(Var, Label, Var)] -> String
 dotFromHist [] = ""
-dotFromHist ((parentVar, label, var, fvs, (env, stack, expr)):hist) =
+dotFromHist ((parentVar, label, var):es) =
+  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++show label++"\"]\n" ++
+  dotFromHist es
+
+dotFromHist2 :: [(Var, [Var], Node, Conf)] -> String
+dotFromHist2 [] = ""
+dotFromHist2 ((var, fvs, node, (env, stack, expr)):vs) =
   "\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
-  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++label++"\"]\n" ++
-  dotFromHist hist
+  dotFromHist2 vs
 
 wrapDot :: String -> String
 wrapDot gr = "digraph G {\n" ++ gr ++ "}\n"
@@ -72,7 +78,7 @@ main = do
       let res = dot' $ (dot . newConf emptyEnv) expr
       --putStrLn res
       let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
-      let (_, (_, hist, _)) = runMemo expr
-      let dotmm = wrapDot $ dotFromHist $ reverse hist
+      let (_, ((es, vs), prom)) = runMemo expr
+      let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 vs
       writeFile (fromFileName fileName "dot") dotmm --dotsexpr
       return ()
