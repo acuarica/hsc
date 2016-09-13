@@ -1,0 +1,4 @@
+let map={f->{xs->case xs of
+  Nil->Nil;
+  Cons y ys-> Cons (f y) (map f ys);}} in
+map h (map g zs)
