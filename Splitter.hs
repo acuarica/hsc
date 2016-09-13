@@ -1,22 +1,25 @@
 
 module Splitter (
-    Node(VarNode, ConNode, CaseNode), Label(PatLabel, ConLabel), split
+    Node(VarNode, ArgNode, ConNode, CaseNode),
+    Label(PatLabel, ConLabel), 
+    split
   ) where
 
 import Expr (Expr(Var, Con, Lam), Pat)
-import Eval (Conf, StackFrame(Alts), newConf, toExpr)
+import Eval (Conf, StackFrame(Arg, Alts), newConf, toExpr)
 
 -- |
 -- |
-data Node = VarNode | ConNode | CaseNode deriving Show
+data Node = VarNode | ArgNode | ConNode | CaseNode deriving Show
 
 -- |
 -- |
-data Label = PatLabel Pat | ConLabel String
+data Label = PatLabel Pat | ConLabel String | ArgLabel
 
 instance Show Label where
   show (PatLabel pat) = show pat
   show (ConLabel s) = s
+  show ArgLabel = "ArgLabel"
 
 -- | Given a state, returns where to continue the computation.
 -- | The given conf must be stucked.
@@ -24,6 +27,7 @@ split :: Conf -> (Node, [(Label, Conf)])
 split s@(env, stack, expr) = case expr of
   Var var -> case stack of
     [] -> (VarNode, [])
+    Arg arg:stack' -> (ArgNode, [(ArgLabel, (env, stack', arg))])
     Alts alts:stack' -> (CaseNode,
       map (\(pat, alt) -> (PatLabel pat, (env, stack', alt))) alts )
     _ -> error $ "Error: split var: " ++ show s

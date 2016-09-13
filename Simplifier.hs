@@ -6,21 +6,15 @@ import Control.Exception (assert)
 import Expr (Expr(Var, Lam, Case), Var, Pat(Pat))
 import Eval (Conf, StackFrame(Alts, Arg), reduce)
 
-doSimp :: Conf -> Conf
-doSimp conf =
-  let rconf'' = reduce conf in
-  let rconf' = freduce rconf'' in
-  let rconf = reduce $ simp rconf' in
-  rconf
-
-freduce ::  Conf -> Conf
-freduce = freduce' (map (Var . (++) "$m_" . show) [1..10])
+freduce :: Conf -> Conf
+freduce = freduce' 1
   where
-   freduce' args conf = let (env, stack, expr) = reduce conf in
+   v = Var . (++) "$m_" . show
+   freduce' next conf = let (env, stack, expr) = reduce conf in
     case expr of
       Lam var lamexpr ->
         assert (null stack)
-          (freduce' (tail args) (env, [Arg (head args)], Lam var lamexpr))
+          (freduce' (next + 1) (env, [Arg (v next)], Lam var lamexpr))
       _ -> (env, stack, expr)
 
 simp :: Conf -> Conf

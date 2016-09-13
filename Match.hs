@@ -2,8 +2,8 @@
 module Match where
 
 import Expr (Expr(Var, Lam, Let), Var, freeVars)
-import Eval (Env, Conf, StackFrame(Update), newConf, emptyEnv, toExpr)
-import Simplifier
+import Eval (Env, Conf, StackFrame(Update), newConf, emptyEnv, toExpr, reduce)
+import Simplifier (freduce)
 
 envToLet :: Env -> Expr -> Expr
 envToLet [] expr = expr
@@ -20,23 +20,17 @@ toLambda vs expr = foldr Lam expr vs
 
 type Match = Conf -> Conf -> Bool
 
-textualMatch :: Conf -> Conf -> Bool
-textualMatch (_,Update _:_,_) (_,_,_)          = False
-textualMatch (_,_,_)          (_,Update _:_,_) = False
-textualMatch (_,_,l)          (_,_,r)          = l == r
-
 -- | Not alpha-equivalence. Free variables equivalence.
 -- | Implementation not nice, but nices.
--- | Support only up to 10 arguments!!!
 match :: Conf -> Conf -> Bool
-match lhs rhs = toExpr lred == toExpr rred
+match lhs rhs =
+  toExpr lred == toExpr rred
   where
-    lexpr = envExpr lhs
-    rexpr = envExpr rhs
+    lexpr = envExpr $ reduce lhs
+    rexpr = envExpr $ reduce rhs
     lfv   = freeVars lexpr
     rfv   = freeVars rexpr
     llam  = toLambda lfv lexpr
     rlam  = toLambda rfv rexpr
-    lred  = freduce  (newConf emptyEnv llam)
-    rred  = freduce  (newConf emptyEnv rlam)
-    --args  = map (Var . (++) "$a_" . show) [1..10]
+    lred  = freduce (newConf emptyEnv llam)
+    rred  = freduce (newConf emptyEnv rlam)

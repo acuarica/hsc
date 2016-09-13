@@ -10,7 +10,9 @@ import Control.Monad.State (State, state, runState)
 import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (Conf, Env, StackFrame(..),
   newConf, emptyEnv, toExpr, nf, reduce, put)
-import Splitter (Node(VarNode, ConNode, CaseNode), Label(PatLabel, ConLabel),
+import Splitter (
+  Node(VarNode, ArgNode, ConNode, CaseNode),
+  Label(PatLabel, ConLabel),
   split)
 import Simplifier (freduce, simp)
 import Match (Match, match, toLambda, envExpr)
@@ -33,13 +35,12 @@ memo :: Var -> Label -> Conf -> Memo Expr
 memo parentVar label conf@(env, stack, expr) =
   do
   next <- getNext
-  if next > 100 then error "Reached 100 iterations, implement termination" else
+  if next > 10 then return expr else --error "Reached 100 iterations, implement termination" else
     do
     ii <- isin conf match
     if isNothing ii
       then do
-        --let rconf = reduce $ simp $ reduce conf
-        --let rconf = doSimp conf
+        --let rconf@(_, _, vv) = reduce $ simp $ reduce $ freduce $ reduce conf
         let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
         let (node, sps) = split rconf
         let fv = fvs rconf
@@ -48,6 +49,7 @@ memo parentVar label conf@(env, stack, expr) =
         splits <- mapM (uncurry $ memo v) sps
         let e = toLambda fv $ case node of
                   VarNode -> vv
+                  ArgNode -> app vv splits
                   ConNode -> let Con tag args = vv in app (Con tag []) splits
                   CaseNode -> let alts = zip (fst (unzip sps)) splits in
                     Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
@@ -82,13 +84,15 @@ isin conf m = state $ \(hist@(es, vs), prom) ->
   (lookupMatch m vs conf, (hist, prom))
 
 getNext :: Memo Int
-getNext = state $ \(hist, prom) -> (length hist, (hist, prom))
+getNext = state $ \(hist@(es, vs), prom) -> (length vs, (hist, prom))
 
 lookupMatch :: Match -> [(Var, [Var], Node, Conf)] -> Conf -> Maybe (Var, [Var])
 lookupMatch _ [] _ = Nothing
-lookupMatch m ((var, vars, node, conf'):hist) conf = if conf `m` conf'
-  then Just (var, vars)
-  else lookupMatch m hist conf
+lookupMatch m ((var, vars, node, conf'):hist) conf =
+  --trace (show conf ++ " ?==? " ++ var ++ show conf') $
+  if conf `m` conf'
+    then Just (var, vars)
+    else lookupMatch m hist conf
 
 instance {-# OVERLAPPING #-} Show Hist where
   show (es, vs) = "" ++

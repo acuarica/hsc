@@ -15,7 +15,7 @@ import Supercompiler (Hist, supercompile, runMemo)
 import HSE (fromHSE)
 
 usage :: String
-usage = "Usage: hsc <haskell file.hs | expr file.expr>"
+usage = "Usage: hsc <haskell-file.hs | expr-file.expr>"
 
 dot :: Conf -> [Conf]
 dot conf = conf:(case step conf of
@@ -70,15 +70,17 @@ main = do
       fileText <- readFile fileName
       let expr = filterByExt ext fileText
       print expr
-      print $ runMemo expr
+      let rm@(_, ((es, vs), prom)) = runMemo expr
+      print rm
 
-      let sexpr = supercompile expr
-      print sexpr
+      --let sexpr = supercompile expr
+      --print sexpr
+      let sexpr=expr
       --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
       --putStrLn res
       let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
-      let (_, ((es, vs), prom)) = runMemo expr
+
       let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 vs
       writeFile (fromFileName fileName "dot") dotmm --dotsexpr
       return ()

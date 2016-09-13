@@ -6,7 +6,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 import Control.Arrow (second)
 
-import Expr (Expr(..), appVars)
+import Expr (Expr(Var, Con, App), app, appVars)
 import Parser (parseExpr)
 import Eval (Env, newConf, emptyEnv, eval)
 import Match
@@ -30,8 +30,7 @@ testMatch = testGroup "match1 ~~>" $
   ("let i={n->Succ n} in i", "let i={n->Succ n} in i", True),
   ("let i={n->Succ n} in i", "{n->Succ n}", True),
   ("let i={n->Succ n} in i", "Succ n", True),
-  ("let i={n->Succ n} in i",
-    "let i={n->Succ n} in let id={x->x} in i m", True)
+  ("let i={n->S n} in i", "let i={n->S n} in let id={x->x} in i m", True)
   ]
   where s = newConf emptyEnv . parseExpr
 
@@ -46,9 +45,17 @@ testMatch2 = testGroup "match2 ~~>" $
     ( ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])),
       (env, [], appVars (Var "map") ["inc", "ys"]), True),
     ( (env, [], appVars (Var "map") ["inc", "ys"]),
-      ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])), True)
+      ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])), True),
+    ( (env, [], Con "Cons" [hgy, mhmg]),
+      (env, [], Con "Cons" [hgy, mhmg]), True),
+    ( (env, [], parseExpr "case Cons (g y) (map g ys) of Nil->[];Cons y ys->Cons (h y) (map h ys);"),
+      (env, [], Con "Cons" [hgy, mhmg]), True)
   ]
+  where mhmg = app (Var "map") [Var "h", appVars (Var "map") ["g", "ys"]]
+        hgy = App (Var "h") $ App (Var "g") (Var "y")
 
+-- $m_4 ($m_1 $m_2):map $m_4 (map $m_1 $m_3)
+-- $m_1 ($m_2 $m_3):map $m_1 (map $m_2 $m_4)
 testTextualMatch :: TestTree
 testTextualMatch = testGroup "matchTextual ~~>" $
   map (\(l,r,v) ->
@@ -75,6 +82,6 @@ main = defaultMain $
   testGroup "Supercompiler: match, supercompile/eval"
     [
       testMatch,
-      testMatch2,
-      testTextualMatch
+      testMatch2--,
+      --testTextualMatch
     ]

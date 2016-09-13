@@ -88,12 +88,5 @@ testSupercompile = testGroup "supercompile" $
       \in let reverse={rs->revAccum rs []}\
       \in reverse zs"
 
-env :: Env
-env = map (second parseExpr)
-  [
-  ("inc", "{n->Succ n}"),
-  ("map", "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
-  ]
-
 main :: IO ()
 main = defaultMain $ testGroup "Supercompiler " [testSupercompile]
