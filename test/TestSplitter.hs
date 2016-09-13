@@ -10,11 +10,14 @@ import Parser (parseExpr)
 import Eval (newConf, emptyEnv, reduce)
 import Splitter (split)
 
+sps :: (a, [(b, c)]) -> [c]
+sps (_, xs) = snd $ unzip xs
+
 splitTest :: TestTree
 splitTest = testGroup "Splitter test" $
   map (\(s, ss) ->
     testCase (s ++ " |< " ++ show ss) $
-      split (reduce . toConf $ s) @?= map toConf ss)
+      sps (split (reduce . toConf $ s)) @?= map toConf ss)
   [
     ("x", []),
     ("Cons x xs", ["x", "xs"]),
@@ -27,7 +30,7 @@ splitConfTest :: TestTree
 splitConfTest = testGroup "Splitter w/Conf test" $
   map (\(s@(_, _, exprText), ss) ->
     testCase (exprText ++ " |< " ++ show (map (\(_,_,a)->a) ss)) $
-      split (reduce . toConf' $ s) @?= map toConf' ss)
+      sps (split (reduce . toConf' $ s)) @?= map toConf' ss)
   [
     ((env, [], "map inc zs"), [
       (env, [], "[]"),

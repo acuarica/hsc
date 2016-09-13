@@ -1,5 +1,5 @@
 
-module Simplifier (doSimp, freduce, simp) where
+module Simplifier (freduce, simp) where
 
 import Control.Exception (assert)
 
@@ -9,18 +9,19 @@ import Eval (Conf, StackFrame(Alts, Arg), reduce)
 doSimp :: Conf -> Conf
 doSimp conf =
   let rconf'' = reduce conf in
-  let rconf' = freduce (map (Var . (++) "$m_" . show) [1..10]) rconf'' in
+  let rconf' = freduce rconf'' in
   let rconf = reduce $ simp rconf' in
   rconf
 
-freduce :: [Expr] -> Conf -> Conf
-freduce args conf =
-  let (env, stack, expr) = reduce conf in
-  case expr of
-    Lam var lamexpr ->
-      assert (null stack)
-        (freduce (tail args) (env, [Arg (head args)], Lam var lamexpr))
-    _ -> (env, stack, expr)
+freduce ::  Conf -> Conf
+freduce = freduce' (map (Var . (++) "$m_" . show) [1..10])
+  where
+   freduce' args conf = let (env, stack, expr) = reduce conf in
+    case expr of
+      Lam var lamexpr ->
+        assert (null stack)
+          (freduce' (tail args) (env, [Arg (head args)], Lam var lamexpr))
+      _ -> (env, stack, expr)
 
 simp :: Conf -> Conf
 simp conf@(env, stack, expr) = case expr of

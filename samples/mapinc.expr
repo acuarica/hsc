@@ -1,8 +1,7 @@
 
 let inc={n->Succ n} in
-let map={f->{xs->case xs of 
+let map={f->{xs->case xs of
   Nil -> Nil;
   Cons x' xs' -> Cons (f x') (map f xs');
 }} in
-map inc zs
-
+map inc

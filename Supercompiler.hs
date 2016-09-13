@@ -11,29 +11,21 @@ import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (Conf, Env, StackFrame(..),
   newConf, emptyEnv, toExpr, nf, reduce, put)
 import Splitter (Node(VarNode, ConNode, CaseNode), Label(PatLabel, ConLabel),
-  split, combine)
-import Simplifier (doSimp, freduce, simp)
+  split)
+import Simplifier (freduce, simp)
 import Match (Match, match, toLambda, envExpr)
-
-import Debug.Trace ()
 
 supercompile :: Expr -> Expr
 supercompile = gp . runMemo
+  where
+    gp (expr0, (_, prom)) = fromMemo prom expr0
+    fromMemo [] expr0 = expr0
+    fromMemo ((var, expr):prom) expr0 =
+      Let var expr (fromMemo prom expr0)
 
-gp :: (Expr, (Hist, Prom)) -> Expr
-gp (expr0, (_, prom)) = fromMemo prom expr0
-
-runMemo :: Expr -> (Expr, (Hist, Prom))
-runMemo expr = let s = memo "$v_start" (ConLabel "_") (newConf emptyEnv expr)
-  in runState s (([], []), [])
-
-fromMemo :: [(Var, [Var], Expr)] -> Expr -> Expr
-fromMemo [] expr0 = expr0
-fromMemo ((var, fv, expr):prom) expr0 =
-    Let var expr (fromMemo prom expr0)
-
-add :: Var -> Expr -> Conf -> Conf
-add var valexpr (env, stack, expr) = (put var valexpr env, stack, expr)
+runMemo :: Expr -> (Expr, (Hist, Env))
+runMemo expr = runState s (([], []), [])
+  where s = memo "$v_start" (ConLabel "_") (newConf emptyEnv expr)
 
 -- Runs the supercompiler
 -- Conf has to be WHNF?
@@ -48,54 +40,42 @@ memo parentVar label conf@(env, stack, expr) =
       then do
         --let rconf = reduce $ simp $ reduce conf
         --let rconf = doSimp conf
-        let rconf@(_, _, vv) = reduce conf
+        let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
         let (node, sps) = split rconf
-        (v, fv) <- rec parentVar label node rconf
+        let fv = fvs rconf
+        v <- rec parentVar label fv node rconf
 
-        --recProc conf sps
         splits <- mapM (uncurry $ memo v) sps
-        --let r@(env', stack', expr') = combine rconf splits
         let e = toLambda fv $ case node of
                   VarNode -> vv
                   ConNode -> let Con tag args = vv in app (Con tag []) splits
                   CaseNode -> let alts = zip (fst (unzip sps)) splits in
                     Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
 
-        promise v (fvs rconf) e
-        --return (env', stack', appVars (Var v) fv)
-        -- return $ (
-        --   case node of
-        --     CaseNode -> Case vv (map (\e-> (Pat "?" [], e)) splits)
-        --     _ -> Var "??"
-        --   )
-        return $ appVars (Var v) fv
+        promise v e
+        return $ appVars (Var v) (fvs conf)
       else do
         let (var, _) = fromJust ii
         recArrow parentVar label var
-        --return (env, stack, appVars (Var var) (fvs conf))
         return $ appVars (Var var) (fvs conf)
   where fvs = freeVars . envExpr
 
---type Hist = [(Var, Label, Var, [Var], Conf)]
 type Hist = ([(Var, Label, Var)], [(Var, [Var], Node, Conf)])
 
-type Prom = [(Var, [Var], Expr)]
+type Memo a = State (Hist, Env) a
 
-type Memo a = State (Hist, Prom) a
-
-rec :: Var -> Label -> Node -> Conf -> Memo (Var, [Var])
-rec parentVar label node conf = state $ \((es, vs), prom) ->
+rec :: Var -> Label -> [Var] -> Node -> Conf -> Memo Var
+rec parentVar label fv node conf = state $ \((es, vs), prom) ->
   let var = "$v_" ++ show (length vs) in
-  let fv = (freeVars . envExpr) conf in
-    ((var, fv), (((parentVar, label, var):es, (var, fv, node, conf):vs), prom))
+    (var, (((parentVar, label, var):es, (var, fv, node, conf):vs), prom))
 
 recArrow :: Var -> Label -> Var -> Memo ()
 recArrow parentVar label var = state $ \((es, vs), prom) ->
     ((), (((parentVar, label, var):es, vs), prom))
 
-promise :: Var -> [Var] -> Expr -> Memo ()
-promise var fv expr = state $ \(hist, prom) ->
-  ((), (hist, (var, fv, expr):prom))
+promise :: Var -> Expr -> Memo ()
+promise var expr = state $ \(hist, prom) ->
+  ((), (hist, (var, expr):prom))
 
 isin :: Conf -> Match -> Memo (Maybe (Var, [Var]))
 isin conf m = state $ \(hist@(es, vs), prom) ->
@@ -115,9 +95,9 @@ instance {-# OVERLAPPING #-} Show Hist where
     intercalate "\n" (map ((++) "  " . show) es) ++ "\n" ++
     intercalate "\n" (map ((++) "  " . show) vs)
 
-instance {-# OVERLAPPING #-} Show Prom where
-  show prom = "" ++
-    intercalate "\n" (map ((++) "  " . show) prom)
+-- instance {-# OVERLAPPING #-} Show Prom where
+--   show prom = "" ++
+--     intercalate "\n" (map ((++) "  " . show) prom)
 
 instance {-# OVERLAPPING #-} Show (Var, Label, Var) where
   show (parentVar, label, var) = parentVar ++ "/"++show label++"/" ++ var
@@ -130,12 +110,8 @@ instance {-# OVERLAPPING #-} Show (Var, [Var], Node, Conf) where
   show (var, args, node, expr) =
     var ++ "(" ++ unwords args ++ ") ~> " ++ show node ++ "@" ++ show expr
 
-instance {-# OVERLAPPING #-} Show (Var, Conf) where
-  show (var, expr) = var ++ " ~> " ++ show expr
-
-instance {-# OVERLAPPING #-} Show a => Show (a, (Hist, Prom)) where
+instance {-# OVERLAPPING #-} Show a => Show (a, (Hist, Env)) where
   show (val, (hist, prom)) =
     "Value: " ++ show val ++ "\n" ++
-    --"Next: " ++ show next ++ "\n" ++
     "Hist: \n" ++ show hist ++ "\n" ++
     "Prom: \n" ++ show prom

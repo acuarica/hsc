@@ -121,7 +121,7 @@ instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)
 
 instance {-# OVERLAPPING #-} Show (Var, Expr) where
-  show (var, expr) = var -- ++ "=" ++ show expr
+  show (var, expr) = var ++ "=" ++ show expr
 
 instance {-# OVERLAPPING #-} Show Stack where
   show stack = intercalate "|" (map ((++) " " . show) stack)

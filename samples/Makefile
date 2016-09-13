@@ -11,4 +11,3 @@ all: $(PNGS)
 
 clean:
 	rm $(PNGS)
-

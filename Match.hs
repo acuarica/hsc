@@ -15,7 +15,6 @@ envExpr conf@(env, stack, expr) = rebuildEnv env (toExpr conf)
         rebuildEnv ((var,valexpr):env) expr =
           Let var valexpr (rebuildEnv env expr)
 
-
 toLambda :: [Var] -> Expr -> Expr
 toLambda vs expr = foldr Lam expr vs
 
@@ -38,6 +37,6 @@ match lhs rhs = toExpr lred == toExpr rred
     rfv   = freeVars rexpr
     llam  = toLambda lfv lexpr
     rlam  = toLambda rfv rexpr
-    lred  = freduce args (newConf emptyEnv llam)
-    rred  = freduce args (newConf emptyEnv rlam)
-    args  = map (Var . (++) "$a_" . show) [1..10]
+    lred  = freduce  (newConf emptyEnv llam)
+    rred  = freduce  (newConf emptyEnv rlam)
+    --args  = map (Var . (++) "$a_" . show) [1..10]
