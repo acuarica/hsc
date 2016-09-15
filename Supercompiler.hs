@@ -61,23 +61,27 @@ memo parentVar label conf@(env, stack, expr) =
         promise v e
         return $ appVars (Var v) (fvs conf)
       else do
-        let (var, _) = fromJust ii
-        recArrow parentVar label var
+        let (var, fv) = fromJust ii
+        recArrow (parentVar, label, var, fvs conf, conf)
         return $ appVars (Var var) (fvs conf)
   where fvs = freeVars . envExpr
 
-type Hist = ([(Var, Label, Var)], [(Var, [Var], Node, Conf, [Conf])])
+type HistEdge = (Var, Label, Var, [Var], Conf)
+
+type HistNode = (Var, [Var], Node, Conf, [Conf])
+
+type Hist = ([HistEdge], [HistNode])
 
 type Memo a = State (Hist, Env) a
 
 rec :: Var -> Label -> [Var] -> Node -> Conf -> [Conf] -> Memo Var
 rec parentVar label fv node conf sps = state $ \((es, vs), prom) ->
   let var = "$v_" ++ show (length vs) in
-    (var, (((parentVar, label, var):es, (var, fv, node, conf, sps):vs), prom))
+    (var, (((parentVar, label, var, fv, conf):es, (var, fv, node, conf, sps):vs), prom))
 
-recArrow :: Var -> Label -> Var -> Memo ()
-recArrow parentVar label var = state $ \((es, vs), prom) ->
-    ((), (((parentVar, label, var):es, vs), prom))
+recArrow :: HistEdge -> Memo ()
+recArrow edge = state $ \((es, vs), prom) ->
+    ((), ((edge:es, vs), prom))
 
 promise :: Var -> Expr -> Memo ()
 promise var expr = state $ \(hist, prom) ->
@@ -107,17 +111,18 @@ instance {-# OVERLAPPING #-} Show Hist where
 --   show prom = "" ++
 --     intercalate "\n" (map ((++) "  " . show) prom)
 
-instance {-# OVERLAPPING #-} Show (Var, Label, Var) where
-  show (parentVar, label, var) = parentVar ++ "/"++show label++"/" ++ var
+instance {-# OVERLAPPING #-} Show HistEdge where
+  show (parentVar, label, var, fv, conf) =
+    parentVar ++ "/"++show label++"/" ++ var ++ unwords fv ++ show conf
 
-instance {-# OVERLAPPING #-} Show (Var, [Var], Expr) where
-  show (var, args, expr) =
-    var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
-
-instance {-# OVERLAPPING #-} Show (Var, [Var], Node, Conf, [Conf]) where
+instance {-# OVERLAPPING #-} Show HistNode where
   show (var, args, node, expr, sps) =
     var ++ "(" ++ unwords args ++ ") ~> " ++ show node ++ "@" ++ show expr
     ++ "\n    " ++ show sps
+
+-- instance {-# OVERLAPPING #-} Show (Var, [Var], Expr) where
+--   show (var, args, expr) =
+--     var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
 
 instance {-# OVERLAPPING #-} Show a => Show (a, (Hist, Env)) where
   show (val, (hist, prom)) =

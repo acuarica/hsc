@@ -31,13 +31,13 @@ dot' cs = "digraph G {" ++ tolist cs ++ "}"
 fromFileName :: FilePath -> String -> FilePath
 fromFileName fileName ext = fileName ++ "." ++ ext
 
-dotFromHist :: [(Var, Label, Var)] -> String
+dotFromHist :: [HistEdge] -> String
 dotFromHist [] = ""
-dotFromHist ((parentVar, label, var):es) =
+dotFromHist ((parentVar, label, var, fv, conf):es) =
   "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++show label++"\"]\n" ++
   dotFromHist es
 
-dotFromHist2 :: [(Var, [Var], Node, Conf, [Conf])] -> String
+dotFromHist2 :: [HistNode] -> String
 dotFromHist2 [] = ""
 dotFromHist2 ((var, fvs, node, (env, stack, expr), sps):vs) =
   "\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++

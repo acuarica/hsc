@@ -1,0 +1,19 @@
+
+let eqn={n->{m->case n of
+  Z -> case m of
+    Z -> True;
+    S m' -> False;;
+  S n' -> case m of
+    Z -> False;
+    S m' -> eqn n' m';;
+  }} in
+let len={xs->case xs of
+    Nil -> Z;
+    Cons x' xs' -> S (len xs');
+  } in
+let map={f->{xs->case xs of
+    Nil -> Nil;
+    Cons x' xs' -> Cons (f x') (map f xs');
+  }} in
+let id={x->x} in
+eqn (len (map id xs)) (len xs)
