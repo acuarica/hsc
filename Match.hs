@@ -18,8 +18,6 @@ envExpr conf@(env, stack, expr) = rebuildEnv env (toExpr conf)
 toLambda :: [Var] -> Expr -> Expr
 toLambda vs expr = foldr Lam expr vs
 
-type Match = Conf -> Conf -> Bool
-
 -- | Not alpha-equivalence. Free variables equivalence.
 -- | Implementation not nice, but nices.
 match :: Conf -> Conf -> Bool

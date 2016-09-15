@@ -6,6 +6,7 @@ import System.Environment (getArgs)
 import System.FilePath (takeExtension)
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 import Data.List (intercalate)
+import Text.Printf (printf)
 
 import Expr (Expr(Var), Var)
 import Parser (parseExpr)
@@ -37,14 +38,17 @@ dotFromHist ((parentVar, label, var, fv, conf):es) =
   "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++show label++"\"]\n" ++
   dotFromHist es
 
-dotFromHist2 :: [HistNode] -> String
-dotFromHist2 [] = ""
-dotFromHist2 ((var, fvs, node, (env, stack, expr), sps):vs) =
-  "\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
-  dotFromHist2 vs
+dotFromHist2 :: Var -> [HistNode] -> String
+dotFromHist2 var0 [] = ""
+dotFromHist2 var0 ((var, fvs, node, (env, stack, expr), sps):vs) =
+  printf "\t\"%s\" [shape=record,label=\"{%s|%s}\"%s]\n"
+    var (unwords fvs) (show expr) style ++
+  --"\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
+  dotFromHist2 var0 vs
+  where style = if var == var0 then ",style=bold" else ""
 
 wrapDot :: String -> String
-wrapDot gr = "digraph G {\n" ++ gr ++ "}\n"
+wrapDot = printf "digraph G {\n\tnode [style=rounded]\n%s}\n"
 
 filterByExt :: String -> String -> Expr
 filterByExt ext fileText = case lookup ext filters of
@@ -70,13 +74,13 @@ main = do
       fileText <- readFile fileName
       let expr = filterByExt ext fileText
       print expr
-      let (sexpr, rm@(expr0, ((es, vs), prom))) = supercompileWithMemo expr
+      let (sexpr, rm@((var0, expr0), ((es, vs), prom))) = supercompileWithMemo expr
       print rm
       print sexpr
 
       let res = dot' $ (dot . newConf emptyEnv) expr
       --putStrLn res
       let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
-      let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 vs
+      let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 var0 vs
       writeFile (fromFileName fileName "dot") dotmm --dotsexpr
       return ()

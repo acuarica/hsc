@@ -7,63 +7,71 @@ import Data.Maybe (isNothing, fromJust)
 import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 
-import Expr (Expr(..), Var, Pat(Pat), app, appVars, isVar, isEmptyCon, freeVars)
-import Eval (Conf, Env, StackFrame(..),
+import Expr (
+  Expr(..), Var, Pat(Pat),
+  app, appVars, isVar, isEmptyCon, freeVars)
+import Eval (
+  Conf, Env, StackFrame(..),
   newConf, emptyEnv, toExpr, nf, reduce, put)
 import Splitter (
   Node(VarNode, ArgNode, ConNode, CaseNode),
   Label(PatLabel, ConLabel),
   split)
 import Simplifier (freduce, simp)
-import Match (Match, match, toLambda, envExpr)
+import Match (match, toLambda, envExpr)
 
 supercompile :: Expr -> Expr
 supercompile = fst . supercompileWithMemo
 
-supercompileWithMemo :: Expr -> (Expr, (Expr, (Hist, Env)))
+supercompileWithMemo :: Expr -> (Expr, ((Var, Expr), (Hist, Env)))
 supercompileWithMemo expr =
   let rm = runMemo expr in
-  let gp (expr0, (_, prom)) = fromMemo prom expr0 in
+  let gp ((_, expr0), (_, prom)) = fromMemo prom expr0 in
   (gp rm, rm)
 
 fromMemo [] expr0 = expr0
 fromMemo ((var, expr):prom) expr0 = Let var expr (fromMemo prom expr0)
 
-runMemo :: Expr -> (Expr, (Hist, Env))
+runMemo :: Expr -> ((Var, Expr), (Hist, Env))
 runMemo expr = runState s (([], []), [])
-  where s = memo "$v_start" (ConLabel "_") (newConf emptyEnv expr)
+  where s = memo (newConf emptyEnv expr)
 
 -- Runs the supercompiler
 -- Conf has to be WHNF?
-memo :: Var -> Label -> Conf -> Memo Expr
-memo parentVar label conf@(env, stack, expr) =
+memo :: Conf -> Memo (Var, Expr)
+memo conf@(env, stack, expr) =
   do
   next <- getNext
-  if next > 10 then return expr else --error "Reached 100 iterations, implement termination" else
+  if next > 10 then error "10 iterations, implement termination" else
     do
-    ii <- isin conf match
+    ii <- isin conf
     if isNothing ii
       then do
-        --let rconf@(_, _, vv) = reduce $ simp $ reduce $ freduce $ reduce conf
         let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
         let (node, sps) = split rconf
         let fv = fvs rconf
-        v <- rec parentVar label fv node rconf (snd $ unzip sps)
+        v <- recVertex fv node rconf (snd $ unzip sps)
+        --v <- rec parentVar label fv node rconf (snd $ unzip sps)
 
-        splits <- mapM (uncurry $ memo v) sps
+        splits' <- mapM (memo . snd) sps
+        let (childVars, splits) = unzip splits'
+        let ccs = zipWith (\(l,c) v -> (l, v)) sps childVars
+
+        mapM_ (\(l,cv)->recEdge (v, l, cv, fvs conf, conf)) ccs
+
         let e = toLambda fv $ case node of
-                  VarNode -> vv
-                  ArgNode -> app vv splits
-                  ConNode -> let Con tag args = vv in app (Con tag []) splits
-                  CaseNode -> let alts = zip (fst (unzip sps)) splits in
-                    Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
+              VarNode -> vv
+              ArgNode -> app vv splits
+              ConNode -> let Con tag args = vv in app (Con tag []) splits
+              CaseNode -> let alts = zip (fst (unzip sps)) splits in
+                Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
 
         promise v e
-        return $ appVars (Var v) (fvs conf)
+        return (v, appVars (Var v) (fvs conf))
       else do
         let (var, fv) = fromJust ii
-        recArrow (parentVar, label, var, fvs conf, conf)
-        return $ appVars (Var var) (fvs conf)
+        --recEdge (parentVar, label, var, fvs conf, conf)
+        return (var, appVars (Var var) (fvs conf))
   where fvs = freeVars . envExpr
 
 type HistEdge = (Var, Label, Var, [Var], Conf)
@@ -77,30 +85,37 @@ type Memo a = State (Hist, Env) a
 rec :: Var -> Label -> [Var] -> Node -> Conf -> [Conf] -> Memo Var
 rec parentVar label fv node conf sps = state $ \((es, vs), prom) ->
   let var = "$v_" ++ show (length vs) in
-    (var, (((parentVar, label, var, fv, conf):es, (var, fv, node, conf, sps):vs), prom))
+  let edge = (parentVar, label, var, fv, conf) in
+  let vertex = (var, fv, node, conf, sps) in
+    (var, ((edge:es, vertex:vs), prom))
 
-recArrow :: HistEdge -> Memo ()
-recArrow edge = state $ \((es, vs), prom) ->
+recVertex :: [Var] -> Node -> Conf -> [Conf] -> Memo Var
+recVertex fv node conf sps = state $ \((es, vs), prom) ->
+  let var = "$v_" ++ show (length vs) in
+  let vertex = (var, fv, node, conf, sps) in
+    (var, ((es, vertex:vs), prom))
+
+recEdge :: HistEdge -> Memo ()
+recEdge edge = state $ \((es, vs), prom) ->
     ((), ((edge:es, vs), prom))
 
 promise :: Var -> Expr -> Memo ()
 promise var expr = state $ \(hist, prom) ->
   ((), (hist, (var, expr):prom))
 
-isin :: Conf -> Match -> Memo (Maybe (Var, [Var]))
-isin conf m = state $ \(hist@(es, vs), prom) ->
-  (lookupMatch m vs conf, (hist, prom))
+isin :: Conf -> Memo (Maybe (Var, [Var]))
+isin conf = state $ \(hist@(es, vs), prom) ->
+  (lookupMatch vs conf, (hist, prom))
 
 getNext :: Memo Int
 getNext = state $ \(hist@(es, vs), prom) -> (length vs, (hist, prom))
 
-lookupMatch :: Match -> [(Var, [Var], Node, Conf, [Conf])] -> Conf -> Maybe (Var, [Var])
-lookupMatch _ [] _ = Nothing
-lookupMatch m ((var, vars, node, conf', sps):hist) conf =
-  --trace (show conf ++ " ?==? " ++ var ++ show conf') $
-  if conf `m` conf'
+lookupMatch :: [HistNode] -> Conf -> Maybe (Var, [Var])
+lookupMatch [] _ = Nothing
+lookupMatch ((var, vars, node, conf', sps):hist) conf =
+  if match conf conf'
     then Just (var, vars)
-    else lookupMatch m hist conf
+    else lookupMatch hist conf
 
 instance {-# OVERLAPPING #-} Show Hist where
   show (es, vs) = "" ++
@@ -117,8 +132,8 @@ instance {-# OVERLAPPING #-} Show HistEdge where
 
 instance {-# OVERLAPPING #-} Show HistNode where
   show (var, args, node, expr, sps) =
-    var ++ "(" ++ unwords args ++ ") ~> " ++ show node ++ "@" ++ show expr
-    ++ "\n    " ++ show sps
+    var ++ "(" ++ unwords args ++ ") ~> " ++ show node ++ "@" ++
+    show expr ++ "\n    " ++ show sps
 
 -- instance {-# OVERLAPPING #-} Show (Var, [Var], Expr) where
 --   show (var, args, expr) =
