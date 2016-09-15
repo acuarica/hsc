@@ -28,7 +28,7 @@ data StackFrame
 -- | Evaluates the given expression to Normal Form (NF).
 -- | It uses alpha to avoid name capture.
 eval :: Expr -> Expr
-eval = toExpr . nf . newConf emptyEnv -- . alpha
+eval = toExpr . nf . newConf emptyEnv
 
 -- | Evaluates the given expression to Weak Head Normal Form (WHNF).
 whnf :: Expr -> Expr
@@ -51,7 +51,6 @@ toExpr conf@(env, stack, expr) = go expr stack
   where go expr [] = expr
         go expr (Arg arg:stack') = go (App expr arg) stack'
         go expr (Alts alts:stack') = go (Case expr alts) stack'
-        --go _ _ = error $ "toExpr: " ++ show conf
         go expr (Update var:stack') = go (Let var expr (Var var)) stack'
 
 -- | Reduce a state to Normal Form (NF).
@@ -121,7 +120,7 @@ instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)
 
 instance {-# OVERLAPPING #-} Show (Var, Expr) where
-  show (var, expr) = var ++ "=" ++ show expr
+  show (var, expr) = var -- ++ "=" ++ show expr
 
 instance {-# OVERLAPPING #-} Show Stack where
   show stack = intercalate "|" (map ((++) " " . show) stack)

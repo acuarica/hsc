@@ -11,7 +11,7 @@ import Expr (Expr(Var), Var)
 import Parser (parseExpr)
 import Eval (Conf, eval, emptyEnv, newConf, toExpr, step)
 import Splitter (Node, Label)
-import Supercompiler (Hist, supercompile, runMemo)
+import Supercompiler -- (Hist, supercompile, runMemo)
 import HSE (fromHSE)
 
 usage :: String
@@ -37,9 +37,9 @@ dotFromHist ((parentVar, label, var):es) =
   "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++show label++"\"]\n" ++
   dotFromHist es
 
-dotFromHist2 :: [(Var, [Var], Node, Conf)] -> String
+dotFromHist2 :: [(Var, [Var], Node, Conf, [Conf])] -> String
 dotFromHist2 [] = ""
-dotFromHist2 ((var, fvs, node, (env, stack, expr)):vs) =
+dotFromHist2 ((var, fvs, node, (env, stack, expr), sps):vs) =
   "\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
   dotFromHist2 vs
 
@@ -70,17 +70,13 @@ main = do
       fileText <- readFile fileName
       let expr = filterByExt ext fileText
       print expr
-      let rm@(_, ((es, vs), prom)) = runMemo expr
+      let (sexpr, rm@(expr0, ((es, vs), prom))) = supercompileWithMemo expr
       print rm
+      print sexpr
 
-      --let sexpr = supercompile expr
-      --print sexpr
-      let sexpr=expr
-      --print $ (dot . newConf emptyEnv) expr
       let res = dot' $ (dot . newConf emptyEnv) expr
       --putStrLn res
       let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
-
       let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 vs
       writeFile (fromFileName fileName "dot") dotmm --dotsexpr
       return ()

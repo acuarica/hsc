@@ -18,12 +18,16 @@ import Simplifier (freduce, simp)
 import Match (Match, match, toLambda, envExpr)
 
 supercompile :: Expr -> Expr
-supercompile = gp . runMemo
-  where
-    gp (expr0, (_, prom)) = fromMemo prom expr0
-    fromMemo [] expr0 = expr0
-    fromMemo ((var, expr):prom) expr0 =
-      Let var expr (fromMemo prom expr0)
+supercompile = fst . supercompileWithMemo
+
+supercompileWithMemo :: Expr -> (Expr, (Expr, (Hist, Env)))
+supercompileWithMemo expr =
+  let rm = runMemo expr in
+  let gp (expr0, (_, prom)) = fromMemo prom expr0 in
+  (gp rm, rm)
+
+fromMemo [] expr0 = expr0
+fromMemo ((var, expr):prom) expr0 = Let var expr (fromMemo prom expr0)
 
 runMemo :: Expr -> (Expr, (Hist, Env))
 runMemo expr = runState s (([], []), [])
@@ -44,7 +48,7 @@ memo parentVar label conf@(env, stack, expr) =
         let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
         let (node, sps) = split rconf
         let fv = fvs rconf
-        v <- rec parentVar label fv node rconf
+        v <- rec parentVar label fv node rconf (snd $ unzip sps)
 
         splits <- mapM (uncurry $ memo v) sps
         let e = toLambda fv $ case node of
@@ -62,14 +66,14 @@ memo parentVar label conf@(env, stack, expr) =
         return $ appVars (Var var) (fvs conf)
   where fvs = freeVars . envExpr
 
-type Hist = ([(Var, Label, Var)], [(Var, [Var], Node, Conf)])
+type Hist = ([(Var, Label, Var)], [(Var, [Var], Node, Conf, [Conf])])
 
 type Memo a = State (Hist, Env) a
 
-rec :: Var -> Label -> [Var] -> Node -> Conf -> Memo Var
-rec parentVar label fv node conf = state $ \((es, vs), prom) ->
+rec :: Var -> Label -> [Var] -> Node -> Conf -> [Conf] -> Memo Var
+rec parentVar label fv node conf sps = state $ \((es, vs), prom) ->
   let var = "$v_" ++ show (length vs) in
-    (var, (((parentVar, label, var):es, (var, fv, node, conf):vs), prom))
+    (var, (((parentVar, label, var):es, (var, fv, node, conf, sps):vs), prom))
 
 recArrow :: Var -> Label -> Var -> Memo ()
 recArrow parentVar label var = state $ \((es, vs), prom) ->
@@ -86,9 +90,9 @@ isin conf m = state $ \(hist@(es, vs), prom) ->
 getNext :: Memo Int
 getNext = state $ \(hist@(es, vs), prom) -> (length vs, (hist, prom))
 
-lookupMatch :: Match -> [(Var, [Var], Node, Conf)] -> Conf -> Maybe (Var, [Var])
+lookupMatch :: Match -> [(Var, [Var], Node, Conf, [Conf])] -> Conf -> Maybe (Var, [Var])
 lookupMatch _ [] _ = Nothing
-lookupMatch m ((var, vars, node, conf'):hist) conf =
+lookupMatch m ((var, vars, node, conf', sps):hist) conf =
   --trace (show conf ++ " ?==? " ++ var ++ show conf') $
   if conf `m` conf'
     then Just (var, vars)
@@ -110,9 +114,10 @@ instance {-# OVERLAPPING #-} Show (Var, [Var], Expr) where
   show (var, args, expr) =
     var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
 
-instance {-# OVERLAPPING #-} Show (Var, [Var], Node, Conf) where
-  show (var, args, node, expr) =
+instance {-# OVERLAPPING #-} Show (Var, [Var], Node, Conf, [Conf]) where
+  show (var, args, node, expr, sps) =
     var ++ "(" ++ unwords args ++ ") ~> " ++ show node ++ "@" ++ show expr
+    ++ "\n    " ++ show sps
 
 instance {-# OVERLAPPING #-} Show a => Show (a, (Hist, Env)) where
   show (val, (hist, prom)) =

@@ -151,16 +151,18 @@ evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
     ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
     ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
     ("let x=A B in Tup x x", "Tup (A B) (A B)"),
-    ("(let x=F in x) (let x=X in x)", "F X")
-  ] 
+    ("(let x=F in x) (let x=X in x)", "F X"),
+    ("{n->case n of S n -> n;} (S Z)", "Z"),
+    ("{n->case n of S n -> n;} (S n)", "n")
+  ]
 
 evalWithPreludeTest :: TestTree
-evalWithPreludeTest = testGroup ("evalPreludeTest") $
+evalWithPreludeTest = testGroup "evalPreludeTest" $
   map (\(a, e) ->
     testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr . (++) prelude) a @?= (eval . parseExpr) e)
   [
-    ("x", "x"), 
+    ("x", "x"),
     ("cp 5", "5"),
     ("{x->x} (cp 5)", "5"),
     ("len [1,2,3,4,5,6,7]", "7"),
@@ -211,7 +213,7 @@ evalWithPreludeTest = testGroup ("evalPreludeTest") $
       \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in "
 
 evalLazyTest :: TestTree
-evalLazyTest = testGroup ("eval lazy with prelude") $
+evalLazyTest = testGroup "eval lazy with prelude" $
   map (\(a, e) ->
     testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr . (++) prelude) a @?= (eval . parseExpr) e)
@@ -221,7 +223,7 @@ evalLazyTest = testGroup ("eval lazy with prelude") $
     ("head (tail (tail (tail (inf 1))))", "4")
   ]
   where
-    prelude = 
+    prelude =
       "let head={xs->case xs of Cons y ys -> y; } in \
       \let tail={xs->case xs of Cons y ys -> ys; } in \
       \let inf={n->Cons n (inf (Succ n))} in \
@@ -247,6 +249,6 @@ evalForwardDecl = testGroup "eval w/forward declarations" $
   ]
 
 main :: IO ()
-main = defaultMain $ testGroup "Eval::eval/whnf" $
-  [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest, 
+main = defaultMain $ testGroup "Eval::eval/whnf"
+  [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest,
   evalNameCaptureTest, evalForwardDecl]
