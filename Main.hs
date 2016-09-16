@@ -8,7 +8,7 @@ import Language.Haskell.Exts (parseFileContents, fromParseResult)
 import Data.List (intercalate)
 import Text.Printf (printf)
 
-import Expr (Expr(Var), Var)
+import Expr (Expr(Var, Let), Var)
 import Parser (parseExpr)
 import Eval (Conf, eval, emptyEnv, newConf, toExpr, step)
 import Splitter (Node, Label)
@@ -60,6 +60,18 @@ filterByExt ext fileText = case lookup ext filters of
       (".hs", fromHSE (Var "root") . fromParseResult . parseFileContents)
       ]
 
+pprint :: Expr -> String
+pprint (Let var valexpr inexpr) =
+  "let " ++ var ++ "=" ++ show valexpr ++ "" ++ " in \n" ++ pprint inexpr
+pprint expr = show expr
+
+writeFileWithLog :: FilePath -> String -> IO ()
+writeFileWithLog fileName content =
+  do
+    putStrLn $ "[Writing " ++ fileName ++ "]"
+    writeFile fileName content
+    return ()
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -70,17 +82,17 @@ main = do
     else do
       let fileName = head args
       let ext = takeExtension fileName
-      putStrLn $ "[Supercompiling " ++ fileName ++ " ...]"
+      putStrLn $ "[Supercompiling " ++ fileName ++ "]"
       fileText <- readFile fileName
       let expr = filterByExt ext fileText
-      print expr
       let (sexpr, rm@((var0, expr0), ((es, vs), prom))) = supercompileWithMemo expr
-      print rm
-      print sexpr
-
-      let res = dot' $ (dot . newConf emptyEnv) expr
-      --putStrLn res
-      let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
       let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 var0 vs
-      writeFile (fromFileName fileName "dot") dotmm --dotsexpr
+
+      writeFileWithLog (fromFileName fileName "hist") $ show rm
+      writeFileWithLog (fromFileName fileName "sexpr") $ pprint sexpr
+      writeFileWithLog (fromFileName fileName "dot") dotmm
+
+      --let res = dot' $ (dot . newConf emptyEnv) expr
+      --let dotsexpr = dot' $ (dot . newConf emptyEnv) sexpr
+
       return ()

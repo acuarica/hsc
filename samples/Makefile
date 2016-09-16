@@ -1,5 +1,5 @@
 
-DOTS=$(wildcard expr/*.dot) $(wildcard hs/*.dot)
+DOTS=$(wildcard expr/*.dot) $(wildcard expr/preds/*.dot) $(wildcard hs/*.dot)
 PNGS=$(DOTS:%=%.png)
 
 .PHONY: all clean

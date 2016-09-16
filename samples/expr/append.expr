@@ -1,7 +1,6 @@
 
-let append={xs->{ys->case xs of 
+let append={xs->{ys->case xs of
   Nil -> ys;
-  Cons x' xs' -> Cons x' (append xs' ys);  
+  Cons x' xs' -> Cons x' (append xs' ys);
 }} in
 append (append as bs) cs
-
