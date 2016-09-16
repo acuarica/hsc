@@ -8,10 +8,10 @@ import Language.Haskell.Exts (parseFileContents, fromParseResult)
 import Data.List (intercalate)
 import Text.Printf (printf)
 
-import Expr (Expr(Var, Let), Var)
+import Expr --(Expr(Var, Let), Var)
 import Parser (parseExpr)
 import Eval (Conf, eval, emptyEnv, newConf, toExpr, step)
-import Splitter (Node, Label)
+import Splitter --(Node, Label)
 import Supercompiler -- (Hist, supercompile, runMemo)
 import HSE (fromHSE)
 
@@ -35,20 +35,37 @@ fromFileName fileName ext = fileName ++ "." ++ ext
 dotFromHist :: [HistEdge] -> String
 dotFromHist [] = ""
 dotFromHist ((parentVar, label, var, fv, conf):es) =
-  "\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++show label++"\"]\n" ++
+  printf "\t\"%s\":\"%s\" -> \"%s\" [label=\"%s\"]\n"
+    parentVar (show label) var (show label) ++
+  --"\t\"" ++ parentVar ++ "\" -> \"" ++ var ++ "\"[label=\""++show label++"\"]\n" ++
   dotFromHist es
 
 dotFromHist2 :: Var -> [HistNode] -> String
 dotFromHist2 var0 [] = ""
 dotFromHist2 var0 ((var, fvs, node, (env, stack, expr), sps):vs) =
-  printf "\t\"%s\" [shape=record,label=\"{%s|%s}\"%s]\n"
-    var (unwords fvs) (show expr) style ++
+  printf "\t\"%s\" [shape=record,label=\"{{%s|%s}|%s%s}\"%s]\n"
+    var var (unwords fvs) (pprint node) ports style ++
   --"\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
   dotFromHist2 var0 vs
-  where style = if var == var0 then ",style=bold" else ""
+  where
+    style = if var == var0 then ",style=\"rounded,bold\"" else ""
+    pprint VarNode = show expr
+    pprint ArgNode = show expr ++ show stack
+    pprint ConNode = let (Con t vs) = expr in t
+    pprint CaseNode = "case " ++ show expr ++ " of"--let (Con t vs) = expr in t
+    ports = case node of
+      VarNode -> ""
+      ArgNode -> ""
+      ConNode -> "|{" ++ let (Con t vs) = expr in intercalate "|" (map show vs) ++"}"
+      CaseNode -> "|{" ++ intercalate "|" (map (\l->printf "<%s>%s" (show l) (show l)) (fst (unzip sps))) ++ "}"
 
 wrapDot :: String -> String
-wrapDot = printf "digraph G {\n\tnode [style=rounded]\n%s}\n"
+wrapDot = printf
+  "digraph G {\n\
+  \\tnode [style=rounded, fontname=\"Monaco\", fontsize=12]\n\
+  \\tedge [fontname=\"Monaco\", fontsize=12]\n\
+  \%s\
+  \}\n"
 
 filterByExt :: String -> String -> Expr
 filterByExt ext fileText = case lookup ext filters of

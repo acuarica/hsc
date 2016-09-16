@@ -50,7 +50,7 @@ memo conf@(env, stack, expr) =
         let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
         let (node, sps) = split rconf
         let fv = fvs rconf
-        v <- recVertex fv node rconf (snd $ unzip sps)
+        v <- recVertex fv node rconf sps
         --v <- rec parentVar label fv node rconf (snd $ unzip sps)
 
         splits' <- mapM (memo . snd) sps
@@ -76,20 +76,20 @@ memo conf@(env, stack, expr) =
 
 type HistEdge = (Var, Label, Var, [Var], Conf)
 
-type HistNode = (Var, [Var], Node, Conf, [Conf])
+type HistNode = (Var, [Var], Node, Conf, [(Label, Conf)])
 
 type Hist = ([HistEdge], [HistNode])
 
 type Memo a = State (Hist, Env) a
 
-rec :: Var -> Label -> [Var] -> Node -> Conf -> [Conf] -> Memo Var
-rec parentVar label fv node conf sps = state $ \((es, vs), prom) ->
-  let var = "$v_" ++ show (length vs) in
-  let edge = (parentVar, label, var, fv, conf) in
-  let vertex = (var, fv, node, conf, sps) in
-    (var, ((edge:es, vertex:vs), prom))
+-- rec :: Var -> Label -> [Var] -> Node -> Conf -> [Conf] -> Memo Var
+-- rec parentVar label fv node conf sps = state $ \((es, vs), prom) ->
+--   let var = "$v_" ++ show (length vs) in
+--   let edge = (parentVar, label, var, fv, conf) in
+--   let vertex = (var, fv, node, conf, sps) in
+--     (var, ((edge:es, vertex:vs), prom))
 
-recVertex :: [Var] -> Node -> Conf -> [Conf] -> Memo Var
+recVertex :: [Var] -> Node -> Conf -> [(Label, Conf)] -> Memo Var
 recVertex fv node conf sps = state $ \((es, vs), prom) ->
   let var = "$v_" ++ show (length vs) in
   let vertex = (var, fv, node, conf, sps) in
