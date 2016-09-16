@@ -43,7 +43,7 @@ dotFromHist ((parentVar, label, var, fv, conf):es) =
 dotFromHist2 :: Var -> [HistNode] -> String
 dotFromHist2 var0 [] = ""
 dotFromHist2 var0 ((var, fvs, node, (env, stack, expr), sps):vs) =
-  printf "\t\"%s\" [shape=record,label=\"{{%s|%s}|%s%s}\"%s]\n"
+  printf "\t\"%s\" [shape=record,label=\"{{<p0>%s|%s}|%s%s}\"%s]\n"
     var var (unwords fvs) (pprint node) ports style ++
   --"\t\"" ++ var ++       "\"[label=\"" ++ show expr ++ "\"]\n" ++
   dotFromHist2 var0 vs
@@ -53,12 +53,14 @@ dotFromHist2 var0 ((var, fvs, node, (env, stack, expr), sps):vs) =
     pprint ArgNode = show expr ++ show stack
     pprint ConNode = let (Con t vs) = expr in t
     pprint CaseNode = "case " ++ show expr ++ " of"--let (Con t vs) = expr in t
+    port = printf "<%s>%s"
     ports = case node of
       VarNode -> ""
       ArgNode -> ""
-      ConNode -> "|{" ++ let (Con t vs) = expr in intercalate "|" (map show vs) ++"}"
-      CaseNode -> "|{" ++ intercalate "|" (map (\l->printf "<%s>%s" (show l) (show l)) (fst (unzip sps))) ++ "}"
+      ConNode -> "|{" ++ let (Con tag vs) = expr in intercalate "|" (zipWith (\v i -> port (tag ++"_"++show i) (show v)) vs [1..length vs] ) ++"}"
+      CaseNode -> "|{" ++ intercalate "|" (map (\l-> port (show l) (show l)) (fst (unzip sps))) ++ "}"
 
+  -- \\trankdir=LR\n\
 wrapDot :: String -> String
 wrapDot = printf
   "digraph G {\n\
@@ -103,7 +105,7 @@ main = do
       fileText <- readFile fileName
       let expr = filterByExt ext fileText
       let (sexpr, rm@((var0, expr0), ((es, vs), prom))) = supercompileWithMemo expr
-      let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 var0 vs
+      let dotmm = wrapDot $ dotFromHist es ++ dotFromHist2 var0 (reverse vs)
 
       writeFileWithLog (fromFileName fileName "hist") $ show rm
       writeFileWithLog (fromFileName fileName "sexpr") $ pprint sexpr

@@ -46,5 +46,5 @@ split s@(env, stack, expr) = case expr of
   Con tag args -> case stack of
     [] -> (ConNode,
       map (\(i, e)->
-        (ConLabel $ tag ++ ":" ++ show i, newConf env e)) (zip [1..length args] args))
+        (ConLabel $ tag ++ "_" ++ show i, newConf env e)) (zip [1..length args] args))
     _ -> error $ "Spliting with Con and stack: " ++ show stack
