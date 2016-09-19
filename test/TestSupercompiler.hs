@@ -3,7 +3,7 @@
 module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.SmallCheck (testProperty)
+import Test.Tasty.SmallCheck --(testProperty)
 
 import Expr (Expr(App, Let), app, zero, suc, nil, cons)
 import Parser (parseExpr)
@@ -18,9 +18,6 @@ nat n = if n > 0 then App suc (nat (n-1)) else zero
 ls :: [Int] -> Expr
 ls [] = nil
 ls (x:xs) = app cons [nat x, ls xs]
-
--- goa :: ([Int] -> [Int]) -> Expr -> Expr
--- goa as bs expr = Let "as" (ls as) (Let "bs" (ls bs) expr)
 
 testSupercompile :: TestTree
 testSupercompile = testGroup "Supercompiler" [
@@ -43,11 +40,9 @@ testSupercompile = testGroup "Supercompiler" [
   --   flip App . ls,
   -- go "c (map inc) (map inc)" $
   --   flip App . ls,
-  go "append as bs" $
-    \(as, bs) -> trace (show (as, bs)) $ Let "as" (ls as) . Let "bs" (ls bs),
-    -- \as bs expr -> Let "as" (ls as) (Let "bs" (ls bs) expr),
-  testProperty "append as bs" $ \as bs -> trace (show (as, bs)) $
-    run "append as bs" $ Let "as" (ls as) . Let "bs" (ls bs)
+  let e = "append as bs" in testProperty e $
+    \as bs -> --trace (show (as, bs)) $ 
+      run e $ Let "as" (ls as) . Let "bs" (ls bs),
   -- go "append (append as bs) cs" $
   --   \(as, bs, cs) ->Let "as" (ls as) . Let "bs" (ls bs) . Let "cs" (ls cs),
   -- go "eqn x x" $
@@ -58,8 +53,8 @@ testSupercompile = testGroup "Supercompiler" [
   --   \zs -> Let "zs" $ ls zs,
   -- go "eqn (len (map f zs)) (len zs)" $
   --   \zs -> Let "f" (parseExpr "{n->Succ n}") . Let "zs" (ls zs),
-  -- go "eqn (len (append as bs)) (plus (len as) (len bs))" $
-  --   \(as, bs) -> Let "as" (ls as) . Let "bs" (ls bs)
+  let e = "eqn (len (append as bs)) (plus (len as) (len bs))" in testProperty e $
+    \as bs -> run e $ Let "as" (ls as) . Let "bs" (ls bs)
   ]
   where
     go e fexpr = testProperty e $ run e . fexpr

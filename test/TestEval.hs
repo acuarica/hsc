@@ -234,10 +234,12 @@ evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
     testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
-    ("let x=(let y=A in y 0) in x y", "A 0 y"),
-    ("let x=(let y=A in let z=B in C y z) in x y z", "C A B y z"),
-    ("(let x=A in C x) x", "C A x"),
-    ("(let y=A in let z=B in C y z) y z", "C A B y z")
+    -- ("let x=(let y=A in y 0) in x y", "A 0 y"),
+    -- ("let x=(let y=A in let z=B in C y z) in x y z", "C A B y z"),
+    -- ("(let x=A in C x) x", "C A x"),
+    -- ("(let y=A in let z=B in C y z) y z", "C A B y z"),
+    ("case Succ n of Succ n'->A n';", "A n"),
+    ("case Succ n of Succ n->A n;", "A n")
   ]
 
 evalForwardDecl = testGroup "eval w/forward declarations" $

@@ -32,8 +32,9 @@ split s@(env, stack, expr) = case expr of
     Arg arg:stack' -> (ArgNode, [(ArgLabel, (env, stack', arg))])
     Alts alts:stack' -> (CaseNode,
       map (\(Pat tag vars, alt) ->
-        --let cVar v i = "$c_" ++ show i ++ "_" ++ v in
-        let cVar v i = "$" ++ v in
+        --let cVar v i = "$" ++ var ++ "_"++ show i ++ "_" ++ v in
+        let cVar v i = "$" ++ var ++ "_" ++ v in
+        --let cVar v i = v in
         let cVars = zipWith cVar vars [1..length vars] in
         let repl = zip vars (map Var cVars) in
         let cc = appVars (con tag) cVars in

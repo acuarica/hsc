@@ -21,7 +21,7 @@ let append={xs->{ys->case xs of
 }} in
 --eqn (len bs) (len bs)
 --eqn (len (append [] bs)) (len bs)
-eqn x (plus Z x)
+--eqn x (plus Z x)
 --eqn (len bs) (plus Z (len bs))
 --eqn (len (append [] bs)) (plus Z (len bs))
---eqn (len (append as bs)) (plus (len as) (len bs))
+eqn (len (append as bs)) (plus (len as) (len bs))

@@ -66,3 +66,4 @@ Correctness of Supercompiler is done using SmallCheck.
 * Fix show Expr/assert for Con "Nil" [Con "Nil" []].
   See hsc.cabal ghc-options: -fno-ignore-asserts
 * Complete Haskell to Core implementation.
+* Fix Eval for normal form (Variable Capture)

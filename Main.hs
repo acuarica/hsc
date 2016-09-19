@@ -1,8 +1,8 @@
 
 module Main where
 
-import Data.List (intercalate)
-import Data.String.Utils (lstrip, startswith)
+import Data.List (intercalate, isPrefixOf)
+import Data.Char (isSpace)
 import System.Exit (exitFailure)
 import System.Environment (getArgs)
 import System.FilePath (takeExtension)
@@ -75,6 +75,9 @@ writeFileWithLog fileName content =
     writeFile fileName content
     return ()
 
+--tag :: Int -> Expr -> Expr
+--tag n = case
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -87,7 +90,7 @@ main = do
       let ext = takeExtension fileName
       putStrLn $ "[Supercompiling " ++ fileName ++ "]"
       content <- readFile fileName
-      let noComment = not . startswith "--" . lstrip
+      let noComment = not . isPrefixOf "--" . dropWhile isSpace
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
       let (sexpr, rm@((var0, expr0), (hist, _))) = supercompileWithMemo expr
