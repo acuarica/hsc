@@ -5,9 +5,12 @@ EXPRS=$(wildcard expr/*.expr) $(wildcard expr/preds/*.expr)
 DOTS=$(EXPRS:%=%.dot)
 PNGS=$(DOTS:%=%.png)
 
-.PHONY: all clean
+.PHONY: all expr clean
 
 all: $(PNGS)
+
+expr:
+	touch $(EXPRS)
 
 %.dot.png: %.dot
 	cat $< | dot -Tpng > $@

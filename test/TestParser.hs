@@ -9,7 +9,7 @@ import Parser (parseExpr)
 
 testParser :: TestTree
 testParser = testGroup "Parser.parseExpr str ~> expr" $
-  map (\(a, e) -> 
+  map (\(a, e) ->
     testCase (a ++ " ~> " ++ show e) $
       parseExpr a @?= e)
   [
@@ -65,7 +65,10 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("[x]", app cons [Var "x", nil]),
     ("[x,y]", app cons [Var "x", app cons [Var "y", nil]]),
     ("[x,A,y]", app cons [Var "x", app cons [con "A", app cons [Var "y", nil]]]),
+    ("x:xs", app cons [Var "x", Var "xs"]),
     ("(x:xs)", app cons [Var "x", Var "xs"]),
+    ("A:Nil", app cons [con "A", nil]),
+    ("A:B:C:Nil", app cons [con "A", app cons [con "B", app cons [con "C", nil]]]),
     ("let c=case n of Z->A;S m->B; in c",
       Let "c" (Case (Var "n") [
         (Pat "Z" [], Con "A" []),
@@ -97,4 +100,4 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
   ]
 
 main :: IO ()
-main = defaultMain testParser 
+main = defaultMain testParser

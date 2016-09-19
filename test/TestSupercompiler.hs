@@ -1,52 +1,53 @@
+{-# LANGUAGE FlexibleContexts #-}
 
 module Main (main) where
 
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty --(TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.SmallCheck
 
 import Control.Arrow (second)
 
-import Expr (Expr(..), appVars)
+import Expr --(Expr(..), appVars)
 import Parser (parseExpr)
 import Eval (Env, newConf, emptyEnv, eval)
 import Supercompiler (supercompile)
 
-testSupercompile :: TestTree
-testSupercompile = testGroup "supercompile" $
-  map (\(e, f, ar) -> testCase (e ++ "/" ++ ar) $
-    eval (f (sp $ prelude ++ e)) @?= (eval . parseExpr) ar)
-  [
-  (mapinczs, Let "zs" (parse "[]"), "[]"),
-  (mapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
-  (mapinc, \e-> App e (parse "[]"), "[]"),
-  (mapinc, \e-> App e (parse "[1,2,3,4,5]"), "[2,3,4,5,6]"),
-  (mapincmapinczs, Let "zs" (parse "[]"), "[]"),
-  (mapincmapinczs, Let "zs" (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
-  (mapincmapinc, \e-> App e (parse "[]"), "[]"),
-  (mapincmapinc, \e-> App e (parse "[1,2,3,4,5]"), "[3,4,5,6,7]"),
-  (appendasbs, letp "as" "[1,2,3]" . letp "bs" "[4,5]", "[1,2,3,4,5]"),
-  (append, letp "as" "[]".letp "bs" "[]".letp "cs" "[]", "[]"),
-  (append, letp "as" "[]".letp "bs" "[]".letp "cs" "[C, D]", "[C, D]"),
-  (append, letp "as" "[A]".letp "bs" "[B]".letp "cs" "[C]", "[A, B, C]"),
-  (append, letp "as" "[A]".letp "bs" "[B]".letp "cs" "[C, D]", "[A, B, C, D]")
-    -- (revzs, Let "zs" (parse "[]"), "[]")
+ls :: [Int] -> Expr
+ls [] = nil
+ls (x:xs) = app cons [f x, ls xs]
+  where f n = if n > 0 then App suc (f (n-1)) else zero
+
+testSupercompile = testGroup "Supercompiler" [
+  go "map inc zs" $
+    Let "zs" . ls,
+  go "map inc" $
+    flip App . ls,
+  go "map inc (map inc zs)" $
+    Let "zs" . ls,
+  go "map h (map g zs)" $
+    \zs -> Let "h" (Var "inc") . Let "g" (Var "inc") . Let "zs" (ls zs),
+  go "let mimi={zs->map inc (map inc zs)} in mimi" $
+    flip App . ls,
+  go "c (map inc) (map inc)" $
+    flip App . ls,
+  go "append as bs" $
+    \(as, bs) -> Let "as" (ls as) . Let "bs" (ls bs),
+  go "append (append as bs) cs" $
+    \(as, bs, cs) -> Let "as" (ls as) . Let "bs" (ls bs) . Let "cs" (ls cs)
   ]
+  --revzs = "rev vs"
+  --revAccum = "let reverse={rs->revAccum rs []} in reverse zs"
   where
-    letp v val = Let v (parse val)
-    s = newConf emptyEnv . parseExpr
-    parse = parseExpr
-    sp = supercompile . parse
-    mapinczs = "map inc zs"
-    mapinc = "map inc"
-    mapincmapinczs = "map inc (map inc zs)"
-    mapincmapinc = "let mimi={zs->map inc (map inc zs)} in mimi"
-    appendasbs = "append as bs"
-    append = "append (append as bs) cs"
-    revzs = "rev vs"
-    revAccum = "let reverse={rs->revAccum rs []} in reverse zs"
+    go e fexpr =
+      let expr = parseExpr $ prelude ++ e in
+      let sexpr = supercompile expr in
+      testProperty (e ++ show sexpr) $ (\cexpr ->
+        eval (cexpr sexpr) == eval (cexpr expr)) . fexpr
     prelude =
-      "let id={a->a} in \
+      "let id={x->x} in \
       \let app={p->{q->p q}} in \
+      \let c={p->{q->{x->p (q x)}}} in \
       \let inc={n->Succ n} in \
       \let cp={a->case a of Zero->0;Succ aa->Succ (cp aa);} in \
       \let append={xs->{ys->case xs of Nil->ys;Cons z zs->Cons z (append zs ys);}} in \
@@ -58,4 +59,4 @@ testSupercompile = testGroup "supercompile" $
       \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in "
 
 main :: IO ()
-main = defaultMain $ testGroup "Supercompiler " [testSupercompile]
+main = defaultMain testSupercompile

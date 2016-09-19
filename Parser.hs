@@ -152,7 +152,10 @@ p `chainl1` op = do {a <- p; rest a}
   where rest a = (do {f <- op; b <- p; rest (f a b)}) <|> return a
 
 exprp :: Parser Expr
-exprp = termp `chainl1` return App
+exprp = (termp `chainl1` conslistp) `chainl1` return App
+
+conslistp :: Parser (Expr -> Expr -> Expr)
+conslistp = reserved ":" >> return (App . App cons)
 
 termp :: Parser Expr
 termp = litintp

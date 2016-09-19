@@ -10,7 +10,7 @@ envToLet [] expr = expr
 envToLet ((var, valexpr):env) expr = Let var valexpr (envToLet env expr)
 
 envExpr :: Conf -> Expr
-envExpr conf@(env, stack, expr) = rebuildEnv env (toExpr conf)
+envExpr conf@(env, _, _) = rebuildEnv env (toExpr conf)
   where rebuildEnv [] expr = expr
         rebuildEnv ((var,valexpr):env) expr =
           Let var valexpr (rebuildEnv env expr)
@@ -32,3 +32,11 @@ match lhs rhs =
     rlam  = toLambda rfv rexpr
     lred  = freduce (newConf emptyEnv llam)
     rred  = freduce (newConf emptyEnv rlam)
+
+match' :: Conf -> Expr
+match' lhs = toExpr lred
+  where
+    lexpr = envExpr $ reduce lhs
+    lfv   = freeVars lexpr
+    llam  = toLambda lfv lexpr
+    lred  = freduce (newConf emptyEnv llam)

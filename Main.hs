@@ -93,4 +93,6 @@ main = do
       writeFileWithLog (fromFileName fileName "sexpr") (pprint sexpr)
       writeFileWithLog (fromFileName fileName "dot") (makeDot var0 hist)
 
+      print rm
+
       return ()

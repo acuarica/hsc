@@ -18,7 +18,7 @@ import Splitter (
   Label(PatLabel, ConLabel),
   split)
 import Simplifier (freduce, simp)
-import Match (match, toLambda, envExpr)
+import Match -- (match, toLambda, envExpr)
 
 supercompile :: Expr -> Expr
 supercompile = fst . supercompileWithMemo
@@ -71,7 +71,7 @@ memo conf@(env, stack, expr) =
       else do
         let (var, fv) = fromJust ii
         --recEdge (parentVar, label, var, fvs conf, conf)
-        return (var, appVars (Var var) (fvs conf))
+        return (var, appVars (Var var) (fvs $ reduce conf))
   where fvs = freeVars . envExpr
 
 type HistEdge = (Var, Label, Var, [Var], Conf)
@@ -114,8 +114,13 @@ lookupMatch :: [HistNode] -> Conf -> Maybe (Var, [Var])
 lookupMatch [] _ = Nothing
 lookupMatch ((var, vars, node, conf', sps):hist) conf =
   if match conf conf'
-    then Just (var, vars)
+    then if False --fvs (reduce conf) /= fvs (reduce conf')
+      then error $ show (fvs $ reduce conf) ++ show (fvs $ reduce conf') ++ "\n" ++ show conf ++ "\n"++ show conf' ++ "\n" ++
+        show (match' conf) ++ "\n" ++ show (match' conf') ++ "\n" ++
+        show (freeVars $ match' conf) ++ "\n" ++ show (freeVars $ match' conf')
+      else Just (var, vars)
     else lookupMatch hist conf
+  where fvs = freeVars . envExpr
 
 instance {-# OVERLAPPING #-} Show Hist where
   show (es, vs) = "" ++
@@ -139,8 +144,8 @@ instance {-# OVERLAPPING #-} Show HistNode where
 --   show (var, args, expr) =
 --     var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
 
-instance {-# OVERLAPPING #-} Show a => Show (a, (Hist, Env)) where
-  show (val, (hist, prom)) =
-    "Value: " ++ show val ++ "\n" ++
+instance {-# OVERLAPPING #-} Show ((Var, Expr), (Hist, Env)) where
+  show ((var0, expr0), (hist, prom)) =
+    "Var0/Expr0: " ++ var0 ++ "/" ++ show expr0 ++"\n" ++
     "Hist: \n" ++ show hist ++ "\n" ++
     "Prom: \n" ++ show prom
