@@ -10,7 +10,7 @@ as well.
 
 ### Expr
 
-This module defines the Expr type, 
+This module defines the Expr type,
 which is the core language used for all transformations.
 
 ### Parser
@@ -26,7 +26,7 @@ one is to normal form, and the other to weak head normal form.
 ### Spliiter
 
 The splitter contains two function, one splits an stucked expression,
-and the other, combines, reconstruct the original expression but with the 
+and the other, combines, reconstruct the original expression but with the
 splitted parts.
 
 ### Supercompile
@@ -48,3 +48,13 @@ cabal run test-eval
 cabal run test-splitter
 cabal run test-supercompiler
 ```
+
+### Comprehensive Test of Supercompilation
+
+* Correctness of Supercompiler is done using SmallCheck.
+* [TODO] Check that effectively that supercompiled expression is
+  "better" than the input expression.
+  What does "better" mean: How do we compare between two equivalent
+  expressions for one better.
+* [TODO] Power of Supercompiler for predicates: Check that the
+  result is always True, if it terminates.

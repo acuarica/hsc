@@ -7,6 +7,8 @@ import Data.Maybe (isNothing, fromJust)
 import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 
+import Data.List
+
 import Expr (
   Expr(..), Var, Pat(Pat),
   app, appVars, isVar, isEmptyCon, freeVars)
@@ -50,6 +52,7 @@ memo conf@(env, stack, expr) =
         let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
         let (node, sps) = split rconf
         let fv = fvs rconf
+        --let fv = fvs conf
         v <- recVertex fv node rconf sps
         --v <- rec parentVar label fv node rconf (snd $ unzip sps)
 
@@ -59,7 +62,8 @@ memo conf@(env, stack, expr) =
 
         mapM_ (\(l,cv)->recEdge (v, l, cv, fvs conf, conf)) ccs
 
-        let e = toLambda fv $ case node of
+        let fvl = fvs (reduce conf) `union` fvs rconf
+        let e = toLambda fvl $ case node of
               VarNode -> vv
               ArgNode -> app vv splits
               ConNode -> let Con tag args = vv in app (Con tag []) splits
@@ -67,11 +71,13 @@ memo conf@(env, stack, expr) =
                 Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
 
         promise v e
-        return (v, appVars (Var v) (fvs conf))
+        return (v, appVars (Var v) (fvs $ reduce conf))
+        --return (v, appVars (Var v) fv)
       else do
         let (var, fv) = fromJust ii
         --recEdge (parentVar, label, var, fvs conf, conf)
         return (var, appVars (Var var) (fvs $ reduce conf))
+        --return (var, appVars (Var var) (fvs conf))
   where fvs = freeVars . envExpr
 
 type HistEdge = (Var, Label, Var, [Var], Conf)

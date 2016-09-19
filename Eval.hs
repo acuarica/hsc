@@ -7,7 +7,8 @@ module Eval (
 
 import Data.List (intercalate, delete)
 
-import Expr (Expr(..), Var, Pat(Pat), subst, substAlts, lookupAlt, freeVars, alpha)
+import Expr (Expr(..), Var, Pat(Pat),
+  subst, substAlts, lookupAlt, freeVars, alpha)
 
 -- | Represents the configuration of the abstract machine.
 type Conf = (Env, Stack, Expr)

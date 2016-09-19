@@ -106,13 +106,13 @@ freeVars expr = case expr of
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
 
 -- | Alpha renaming of bound variables.
--- | This property comes handy when evaluating to Normal Form, since it avoids
--- | name capture.
+-- | This property comes handy when evaluating to Normal Form,
+-- | since it avoids name capture.
 -- | Forward usage:
 -- |   let a=c in let b=c in let c=X in a
 -- | NOTE: Implementation not finished: Con/Case left to implement.
 alpha :: Expr -> Expr
-alpha expr = doAlpha 0 expr
+alpha = doAlpha 0
   where
     doAlpha next expr = case expr of
       Var var -> Var var
@@ -120,12 +120,14 @@ alpha expr = doAlpha 0 expr
       Lam var lamexpr -> Lam var (doAlpha (next + 1) lamexpr)
 --      Let var valexpr (Let var' valexpr' inexpr') ->
       Let var valexpr inexpr ->
-        Let (nextVar next) (letSubst var next valexpr) (letSubst var next inexpr)
+        Let (nextVar next) (letSubst var next valexpr)
+          (letSubst var next inexpr)
       App funexpr valexpr ->
         App (doAlpha (next+1) funexpr) (doAlpha (next+1) valexpr)
       Case scexpr alts ->
-        Case (doAlpha (next+1) scexpr) $ map (second (doAlpha (next+1))) alts
-    letSubst var next = doAlpha (next+1) . subst (var, Var (nextVar next)) 
+        Case (doAlpha (next+1) scexpr) $
+          map (second (doAlpha (next+1))) alts
+    letSubst var next = doAlpha (next+1) . subst (var, Var (nextVar next))
     nextVar next = "$l_" ++ show next
 
 -- | Some common used expressions for easy write of expressions.
