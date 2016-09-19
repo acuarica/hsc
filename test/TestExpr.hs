@@ -45,7 +45,7 @@ substTest = testGroup "subst (var, expr) expr ~~> expr" $
 
 freeVarsTest :: TestTree
 freeVarsTest = testGroup "freeVars expr ~~> [Var]" $
-  map (\(a, e) -> 
+  map (\(a, e) ->
     testCase (a ++ " ~~> " ++ unwords e) $
       (freeVars . parseExpr) a @?= e)
   [
@@ -68,7 +68,7 @@ freeVarsTest = testGroup "freeVars expr ~~> [Var]" $
 
 alphaTest :: TestTree
 alphaTest = testGroup "alpha expr ~~> expr" $
-  map (\(a, e) -> 
+  map (\(a, e) ->
     testCase (a ++ " <~~> " ++ e) $
       (alpha . parseExpr) a @?= (alpha . parseExpr) e)
   [
@@ -82,5 +82,5 @@ alphaTest = testGroup "alpha expr ~~> expr" $
   ]
 
 main :: IO ()
-main = defaultMain $ testGroup "Expr: app/appVars/subst/freeVars"
+main = defaultMain $ testGroup "Expr"
   [appTest, appVarsTest, substTest, freeVarsTest, alphaTest]

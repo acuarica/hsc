@@ -2,12 +2,10 @@
 
 module Supercompiler where
 
-import Data.List (intercalate)
+import Data.List (intercalate, union)
 import Data.Maybe (isNothing, fromJust)
 import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
-
-import Data.List
 
 import Expr (
   Expr(..), Var, Pat(Pat),
@@ -144,7 +142,7 @@ instance {-# OVERLAPPING #-} Show HistEdge where
 instance {-# OVERLAPPING #-} Show HistNode where
   show (var, args, node, expr, sps) =
     var ++ "(" ++ unwords args ++ ") ~> " ++ show node ++ "@" ++
-    show expr ++ "\n    " ++ show sps
+    show expr ++ "\n    " ++ intercalate "\n    " (map show sps)
 
 -- instance {-# OVERLAPPING #-} Show (Var, [Var], Expr) where
 --   show (var, args, expr) =

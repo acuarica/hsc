@@ -1,3 +1,4 @@
+
 # Haskell Supercompiler Project
 
 The Haskell Supercompiler Project explores uses of supercompilation.
@@ -51,10 +52,17 @@ cabal run test-supercompiler
 
 ### Comprehensive Test of Supercompilation
 
+Correctness of Supercompiler is done using SmallCheck.
+
+## TODOs
 * Correctness of Supercompiler is done using SmallCheck.
-* [TODO] Check that effectively that supercompiled expression is
+* Check that effectively that supercompiled expression is
   "better" than the input expression.
   What does "better" mean: How do we compare between two equivalent
   expressions for one better.
-* [TODO] Power of Supercompiler for predicates: Check that the
+* Power of Supercompiler for predicates: Check that the
   result is always True, if it terminates.
+* Fix test-parser for Cons **:**.
+* Fix show Expr/assert for Con "Nil" [Con "Nil" []].
+  See hsc.cabal ghc-options: -fno-ignore-asserts
+* Complete Haskell to Core implementation.

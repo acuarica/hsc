@@ -1,12 +1,13 @@
 
 module Main where
 
+import Data.List (intercalate)
+import Data.String.Utils (lstrip, startswith)
 import System.Exit (exitFailure)
 import System.Environment (getArgs)
 import System.FilePath (takeExtension)
-import Language.Haskell.Exts (parseFileContents, fromParseResult)
-import Data.List (intercalate)
 import Text.Printf (printf)
+import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
 import Expr --(Expr(Var, Let), Var)
 import Parser (parseExpr)
@@ -85,8 +86,10 @@ main = do
       let fileName = head args
       let ext = takeExtension fileName
       putStrLn $ "[Supercompiling " ++ fileName ++ "]"
-      fileText <- readFile fileName
-      let expr = filterByExt ext fileText
+      content <- readFile fileName
+      let noComment = not . startswith "--" . lstrip
+      let exprText = (unlines . filter noComment . lines) content
+      let expr = filterByExt ext exprText
       let (sexpr, rm@((var0, expr0), (hist, _))) = supercompileWithMemo expr
 
       writeFileWithLog (fromFileName fileName "hist") (show rm)

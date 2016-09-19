@@ -14,9 +14,11 @@ cabal-version:      >=1.10
 
 executable hsc
   main-is:          Main.hs
-  build-depends:    base >=4.8, mtl >= 2.2.1, haskell-src-exts >=1.17, filepath
+  build-depends:    base >=4.8, mtl >= 2.2.1, haskell-src-exts >=1.17,
+                    filepath, MissingH
   hs-source-dirs:   .
   default-language: Haskell98
+  ghc-options:      -fno-ignore-asserts
 
 executable test-parser
   main-is:          TestParser.hs

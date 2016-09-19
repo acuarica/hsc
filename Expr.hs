@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Expr (
-  Expr(..), Var, Pat (Pat),
+  Expr(Var, Con, Lam, Let, App, Case), Var, Pat (Pat),
   con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
   zero, suc, nil, cons
@@ -16,8 +16,8 @@ import Control.Arrow (second)
 data Expr
   = Var  Var
   | Con  Tag  [Expr]
-  | Let  Var  Expr Expr
   | Lam  Var  Expr
+  | Let  Var  Expr Expr
   | App  Expr Expr
   | Case Expr [(Pat, Expr)]
   deriving Eq

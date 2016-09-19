@@ -19,4 +19,9 @@ let append={xs->{ys->case xs of
   Nil -> ys;
   Cons x' xs' -> Cons x' (append xs' ys);
 }} in
-eqn (len (append as bs)) (plus (len as) (len bs))
+--eqn (len bs) (len bs)
+--eqn (len (append [] bs)) (len bs)
+eqn x (plus Z x)
+--eqn (len bs) (plus Z (len bs))
+--eqn (len (append [] bs)) (plus Z (len bs))
+--eqn (len (append as bs)) (plus (len as) (len bs))
