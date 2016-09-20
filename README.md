@@ -63,6 +63,5 @@ Correctness of Supercompiler is done using SmallCheck.
   expressions for one better.
 * Power of Supercompiler for predicates: Check that the
   result is always True, if it terminates.
-* Fix test-parser for Cons **:**.
 * Complete Haskell to Core implementation.
 * Fix Eval for normal form (Variable Capture)
