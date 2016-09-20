@@ -125,36 +125,36 @@ evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
     testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
-    ("let x=(let y=Succ in y 0) in y", "y"),
-    ("let x=0 in Succ x", "1"),
-    ("let x=True in [x]", "[True]"),
-    ("let id={a->a} in id [1,2,3,4,5]", "[1,2,3,4,5]"),
-    ("let two={a->{b->a}} in two True False", "True"),
-    ("{a->{b->a}}", "{a->{b->a}}"),
-    ("{b->{a->b} A} B", "B"),
-    ("{a->{x->x} A} B", "A"),
-    ("{x->x} {a->{b->a}}", "{a->{b->a}}"),
-    ("{f->{x->f x}}", "{f->{x->f x}}"),
-    ("let a={f->{x->f x}} in a", "{f->{x->f x}}"),
-    ("{f->{x->f x}} {b->T} F", "T"),
-    ("let a={f->{x->f x}} in a {b->T} F", "T"),
-    ("let a={f->{x->f x}} in a {b->T}", "{x->{b->T} x}"),
-    ("let a={f->{x->f x}} in a {b->Succ b}", "{x->{b->Succ b} x}"),
-    ("{a->Succ (Succ a)} 1", "3"),
-    ("let sumtwo={a->Succ (Succ a)} in sumtwo 1", "3"),
-    ("let a={f->{x->f x}} in a {n->Succ n} 0", "1"),
-    ("let two={a->{b->a}} in {x->x} (two A) ", "{b->A}"),
-    ("let two={a->{b->a}} in let id={c->c} in id two", "{a->{b->a}}"),
-    ("let fst={a->{b->a}} in let id={b->b} in id fst", "{a->{b->a}}"),
-    ("let fst={a->{b->a}} in let id={a->a} in id fst", "{a->{b->a}}"),
-    ("let fst={a->{b->a}} in let p=fst T in let a={f->{x->f x}} in a p F", "T"),
-    ("let id={a-> a} in let app={f->{x->f x}} in app id [1,2,3,4]", "[1,2,3,4]"),
-    ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
-    ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
-    ("let x=A B in Tup x x", "Tup (A B) (A B)"),
-    ("(let x=F in x) (let x=X in x)", "F X"),
-    ("{n->case n of S n -> n;} (S Z)", "Z"),
-    ("{n->case n of S n -> n;} (S n)", "n")
+  ("let x=(let y=Succ in y 0) in y", "y"),
+  ("let x=0 in Succ x", "1"),
+  ("let x=True in [x]", "[True]"),
+  ("let id={a->a} in id [1,2,3,4,5]", "[1,2,3,4,5]"),
+  ("let two={a->{b->a}} in two True False", "True"),
+  ("{a->{b->a}}", "{a->{b->a}}"),
+  ("{b->{a->b} A} B", "B"),
+  ("{a->{x->x} A} B", "A"),
+  ("{x->x} {a->{b->a}}", "{a->{b->a}}"),
+  ("{f->{x->f x}}", "{f->{x->f x}}"),
+  ("let a={f->{x->f x}} in a", "{f->{x->f x}}"),
+  ("{f->{x->f x}} {b->T} F", "T"),
+  ("let a={f->{x->f x}} in a {b->T} F", "T"),
+  ("let a={f->{x->f x}} in a {b->T}", "{x->{b->T} x}"),
+  ("let a={f->{x->f x}} in a {b->Succ b}", "{x->{b->Succ b} x}"),
+  ("{a->Succ (Succ a)} 1", "3"),
+  ("let sumtwo={a->Succ (Succ a)} in sumtwo 1", "3"),
+  ("let a={f->{x->f x}} in a {n->Succ n} 0", "1"),
+  ("let two={a->{b->a}} in {x->x} (two A) ", "{b->A}"),
+  ("let two={a->{b->a}} in let id={c->c} in id two", "{a->{b->a}}"),
+  ("let fst={a->{b->a}} in let id={b->b} in id fst", "{a->{b->a}}"),
+  ("let fst={a->{b->a}} in let id={a->a} in id fst", "{a->{b->a}}"),
+  ("let f={a->{b->a}} in let p=f T in let a={f->{x->f x}} in a p F", "T"),
+  ("let id={a->a} in let a={f->{x->f x}} in a id [1,2,3,4]", "[1,2,3,4]"),
+  ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
+  ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
+  ("let x=A B in Tup x x", "Tup (A B) (A B)"),
+  ("(let x=F in x) (let x=X in x)", "F X"),
+  ("{n->case n of S n -> n;} (S Z)", "Z"),
+  ("{n->case n of S n -> n;} (S n)", "n")
   ]
 
 evalWithPreludeTest :: TestTree
@@ -176,7 +176,7 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
     ("rev [A,B,C,D]", "[D,C,B,A]"),
     ("rev []", "[]"),
     ("rev [One]", "[One]"),
-    ("let reverse={rs->revA rs []} in reverse [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
+    ("reverseAccum [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
     ("revA [A,B,C,D,E,F,G] []", "[G,F,E,D,C,B,A]"),
     ("map id [A,B,C,D,E]", "[A,B,C,D,E]"),
     ("rev (map rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
@@ -187,8 +187,8 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
     ("map {a->Succ (Succ a)} [1]", "[3]"),
     ("map {a->Succ (Succ a)} [1,2,3,4,5]", "[3,4,5,6,7]"),
     ("map {q->plus 10 q} [1,2,3,4,5]", "[11,12,13,14,15]"),
-    ("let plusten={q->plus 10 q} in map plusten [1,2,3,4,5]", "[11,12,13,14,15]"),
-    ("let two={a->{b->a}} in let plusten=two 10 in app plusten 10", "10"),
+    ("let p10={q->plus 10 q} in map p10 [1,2,3,4,5]", "[11,12,13,14,15]"),
+    ("let two={a->{b->a}} in let p10=two 10 in app p10 10", "10"),
     ("{x->x} (plus 1) 1", "2"),
     ("{f->{x->f x}} (plus 1) 1", "2"),
     ("plus 0 1", "1"),
@@ -205,12 +205,25 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
       \let app={p->{q->p q}} in \
       \let inc={n->Succ n} in \
       \let cp={a->case a of Zero->0;Succ aa->Succ (cp aa);} in \
-      \let cat={xs->{ys->case xs of Nil->ys;Cons z zs->Cons z (cat zs ys);}} in \
-      \let rev={rs-> case rs of Nil->Nil;Cons s ss->cat (rev ss) [s];} in \
-      \let revA={xs->{as->case xs of Nil->as;Cons y ys->revA ys (Cons y as);}}in \
-      \let map={f->{xs->case xs of Nil->Nil;Cons y ys->Cons (f y)(map f ys);}}in \
-      \let plus={n->{m->case n of Zero->m; Succ nn->plus nn (Succ m);}} in \
-      \let mult={n->{m->case n of Zero->0; Succ nn->plus (mult nn m) m;}} in \
+      \let cat={xs->{ys->case xs of \
+      \  Nil->ys;\
+      \  Cons z zs->Cons z (cat zs ys);}} in \
+      \let rev={rs-> case rs of \
+      \  Nil->Nil;\
+      \  Cons s ss->cat (rev ss) [s];} in \
+      \let revA={xs->{as->case xs of \
+      \  Nil->as;\
+      \  Cons y ys->revA ys (Cons y as);}} in \
+      \let reverseAccum = {rs->revA rs []} in \
+      \let map={f->{xs->case xs of \
+      \  Nil->Nil;\
+      \  Cons y ys->Cons (f y)(map f ys);}} in \
+      \let plus={n->{m->case n of \
+      \  Zero->m;\
+      \  Succ nn->plus nn (Succ m);}} in \
+      \let mult={n->{m->case n of \
+      \  Zero->0;\
+      \  Succ nn->plus (mult nn m) m;}} in \
       \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in "
 
 evalLazyTest :: TestTree
@@ -235,10 +248,10 @@ evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
     testCase (a ++ " ~~> " ++ e) $
       (eval . parseExpr) a @?= (eval . parseExpr) e)
   [
-    -- ("let x=(let y=A in y 0) in x y", "A 0 y"),
-    -- ("let x=(let y=A in let z=B in C y z) in x y z", "C A B y z"),
-    -- ("(let x=A in C x) x", "C A x"),
-    -- ("(let y=A in let z=B in C y z) y z", "C A B y z"),
+    ("let x=(let y=A in y 0) in x y", "A 0 y"),
+    ("let x=(let y=A in let z=B in C y z) in x y z", "C A B y z"),
+    ("(let x=A in C x) x", "C A x"),
+    ("(let y=A in let z=B in C y z) y z", "C A B y z"),
     ("case Succ n of Succ n'->A n';", "A n"),
     ("case Succ n of Succ n->A n;", "A n")
   ]
@@ -253,5 +266,5 @@ evalForwardDecl = testGroup "eval w/forward declarations" $
 
 main :: IO ()
 main = defaultMain $ testGroup "Eval::eval/whnf"
-  [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest, evalLazyTest,
-  evalNameCaptureTest, evalForwardDecl]
+  [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest,
+  evalLazyTest, evalNameCaptureTest, evalForwardDecl]
