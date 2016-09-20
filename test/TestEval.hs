@@ -4,7 +4,8 @@ module Main (main) where
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
-import Expr (Expr(..), Pat(Pat), con, app, zero, suc, cons, nil)
+import Expr (Expr(Var, Con, Lam, Let, App, Case), Pat(Pat),
+  con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 import Eval (eval, whnf)
 

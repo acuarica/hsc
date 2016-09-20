@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 module Eval (
-  Conf, Env, StackFrame(..),
+  Conf, Env, StackFrame(Arg, Alts, Update),
   eval, whnf, emptyEnv, newConf, toExpr, nf, reduce, put, step
 ) where
 
 import Data.List (intercalate, delete)
 
-import Expr (Expr(..), Var, Pat(Pat),
+import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Pat(Pat),
   subst, substAlts, lookupAlt, freeVars, alpha)
 
 -- | Represents the configuration of the abstract machine.
