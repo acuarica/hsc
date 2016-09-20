@@ -52,7 +52,8 @@ cabal run test-supercompiler
 
 ### Comprehensive Test of Supercompilation
 
-Correctness of Supercompiler is done using SmallCheck.
+Correctness of Supercompiler is done using QuickCheck.
+Mention problem about using smallcheck related to depth.
 
 ## TODOs
 
