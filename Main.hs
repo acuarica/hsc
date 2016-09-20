@@ -86,7 +86,6 @@ writeFileWithLog fileName content =
 
 main :: IO ()
 main = do
-  print $ Con "Nil" [Con "A" []]
   args <- getArgs
   if null args
     then do

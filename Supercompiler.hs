@@ -11,7 +11,7 @@ import Expr (
   Expr(..), Var, Pat(Pat),
   app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (
-  Conf, Env, StackFrame(..),
+  Conf, Env, StackFrame(Arg, Alts, Update),
   newConf, emptyEnv, toExpr, nf, reduce, put)
 import Splitter (
   Node(VarNode, ArgNode, ConNode, CaseNode),

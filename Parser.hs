@@ -1,7 +1,8 @@
 
 module Parser (parseExpr) where
 
-import Expr (Expr(..), Var, Pat(Pat), con, app, zero, suc, nil, cons)
+import Expr (Expr(Var, Lam, Let, App, Case), Var, Pat(Pat),
+  con, app, zero, suc, nil, cons, nat)
 import Data.Char (isDigit, isAlpha, isLower, isUpper)
 import Control.Applicative (Alternative, empty, (<|>), some, many)
 import Text.Printf (printf)
@@ -151,8 +152,13 @@ chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 p `chainl1` op = do {a <- p; rest a}
   where rest a = (do {f <- op; b <- p; rest (f a b)}) <|> return a
 
+chainr1 :: Parser a -> Parser (a -> a -> a) -> Parser a
+p `chainr1` op = do {a <- p; rest a}
+  where rest a = (do {f <- op; b <- p; b' <- rest b; return (f a b')})
+          <|> return a
+
 exprp :: Parser Expr
-exprp = (termp `chainl1` conslistp) `chainl1` return App
+exprp = (termp `chainr1` conslistp) `chainl1` return App
 
 conslistp :: Parser (Expr -> Expr -> Expr)
 conslistp = reserved ":" >> return (App . App cons)
@@ -168,8 +174,7 @@ termp = litintp
     <|> brackets listp
 
 litintp :: Parser Expr
-litintp = do { n <- number; return (f n) }
-  where f n = if n == 0 then zero else App suc (f (n-1))
+litintp = do { n <- number; return (nat n) }
 
 letp :: Parser Expr
 letp = do
@@ -207,7 +212,6 @@ casep = do
 altp :: Parser (Pat, Expr)
 altp = do
   tag <- upperword
-  --vars <- many lowerword
   vars <- many varnamep
   reserved "->"
   res <- exprp
@@ -220,8 +224,8 @@ listp = (do
       (do
         reserved ","
         rest <- listp
-        return (App (App cons item) rest)) <|>
-        return (App (App cons item) nil)
+        return (app cons [item, rest])) <|>
+        return (app cons [item, nil])
     ) <|> return nil
 
 varnamep :: Parser Var
