@@ -1,0 +1,14 @@
+
+let eqn={n->{m->case n of
+  Z -> case m of
+    Z -> True;
+    S m' -> False;;
+  S n' -> case m of
+    Z -> False;
+    S m' -> eqn n' m';;
+  }} in
+let plus={n->{m->case n of
+    Z -> m;
+    S n' -> S (plus n' m);
+  }} in
+eqn x (S (S (S (S (S Z)))))

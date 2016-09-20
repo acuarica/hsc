@@ -1,0 +1,14 @@
+
+let eqn={n->{m->case n of
+  Zero -> case m of
+    Zero -> True;
+    Succ m' -> False;;
+  Succ n' -> case m of
+    Zero -> False;
+    Succ m' -> eqn n' m';;
+  }} in
+let len={xs->case xs of
+    Nil -> Zero;
+    Cons x' xs' -> Succ (len xs');
+  } in
+eqn (len (Cons z zs)) (Succ (len zs))
