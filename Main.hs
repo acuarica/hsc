@@ -27,9 +27,11 @@ fromFileName fileName ext = fileName ++ "." ++ ext
 makeDot :: String -> Var -> Hist -> String
 makeDot caption var0 (es, vs) = printf
   "digraph G {\n\
-  \\tgraph [label=\"%s\", labelloc=t, fontname=\"Monaco\", fontsize=12]\n\
-  \\tnode [shape=record, style=rounded, fontname=\"Monaco\", fontsize=12]\n\
-  \\tedge [fontname=\"Monaco\", fontsize=12]\n\
+  \\tgraph [label=\"%s\", \n\
+  \\t  labelloc=t, fontname=\"Monaco\", fontsize=12]\n\
+  \\tnode [shape=record, style=rounded, \n\
+  \\t  fontname=\"Monaco\", fontsize=12]\n\
+  \\tedge [fontname=\"Monaco\", fontsize=12, dir=both, arrowtail=box]\n\
   \\t\"%s\" [style=\"rounded, bold\"]\n\
   \%s\n\
   \%s\
@@ -37,7 +39,7 @@ makeDot caption var0 (es, vs) = printf
   caption var0 (foldr ((++) . dotEdge) "" es) (foldr ((++) . dotNode) "" vs)
   where
     dotEdge (parentVar, label, var, fv, conf) =
-      printf "\t\"%s\":\"%s\" -> \"%s\" [arrowtail=\"box\"]\n"
+      printf "\t\"%s\":\"%s\" -> \"%s\"\n"
         parentVar (show label) var
     dotNode (var, fvs, node, (env, stack, expr), sps) =
       let port = printf "<%s>%s" in
