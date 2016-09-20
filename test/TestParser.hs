@@ -4,7 +4,7 @@ module Main (main) where
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
-import Expr (Expr(..), Pat(Pat),
+import Expr (Expr(Var, Lam, Let, App, Case), Pat(Pat),
   con, app, appVars, zero, suc, cons, nil, nat, list)
 import Parser (parseExpr)
 
@@ -48,7 +48,7 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("{$x->$x}", Lam "$x" (Var "$x")),
     ("{$x0->$x0}", Lam "$x0" (Var "$x0")),
     ("{var->var}", Lam "var" (Var "var")),
-    ("{x->True}", Lam "x" (Con "True" [])),
+    ("{x->True}", Lam "x" (con "True")),
     ("{x->2}", Lam "x" (nat 2)),
     ("{f->{x->f x}}", Lam "f" (Lam "x" (App (Var "f") (Var "x")))),
     ("let x={y->y} in x", Let "x" (Lam "y" (Var "y")) (Var "x")),
@@ -77,8 +77,8 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("A:B:xs", app cons [con "A", app cons [con "B", Var "xs"]]),
     ("let c=case n of Z->A;S m->B; in c",
       Let "c" (Case (Var "n") [
-        (Pat "Z" [], Con "A" []),
-        (Pat "S" ["m"], Con "B" [])
+        (Pat "Z" [], con "A"),
+        (Pat "S" ["m"], con "B")
       ]) (Var "c")),
     ("case var of True -> False;",
       Case (Var "var") [
