@@ -1,11 +1,11 @@
--- {-# LANGUAGE FlexibleContexts #-}
 
 module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.HUnit (testCase, assertBool)
 
-import Expr (Expr(App, Let), app, nil, cons, nat)
+import Expr (Expr(Var, Con, Lam, Let, App, Case), app, nil, cons, nat)
 import Parser (parseExpr)
 import Eval (eval)
 import Supercompiler (supercompile)
@@ -14,56 +14,11 @@ ls :: [Int] -> Expr
 ls [] = nil
 ls (x:xs) = app cons [nat x, ls xs]
 
-supercompileWithEvalTest :: TestTree
-supercompileWithEvalTest = testGroup "Supercompile & Eval" [
-  go "map inc zs" $
-    Let "zs" . ls,
-  go "map inc" $
-    flip App . ls,
-  go "map inc (map inc zs)" $
-    Let "zs" . ls,
-  go "map {n->Succ n} (map {n->Succ(Succ n)} zs)" $
-    \zs -> Let "zs" (ls zs),
-  go "map h (map g zs)" $
-    \zs ->
-      Let "h" (parseExpr
-        "{n->Succ n}") .
-      Let "g" (parseExpr
-        "{n->case n of Zero->Zero;Succ n'->Succ(Succ (g n'));}") .
-      Let "zs" (ls zs),
-  go "let mimi={zs->map inc (map inc zs)} in mimi" $
-    flip App . ls,
-  go "c (map inc) (map inc)" $
-    flip App . ls,
-  go "append as bs" $
-    \(as, bs) -> Let "as" (ls as) . Let "bs" (ls bs),
-  go "append (append as bs) cs" $
-    \(as, bs, cs) -> Let "as" (ls as).Let "bs" (ls bs).Let "cs" (ls cs),
-  go "eqn x x" $
-    Let "x" . nat,
-  go "eqn (plus Zero x) x" $
-    Let "x" . nat,
-  go "eqn (len (map id zs)) (len zs)" $
-    \zs -> Let "zs" $ ls zs,
-  go "eqn (len (map f zs)) (len zs)" $
-    \zs -> Let "f" (parseExpr "{n->Succ n}") . Let "zs" (ls zs),
-  go "eqn (len (append as bs)) (plus (len as) (len bs))" $
-    \(as, bs) -> Let "as" (ls as) . Let "bs" (ls bs),
-  go "leqn 0 x" $
-    Let "x" . nat,
-  go "eqn (len (insertSorted z zs)) (plus 1 (len zs))" $
-    \(z, zs) -> Let "x" (nat z) . Let "zs" (ls zs),
-  go "eqn x 0" $
-    Let "x" . nat,
-  go "eqn x 5" $
-    Let "x" . nat
-  ]
+supercompileWithPrelude :: String -> (Expr, Expr)
+supercompileWithPrelude exprText = (expr, sexpr)
   where
-    go e fexpr =
-      let expr = parseExpr $ prelude ++ e in
-      let sexpr = supercompile expr in
-      testProperty e $ (\cexpr ->
-        eval (cexpr sexpr) == eval (cexpr expr)) . fexpr
+    expr = parseExpr $ prelude ++ exprText
+    sexpr = supercompile expr
     prelude =
       "let id={x -> x} in \
       \let app={p->{q->p q}} in \
@@ -114,5 +69,77 @@ supercompileWithEvalTest = testGroup "Supercompile & Eval" [
       \    True -> Cons x (Cons y ys); \
       \    False -> Cons y (insertSorted x ys);;}} in "
 
+supercompileWithEvalTest :: TestTree
+supercompileWithEvalTest = testGroup "Supercompile & Eval" [
+  go "map inc zs" $
+    Let "zs" . ls,
+  go "map inc" $
+    flip App . ls,
+  go "map inc (map inc zs)" $
+    Let "zs" . ls,
+  go "map {n->Succ n} (map {n->Succ(Succ n)} zs)" $
+    \zs -> Let "zs" (ls zs),
+  go "map h (map g zs)" $
+    \zs ->
+      Let "h" (parseExpr
+        "{n->Succ n}") .
+      Let "g" (parseExpr
+        "{n->case n of Zero->Zero;Succ n'->Succ(Succ (g n'));}") .
+      Let "zs" (ls zs),
+  go "let mimi={zs->map inc (map inc zs)} in mimi" $
+    flip App . ls,
+  go "c (map inc) (map inc)" $
+    flip App . ls,
+  go "append as bs" $
+    \(as, bs) -> Let "as" (ls as) . Let "bs" (ls bs),
+  go "append (append as bs) cs" $
+    \(as, bs, cs) -> Let "as" (ls as).Let "bs" (ls bs).Let "cs" (ls cs),
+  go "eqn x x" $
+    Let "x" . nat,
+  go "eqn (plus Zero x) x" $
+    Let "x" . nat,
+  go "eqn (len (map id zs)) (len zs)" $
+    \zs -> Let "zs" $ ls zs,
+  go "eqn (len (map f zs)) (len zs)" $
+    \zs -> Let "f" (parseExpr "{n->Succ n}") . Let "zs" (ls zs),
+  go "eqn (len (append as bs)) (plus (len as) (len bs))" $
+    \(as, bs) -> Let "as" (ls as) . Let "bs" (ls bs),
+  go "leqn 0 x" $
+    Let "x" . nat,
+  go "eqn (len (insertSorted z zs)) (plus 1 (len zs))" $
+    \(z, zs) -> Let "x" (nat z) . Let "zs" (ls zs),
+  go "eqn x 0" $
+    Let "x" . nat,
+  go "eqn x 5" $
+    Let "x" . nat
+  ]
+  where
+    go e fexpr = let (expr, sexpr) = supercompileWithPrelude e in
+      testProperty e $ (\cexpr ->
+        eval (cexpr sexpr) == eval (cexpr expr)) . fexpr
+
+supercompilePredsTest :: TestTree
+supercompilePredsTest = testGroup "Supercompile Predicates" [
+  go "eqn x x",
+  go "eqn (plus Zero x) x",
+  go "eqn (len (map id zs)) (len zs)",
+  go "eqn (len (map f zs)) (len zs)",
+  go "eqn (len (append as bs)) (plus (len as) (len bs))",
+  go "leqn 0 x",
+  go "eqn (len (insertSorted z zs)) (plus 1 (len zs))"
+  ]
+  where
+    go exprText = let (expr, sexpr) = supercompileWithPrelude exprText in
+      testCase exprText $ assertBool (show sexpr) (onlyTrue sexpr)
+    onlyTrue expr = case expr of
+      Var _ -> True
+      Con tag args -> tag == "True" && null args
+      Lam _ lamexpr -> onlyTrue lamexpr
+      Let _ valexpr inexpr -> onlyTrue valexpr && onlyTrue inexpr
+      App funexpr valexpr -> onlyTrue funexpr && onlyTrue valexpr
+      Case scexpr pats -> onlyTrue scexpr && all (onlyTrue . snd) pats
+
 main :: IO ()
-main = defaultMain supercompileWithEvalTest
+main = defaultMain $ testGroup "Supercompiler Tests" [
+  supercompileWithEvalTest, supercompilePredsTest
+  ]
