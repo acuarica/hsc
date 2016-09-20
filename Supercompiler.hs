@@ -42,7 +42,7 @@ memo :: Conf -> Memo (Var, Expr)
 memo conf@(env, stack, expr) =
   do
   next <- getNext
-  if next > 10 then error "10 iterations, implement termination" else
+  if next > 100 then return ("??", expr) else --error "100 iterations, implement termination" else
     do
     ii <- isin conf
     if isNothing ii

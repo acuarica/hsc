@@ -55,6 +55,7 @@ cabal run test-supercompiler
 Correctness of Supercompiler is done using SmallCheck.
 
 ## TODOs
+
 * Correctness of Supercompiler is done using SmallCheck.
 * Check that effectively that supercompiled expression is
   "better" than the input expression.

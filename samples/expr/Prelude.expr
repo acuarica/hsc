@@ -1,0 +1,34 @@
+let eqn={n->{m->case n of
+  Zero -> case m of
+    Zero -> True;
+    Succ m' -> False;;
+  Succ n' -> case m of
+    Zero -> False;
+    Succ m' -> eqn n' m';;
+  }} in
+let land = {x->{y-> case x of
+  False -> False;
+  True -> y;}} in
+let leqn = {n->{m->case n of
+  Zero -> True;
+  Succ n' -> case m of
+    Zero -> False;
+    Succ m' -> leqn n' m';;}} in
+let len={xs->case xs of
+    Nil -> Zero;
+    Cons x' xs' -> Succ (len xs');
+  } in
+let sorted = {xs->case xs of
+  Nil -> True;
+  Cons x' xs' -> case xs' of
+    Nil -> True;
+    Cons x'' xs'' -> land (leqn x' x'') (sorted xs');;} in
+let put = {x->{xs-> case xs of
+  Nil -> Cons x Nil;
+  Cons y ys -> case leqn x y of
+    True -> Cons x (Cons y ys);
+    False -> Cons y (put x ys);;}} in
+let sort = {xs->case xs of
+  Nil -> Nil;
+  Cons y ys -> put y (sort ys);} in
+eqn (len (sort zs)) (len zs)

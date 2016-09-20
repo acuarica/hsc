@@ -4,11 +4,10 @@ module Expr (
   Expr(Var, Con, Lam, Let, App, Case), Var, Pat (Pat),
   con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
-  zero, suc, nil, cons
+  zero, suc, nil, cons, nat, list
 ) where
 
 import Data.Maybe (fromMaybe)
-import Control.Exception (assert)
 import Data.List (nub, delete, (\\), union, intercalate)
 import Control.Arrow (second)
 
@@ -81,7 +80,7 @@ subst (var, valexpr) bodyexpr = case bodyexpr of
   where
     goSubst = subst (var, valexpr)
     goSubstAlt (Pat tag vars, altexpr) =
-      (Pat tag vars, if var `elem ` vars then altexpr else goSubst altexpr)
+      (Pat tag vars, if var `elem` vars then altexpr else goSubst altexpr)
 
 -- | Subtitutes a list of bindings in bodyexpr.
 substAlts :: [(Var, Expr)] -> Expr -> Expr
@@ -92,6 +91,7 @@ lookupAlt :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
 lookupAlt tag ((Pat pattag patvars, expr):alts) = if pattag == tag
   then (Pat pattag patvars, expr)
   else lookupAlt tag alts
+lookupAlt tag [] = error $ "lookupAlt: " ++ tag
 
 -- | Free variables of an expression.
 freeVars :: Expr -> [Var]
@@ -138,6 +138,14 @@ suc = con "Succ"
 nil = con "Nil"
 cons = con "Cons"
 
+nat :: Int -> Expr
+nat n = if n > 0 then App suc (nat (n - 1)) else zero
+
+list :: [Expr] -> Expr
+list xs = case xs of
+  [] -> nil
+  (x':xs') -> app cons [x', list xs']
+
 instance Show Expr where
   show = show' False
     where
@@ -170,15 +178,19 @@ instance Show Expr where
         Just ("(" ++ int ":" xs ++ ":" ++ show expr ++ ")")
     int sep xs = intercalate sep (map show xs)
     doNat expr = case expr of
-      Con "Zero" args -> assert (null args) (0, Nothing)
+      Con "Zero" args -> case args of
+        [] -> (0, Nothing)
+        _ -> error $ "Invalid arguments for Zero: " ++ showArgs args
       Con "Succ" args -> case args of
         [] -> (0, Just expr)
         [arg] -> case doNat arg of
           (n, e) -> (n+1, e)
-        _ -> error $ "Invalid arguments for Succ: " ++ show args
+        _ -> error $ "Invalid arguments for Succ: " ++ showArgs args
       expr' -> (0, Just expr)
     doList expr = case expr of
-      Con "Nil" args -> assert (null args) ([], Nothing)
+      Con "Nil" args -> case args of
+        [] -> ([], Nothing)
+        _ -> error $ "Invalid arguments for Nil: " ++ showArgs args
       Con "Cons" args -> case args of
         [item, rest] -> case doList rest of
           (xs, e) -> (item:xs, e)
@@ -187,6 +199,7 @@ instance Show Expr where
     f <|> g = \expr -> case f expr of
       Nothing -> g expr
       Just s -> Just s
+    showArgs args = unwords (map show args)
 
 instance Show Pat where
   show (Pat tag vars) = unwords (tag:vars)

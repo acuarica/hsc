@@ -24,19 +24,20 @@ fromFileName fileName ext = fileName ++ "." ++ ext
 
 -- \\tgraph [ordering=out]\n\
 
-makeDot :: Var -> Hist -> String
-makeDot var0 (es, vs) = printf
+makeDot :: String -> Var -> Hist -> String
+makeDot caption var0 (es, vs) = printf
   "digraph G {\n\
+  \\tgraph [label=\"%s\", labelloc=t, fontname=\"Monaco\", fontsize=12]\n\
   \\tnode [shape=record, style=rounded, fontname=\"Monaco\", fontsize=12]\n\
   \\tedge [fontname=\"Monaco\", fontsize=12]\n\
   \\t\"%s\" [style=\"rounded, bold\"]\n\
   \%s\n\
   \%s\
   \}\n"
-  var0 (foldr ((++) . dotEdge) "" es) (foldr ((++) . dotNode) "" vs)
+  caption var0 (foldr ((++) . dotEdge) "" es) (foldr ((++) . dotNode) "" vs)
   where
     dotEdge (parentVar, label, var, fv, conf) =
-      printf "\t\"%s\":\"%s\" -> \"%s\"\n"
+      printf "\t\"%s\":\"%s\" -> \"%s\" [arrowtail=\"box\"]\n"
         parentVar (show label) var
     dotNode (var, fvs, node, (env, stack, expr), sps) =
       let port = printf "<%s>%s" in
@@ -68,6 +69,10 @@ pprint (Let var valexpr inexpr) =
   "let " ++ var ++ "=" ++ show valexpr ++ "" ++ " in \n" ++ pprint inexpr
 pprint expr = show expr
 
+caption :: Expr -> String
+caption (Let var valexpr inexpr) = caption inexpr
+caption expr = show expr
+
 writeFileWithLog :: FilePath -> String -> IO ()
 writeFileWithLog fileName content =
   do
@@ -78,8 +83,10 @@ writeFileWithLog fileName content =
 --tag :: Int -> Expr -> Expr
 --tag n = case
 
+
 main :: IO ()
 main = do
+  print $ Con "Nil" [Con "A" []]
   args <- getArgs
   if null args
     then do
@@ -97,8 +104,6 @@ main = do
 
       writeFileWithLog (fromFileName fileName "hist") (show rm)
       writeFileWithLog (fromFileName fileName "sexpr") (pprint sexpr)
-      writeFileWithLog (fromFileName fileName "dot") (makeDot var0 hist)
-
-      print rm
+      writeFileWithLog (fromFileName fileName "dot") (makeDot (caption expr) var0 hist)
 
       return ()
