@@ -57,10 +57,11 @@ Mention problem about using smallcheck related to depth.
 
 ## TODOs
 
-* Correctness of Supercompiler is done using SmallCheck.
+* Implement generalization/distillation.
 * Check that effectively that supercompiled expression is
   "better" than the input expression.
   What does "better" mean: How do we compare between two equivalent
   expressions for one better.
 * Complete Haskell to Core implementation.
 * Fix Eval for normal form (Variable Capture)
+* Type-checking by Supercompilation.
