@@ -5,7 +5,8 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(Var, Lam, Let, App, Case), Pat(Pat),
-  con, app, appVars, zero, suc, cons, nil, nat, list)
+  con, app, appVars,
+  true, false, zero, suc, cons, nil, bool, nat, list)
 import Parser (parseExpr)
 
 testParser :: TestTree
@@ -37,8 +38,8 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("(Succ Zero)", nat 1),
     ("((Succ) (Zero))", nat 1),
     ("Succ (Succ Zero)", nat 2),
-    ("Cons Zero Nil", list [zero]),
-    ("Cons 2 (Cons 0 Nil)", list [nat 2, zero]),
+    ("Cons Zero Nil", list nat [0]),
+    ("Cons 2 (Cons 0 Nil)", list nat [2, 0]),
     ("f x", App (Var "f") (Var "x")),
     ("f x y", appVars (Var "f") ["x", "y"]),
     ("f var y", appVars (Var "f") ["var", "y"]),
@@ -48,7 +49,7 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("{$x->$x}", Lam "$x" (Var "$x")),
     ("{$x0->$x0}", Lam "$x0" (Var "$x0")),
     ("{var->var}", Lam "var" (Var "var")),
-    ("{x->True}", Lam "x" (con "True")),
+    ("{x->True}", Lam "x" true),
     ("{x->2}", Lam "x" (nat 2)),
     ("{f->{x->f x}}", Lam "f" (Lam "x" (App (Var "f") (Var "x")))),
     ("let x={y->y} in x", Let "x" (Lam "y" (Var "y")) (Var "x")),
@@ -60,20 +61,20 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("let $v_0 = A in $v_0", Let "$v_0" (con "A") (Var "$v_0")),
     ("[]", nil),
     ("  [  ]  ", nil),
-    ("[True]", list [con "True"]),
-    ("[A, B]", list [con "A", con "B"]),
-    ("[A,B,C]", list [con "A", con "B", con "C"]),
-    ("[x]", list [Var "x"]),
-    ("[x,y]", list [Var "x", Var "y"]),
-    ("[x,A,y]", list [Var "x", con "A", Var "y"]),
+    ("[True]", list bool [True]),
+    ("[A, B]", list id [con "A", con "B"]),
+    ("[A,B,C]", list id [con "A", con "B", con "C"]),
+    ("[x]", list id [Var "x"]),
+    ("[x,y]", list id [Var "x", Var "y"]),
+    ("[x,A,y]", list id [Var "x", con "A", Var "y"]),
     ("x:xs", appVars cons ["x", "xs"]),
     ("(x:xs)", appVars cons ["x", "xs"]),
-    ("A:Nil", list [con "A"]),
-    ("A:(B:Nil)", list [con "A", con "B"]),
-    ("A:(B:(C:Nil))", list [con "A", con "B", con "C"]),
-    ("A:B:Nil", list [con "A", con "B"]),
-    ("A:B:C:Nil", list [con "A", con "B", con "C"]),
-    ("A:B:C:D:Nil", list [con "A", con "B", con "C", con "D"]),
+    ("A:Nil", list id [con "A"]),
+    ("A:(B:Nil)", list id [con "A", con "B"]),
+    ("A:(B:(C:Nil))", list id [con "A", con "B", con "C"]),
+    ("A:B:Nil", list id [con "A", con "B"]),
+    ("A:B:C:Nil", list id [con "A", con "B", con "C"]),
+    ("A:B:C:D:Nil", list id [con "A", con "B", con "C", con "D"]),
     ("A:B:xs", app cons [con "A", app cons [con "B", Var "xs"]]),
     ("let c=case n of Z->A;S m->B; in c",
       Let "c" (Case (Var "n") [
@@ -82,7 +83,7 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
       ]) (Var "c")),
     ("case var of True -> False;",
       Case (Var "var") [
-        (Pat "True" [], con "False")
+        (Pat "True" [], false)
       ]),
     ("case var of Cons x_ xs_ -> xs_;",
       Case (Var "var") [
@@ -92,15 +93,15 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
       Case (Var "var") [
         (Pat "Cons" ["x'", "xs'"], Var "xs'")
       ]),
-    ("case var of T -> F; F -> T;",
+    ("case var of True -> False; False -> True;",
       Case (Var "var") [
-        (Pat "T" [], con "F"),
-        (Pat "F" [], con "T")
+        (Pat "True" [], false),
+        (Pat "False" [], true)
       ]),
-    ("case xs of T -> F; F -> T; Just n -> m;",
+    ("case xs of True -> False; False -> True; Just n -> m;",
       Case (Var "xs") [
-        (Pat "T" [], con "F"),
-        (Pat "F" [], con "T"),
+        (Pat "True" [], false),
+        (Pat "False" [], true),
         (Pat "Just" ["n"], Var "m")
       ])
   ]

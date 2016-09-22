@@ -6,7 +6,7 @@ module Expr (
   Expr(Var, Con, Lam, Let, App, Case), Var, Tag, Pat (Pat),
   con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
-  zero, suc, nil, cons, nat, list
+  true, false, zero, suc, nil, cons, bool, nat, list
 ) where
 
 import Data.Maybe (fromMaybe)
@@ -134,24 +134,37 @@ alpha = doAlpha 0
 
 -- | Some common used expressions for easy write of expressions.
 -- | These expressions are pretty printed accordingly.
-zero, suc, nil, cons :: Expr
+true, false, zero, suc, nil, cons :: Expr
+true = con "True"
+false = con "False"
 zero = con "Zero"
 suc = con "Succ"
 nil = con "Nil"
 cons = con "Cons"
 
--- | Converts a Haskell Int to an Expr.
--- | The resulting Expr uses the constructor zero and suc.
+{-|
+  Converts a Haskell Bool to an Expr.
+  The resulting Expr uses the constructor true and false.
+-}
+bool :: Bool -> Expr
+bool b = if b then true else false
+
+{-|
+  Converts a Haskell Int to an Expr.
+  The resulting Expr uses the constructor zero and suc.
+-}
 nat :: Int -> Expr
 nat n = if n > 0 then App suc (nat (n - 1)) else zero
 
--- | Given a list of Expr (of the same type), returns an Expr representing
--- | that list.
--- | The resulting Expr uses the constructors nil and cons.
-list :: [Expr] -> Expr
-list xs = case xs of
+{-|
+  Given a way to construct expressions from a type,
+  and a list of that type, returns an Expr representing that list.
+  The resulting Expr uses the constructors nil and cons.
+-}
+list :: (a -> Expr) -> [a] -> Expr
+list f xs = case xs of
   [] -> nil
-  (x':xs') -> app cons [x', list xs']
+  (x':xs') -> app cons [f x', list f xs']
 
 instance Show Expr where
   show = show' False
