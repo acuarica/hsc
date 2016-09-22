@@ -1,0 +1,10 @@
+
+let append={xs->{ys->case xs of
+  Nil -> ys;
+  Cons x' xs' -> Cons x' (append xs' ys);
+}} in
+let reverse={rs-> case rs of
+  Nil->Nil;
+  Cons r' rs'->append (reverse rs') [r'];
+} in
+reverse zs

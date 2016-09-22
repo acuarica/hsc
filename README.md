@@ -62,7 +62,5 @@ Mention problem about using smallcheck related to depth.
   "better" than the input expression.
   What does "better" mean: How do we compare between two equivalent
   expressions for one better.
-* Power of Supercompiler for predicates: Check that the
-  result is always True, if it terminates.
 * Complete Haskell to Core implementation.
 * Fix Eval for normal form (Variable Capture)

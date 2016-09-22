@@ -23,12 +23,13 @@ let sorted = {xs->case xs of
   Cons x' xs' -> case xs' of
     Nil -> True;
     Cons x'' xs'' -> land (leqn x' x'') (sorted xs');;} in
-let put = {x->{xs-> case xs of
+let insertSorted = {x->{xs-> case xs of
   Nil -> Cons x Nil;
   Cons y ys -> case leqn x y of
     True -> Cons x (Cons y ys);
-    False -> Cons y (put x ys);;}} in
+    False -> Cons y (insertSorted x ys);;}} in
 let sort = {xs->case xs of
   Nil -> Nil;
   Cons y ys -> put y (sort ys);} in
-eqn (len (sort zs)) (len zs)
+--eqn (len (sort zs)) (len zs)
+eqn (len (insertSorted z zs)) (plus 1 (len zs))

@@ -42,10 +42,10 @@ testMatch2 = testGroup "match2 ~~>" $
   [
     ( (env, [], appVars (Var "map") ["inc", "zs"]),
       (env, [], appVars (Var "map") ["inc", "ys"]), True),
-    ( ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])),
+    ( ([], [], envExpr (env, [], appVars (Var "map") ["inc", "zs"])),
       (env, [], appVars (Var "map") ["inc", "ys"]), True),
     ( (env, [], appVars (Var "map") ["inc", "ys"]),
-      ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])), True),
+      ([], [], envExpr (env, [], appVars (Var "map") ["inc", "zs"])), True),
     ( (env, [], Con "Cons" [hgy, mhmg]),
       (env, [], Con "Cons" [hgy, mhmg]), True),
     ( (env, [], parseExpr "case Cons (g y) (map g ys) of Nil->[];Cons y ys->Cons (h y) (map h ys);"),
@@ -53,22 +53,6 @@ testMatch2 = testGroup "match2 ~~>" $
   ]
   where mhmg = app (Var "map") [Var "h", appVars (Var "map") ["g", "ys"]]
         hgy = App (Var "h") $ App (Var "g") (Var "y")
-
--- $m_4 ($m_1 $m_2):map $m_4 (map $m_1 $m_3)
--- $m_1 ($m_2 $m_3):map $m_1 (map $m_2 $m_4)
-testTextualMatch :: TestTree
-testTextualMatch = testGroup "matchTextual ~~>" $
-  map (\(l,r,v) ->
-    testCase (show l ++ " =~= " ++ show "") $
-      l `textualMatch` r @?= v)
-  [
-    ( (env, [], appVars (Var "map") ["inc", "zs"]),
-      (env, [], appVars (Var "map") ["inc", "ys"]), True),
-    ( ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])),
-      (env, [], appVars (Var "map") ["inc", "ys"]), True),
-    ( (env, [], appVars (Var "map") ["inc", "ys"]),
-      ([], [], envToLet env (appVars (Var "map") ["inc", "zs"])), True)
-  ]
 
 env :: Env
 env = map (second parseExpr)
@@ -82,6 +66,5 @@ main = defaultMain $
   testGroup "Supercompiler: match, supercompile/eval"
     [
       testMatch,
-      testMatch2--,
-      --testTextualMatch
+      testMatch2
     ]

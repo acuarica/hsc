@@ -1,5 +1,5 @@
 
-module Main where
+module Main (main) where
 
 import Data.List (intercalate, isPrefixOf)
 import Data.Char (isSpace)
@@ -9,20 +9,17 @@ import System.FilePath (takeExtension)
 import Text.Printf (printf)
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
-import Expr --(Expr(Var, Let), Var)
+import Expr (Expr(Var, Con, Let), Var)
 import Parser (parseExpr)
-import Eval (Conf, eval, emptyEnv, newConf, toExpr, step)
-import Splitter --(Node, Label)
-import Supercompiler -- (Hist, supercompile, runMemo)
+import Splitter (Node(VarNode, ArgNode, ConNode, CaseNode))
+import Supercompiler (Hist, supercompileMemo)
 import HSE (fromHSE)
 
 usage :: String
 usage = "Usage: hsc <haskell-file.hs | expr-file.expr>"
 
-fromFileName :: FilePath -> String -> FilePath
-fromFileName fileName ext = fileName ++ "." ++ ext
-
--- \\tgraph [ordering=out]\n\
+makeName :: FilePath -> String -> FilePath
+makeName fileName ext = fileName ++ "." ++ ext
 
 makeDot :: String -> Var -> Hist -> String
 makeDot caption var0 (es, vs) = printf
@@ -36,8 +33,9 @@ makeDot caption var0 (es, vs) = printf
   \%s\n\
   \%s\
   \}\n"
-  caption var0 (foldr ((++) . dotEdge) "" es) (foldr ((++) . dotNode) "" vs)
+  caption var0 (cc dotEdge es) (cc dotNode vs)
   where
+    cc d = foldr ((++) . d) ""
     dotEdge (parentVar, label, var, fv, conf) =
       printf "\t\"%s\":\"%s\" -> \"%s\"\n"
         parentVar (show label) var
@@ -51,8 +49,12 @@ makeDot caption var0 (es, vs) = printf
               "|{" ++
               let (Con tag vs) = expr in
               intercalate "|"
-                (zipWith (\v i -> port (tag ++"_"++show i) (show v)) vs [1..length vs] ) ++"}")
-            CaseNode -> ("case " ++ show expr ++ " of", "|{" ++ intercalate "|" (map (\l-> port (show l) (show l)) (fst (unzip sps))) ++ "}") in
+                (zipWith (\v i ->
+                  port (tag ++"_"++show i) (show v)) vs [1..length vs] )
+                ++"}")
+            CaseNode -> ("case " ++ show expr ++ " of", "|{" ++
+              intercalate "|" (map (\l->
+                port (show l) (show l)) (fst (unzip sps))) ++ "}") in
       printf "\t\"%s\" [label=\"{{%s|%s}|%s%s}\"]\n"
         var var (unwords fvs) pnode ports
 
@@ -75,16 +77,12 @@ caption :: Expr -> String
 caption (Let var valexpr inexpr) = caption inexpr
 caption expr = show expr
 
-writeFileWithLog :: FilePath -> String -> IO ()
-writeFileWithLog fileName content =
+writeFileLog :: FilePath -> String -> IO ()
+writeFileLog fileName content =
   do
     putStrLn $ "[Writing " ++ fileName ++ "]"
     writeFile fileName content
     return ()
-
---tag :: Int -> Expr -> Expr
---tag n = case
-
 
 main :: IO ()
 main = do
@@ -94,17 +92,17 @@ main = do
       putStrLn usage
       exitFailure
     else do
-      let fileName = head args
-      let ext = takeExtension fileName
-      putStrLn $ "[Supercompiling " ++ fileName ++ "]"
-      content <- readFile fileName
+      let fname = head args
+      let ext = takeExtension fname
+      putStrLn $ "[Supercompiling " ++ fname ++ "]"
+      content <- readFile fname
       let noComment = not . isPrefixOf "--" . dropWhile isSpace
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
-      let (sexpr, rm@((var0, expr0), (hist, _))) = supercompileWithMemo expr
+      let (sexpr, rm@((v0, e0), (h, _))) = supercompileMemo expr
 
-      writeFileWithLog (fromFileName fileName "hist") (show rm)
-      writeFileWithLog (fromFileName fileName "sexpr") (pprint sexpr)
-      writeFileWithLog (fromFileName fileName "dot") (makeDot (caption expr) var0 hist)
+      writeFileLog (makeName fname "hist") (show rm)
+      writeFileLog (makeName fname "sexpr") (pprint sexpr)
+      writeFileLog (makeName fname "dot") (makeDot (caption expr) v0 h)
 
       return ()
