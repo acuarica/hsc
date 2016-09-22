@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 
+-- | The Expr module defines the type Expr, the core type of the language.
+-- | It also contains functions to easily manipulate Expr expressions.
 module Expr (
-  Expr(Var, Con, Lam, Let, App, Case), Var, Pat (Pat),
+  Expr(Var, Con, Lam, Let, App, Case), Var, Tag, Pat (Pat),
   con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
   zero, suc, nil, cons, nat, list
@@ -138,9 +140,14 @@ suc = con "Succ"
 nil = con "Nil"
 cons = con "Cons"
 
+-- | Converts a Haskell Int to an Expr.
+-- | The resulting Expr uses the constructor zero and suc.
 nat :: Int -> Expr
 nat n = if n > 0 then App suc (nat (n - 1)) else zero
 
+-- | Given a list of Expr (of the same type), returns an Expr representing
+-- | that list.
+-- | The resulting Expr uses the constructors nil and cons.
 list :: [Expr] -> Expr
 list xs = case xs of
   [] -> nil

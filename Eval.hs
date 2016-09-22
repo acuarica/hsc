@@ -1,7 +1,9 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
+-- | The Eval module defines the operational semantics of the core
+-- | language.
 module Eval (
-  Conf, Env, StackFrame(Arg, Alts, Update),
+  Conf, Env, Stack, StackFrame(Arg, Alts, Update),
   eval, whnf, emptyEnv, newConf, toExpr, nf, reduce, put, step
 ) where
 
@@ -19,7 +21,7 @@ type Env = [(Var, Expr)]
 -- | Stack for application calls.
 type Stack = [StackFrame]
 
--- Stack frame for stack.
+-- | Stack frame for stack.
 data StackFrame
   = Arg Expr
   | Alts [(Pat, Expr)]

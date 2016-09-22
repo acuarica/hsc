@@ -1,21 +1,19 @@
 
+-- | The Splitter is in charge of split a stucked expression.
 module Splitter (
-    Node(VarNode, ArgNode, ConNode, CaseNode),
-    Label(PatLabel, ConLabel),
-    split
-  ) where
+  Node(VarNode, ArgNode, ConNode, CaseNode), Label(PatLabel, ConLabel),
+  split
+) where
 
-import Expr --(Expr(Var, Con, Lam, App), Pat(Pat), con, appVars, subst)
-import Eval --(Conf, StackFrame(Arg, Alts), newConf, toExpr, reduce)
-import Match (toLambda)
-import Data.Maybe
+import Control.Arrow (second)
 
--- |
--- |
+import Expr (Expr(Var, Con), Pat(Pat), con, appVars, subst, substAlts)
+import Eval (Conf, StackFrame(Arg, Alts), newConf)
+
+-- | Represents where the expression has been stucked.
 data Node = VarNode | ArgNode | ConNode | CaseNode deriving Show
 
--- |
--- |
+-- | Represents how an expression connects to all its splitted childs.
 data Label = PatLabel Pat | ConLabel String | ArgLabel
 
 instance Show Label where
@@ -32,15 +30,14 @@ split s@(env, stack, expr) = case expr of
     Arg arg:stack' -> (ArgNode, [(ArgLabel, (env, stack', arg))])
     Alts alts:stack' -> (CaseNode,
       map (\(Pat tag vars, alt) ->
-        --let cVar v i = "$" ++ var ++ "_"++ show i ++ "_" ++ v in
-        let cVar v i = "$" ++ var ++ "_" ++ v in
-        --let cVar v i = v in
-        let cVars = zipWith cVar vars [1..length vars] in
+        let cVar v = "$" ++ var ++ "_" ++ v in
+        let cVars = map cVar vars in
         let repl = zip vars (map Var cVars) in
         let cc = appVars (con tag) cVars in
         let altExpr = subst (var, cc) $ substAlts repl alt in
         let altFrame frame = (case frame of
-              Alts alts' -> Alts (map (\(p,e)->(p,subst (var, cc) e)) alts') ) in
+              Alts alts' ->
+                Alts (map (second (subst (var, cc))) alts') ) in
         let altStack = map altFrame stack' in
         let altConf = (env, altStack, altExpr) in
         (PatLabel (Pat tag cVars), altConf) ) alts)
@@ -48,5 +45,6 @@ split s@(env, stack, expr) = case expr of
   Con tag args -> case stack of
     [] -> (ConNode,
       map (\(i, e)->
-        (ConLabel $ tag ++ "_" ++ show i, newConf env e)) (zip [1..length args] args))
+        (ConLabel $ tag ++ "_" ++ show i, newConf env e))
+          (zip [1..length args] args))
     _ -> error $ "Spliting with Con and stack: " ++ show stack

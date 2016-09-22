@@ -1,6 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Supercompiler where
+-- | Defines the Supercompiler based on the operational semantics of the
+-- | language using Eval.
+module Supercompiler (
+  Hist, HistNode, HistEdge, supercompile, supercompileMemo
+) where
 
 import Data.List (intercalate, union)
 import Data.Maybe (isNothing, fromJust)
@@ -8,7 +12,7 @@ import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 
 import Expr (
-  Expr(..), Var, Pat(Pat),
+  Expr(Var, Con, Let, Case), Var, Pat(Pat),
   app, appVars, isVar, isEmptyCon, freeVars)
 import Eval (
   Conf, Env, StackFrame(Arg, Alts, Update),
@@ -17,21 +21,24 @@ import Splitter (
   Node(VarNode, ArgNode, ConNode, CaseNode),
   Label(PatLabel, ConLabel),
   split)
-import Simplifier (freduce, simp)
-import Match -- (match, toLambda, envExpr)
+import Match (match, match', toLambda, envExpr, freduce)
 
+-- | Supercompiles an Expr.
 supercompile :: Expr -> Expr
-supercompile = fst . supercompileWithMemo
+supercompile = fst . supercompileMemo
 
-supercompileWithMemo :: Expr -> (Expr, ((Var, Expr), (Hist, Env)))
-supercompileWithMemo expr =
+-- | Supercompiles an Expr, and also returns the memo.
+supercompileMemo :: Expr -> (Expr, ((Var, Expr), (Hist, Env)))
+supercompileMemo expr =
   let rm = runMemo expr in
   let gp ((_, expr0), (_, prom)) = fromMemo prom expr0 in
   (gp rm, rm)
 
+-- | Rebuilds an expression from the promises.
 fromMemo [] expr0 = expr0
 fromMemo ((var, expr):prom) expr0 = Let var expr (fromMemo prom expr0)
 
+-- | Runs the state machine for memo/hist.
 runMemo :: Expr -> ((Var, Expr), (Hist, Env))
 runMemo expr = runState s (([], []), [])
   where s = memo (newConf emptyEnv expr)
@@ -42,7 +49,7 @@ memo :: Conf -> Memo (Var, Expr)
 memo conf@(env, stack, expr) =
   do
   next <- getNext
-  if next > 100 then return ("??", expr) else --error "100 iterations, implement termination" else
+  if next > 10 then return ("??", expr) else
     do
     ii <- isin conf
     if isNothing ii
@@ -52,7 +59,6 @@ memo conf@(env, stack, expr) =
         let fv = fvs rconf
         --let fv = fvs conf
         v <- recVertex fv node rconf sps
-        --v <- rec parentVar label fv node rconf (snd $ unzip sps)
 
         splits' <- mapM (memo . snd) sps
         let (childVars, splits) = unzip splits'
@@ -78,20 +84,17 @@ memo conf@(env, stack, expr) =
         --return (var, appVars (Var var) (fvs conf))
   where fvs = freeVars . envExpr
 
-type HistEdge = (Var, Label, Var, [Var], Conf)
-
+-- | Represents a node in the history graph.
 type HistNode = (Var, [Var], Node, Conf, [(Label, Conf)])
 
+-- | Represents an edge in the history graph.
+type HistEdge = (Var, Label, Var, [Var], Conf)
+
+-- | Represents the history graph of memoized expression being
+-- | supercompiled.
 type Hist = ([HistEdge], [HistNode])
 
 type Memo a = State (Hist, Env) a
-
--- rec :: Var -> Label -> [Var] -> Node -> Conf -> [Conf] -> Memo Var
--- rec parentVar label fv node conf sps = state $ \((es, vs), prom) ->
---   let var = "$v_" ++ show (length vs) in
---   let edge = (parentVar, label, var, fv, conf) in
---   let vertex = (var, fv, node, conf, sps) in
---     (var, ((edge:es, vertex:vs), prom))
 
 recVertex :: [Var] -> Node -> Conf -> [(Label, Conf)] -> Memo Var
 recVertex fv node conf sps = state $ \((es, vs), prom) ->
@@ -119,9 +122,12 @@ lookupMatch [] _ = Nothing
 lookupMatch ((var, vars, node, conf', sps):hist) conf =
   if match conf conf'
     then if False --fvs (reduce conf) /= fvs (reduce conf')
-      then error $ show (fvs $ reduce conf) ++ show (fvs $ reduce conf') ++ "\n" ++ show conf ++ "\n"++ show conf' ++ "\n" ++
+      then error $ show (fvs $ reduce conf) ++
+        show (fvs $ reduce conf') ++ "\n" ++
+        show conf ++ "\n"++ show conf' ++ "\n" ++
         show (match' conf) ++ "\n" ++ show (match' conf') ++ "\n" ++
-        show (freeVars $ match' conf) ++ "\n" ++ show (freeVars $ match' conf')
+        show (freeVars $ match' conf) ++ "\n" ++
+        show (freeVars $ match' conf')
       else Just (var, vars)
     else lookupMatch hist conf
   where fvs = freeVars . envExpr
