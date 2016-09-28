@@ -1,14 +1,35 @@
 
+let land = {x->{y-> case x of
+  False -> False;
+  True -> y;
+}} in
 let eqn={n->{m->case n of
-  Z -> case m of
-    Z -> True;
-    S m' -> False;;
-  S n' -> case m of
-    Z -> False;
-    S m' -> eqn n' m';;
+  Zero -> case m of
+    Zero -> True;
+    Succ m' -> False;;
+  Succ n' -> case m of
+    Zero -> False;
+    Succ m' -> eqn n' m';;
   }} in
 let plus={n->{m->case n of
-    Z -> m;
-    S n' -> S (plus n' m);
+    Zero -> m;
+    Succ n' -> Succ (plus n' m);
   }} in
-eqn x (S (S (S (S (S Z)))))
+let inc={n->Succ n} in
+let map={f->{xs->case xs of
+  Nil -> Nil;
+  Cons x' xs' -> Cons (f x') (map f xs');
+}} in
+let eql={xs->{ys->case xs of
+  Nil -> case ys of
+    Nil -> True;
+    Cons y' ys' -> False;;
+  Cons x' xs' -> case ys of
+    Nil -> False;
+    Cons y' ys' -> land (eqn x' y') (eql xs' ys');;
+}} in
+--eqn x 5
+--eqn 8 (plus 5 x)
+eqn 3 (plus x y)
+--eqn 5 x
+-- eql [1,2,3] zs -- need to implement generalization.

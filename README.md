@@ -47,6 +47,7 @@ cabal run test-expr
 cabal run test-parser
 cabal run test-eval
 cabal run test-splitter
+cabal run test-match
 cabal run test-supercompiler
 ```
 

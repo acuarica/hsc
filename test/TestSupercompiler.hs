@@ -8,7 +8,7 @@ import Test.Tasty.HUnit (testCase, assertBool)
 import Expr (Expr(Var, Con, Lam, Let, App, Case),
   app, nil, cons, bool, nat, list)
 import Parser (parseExpr)
-import Eval (eval)
+import Eval (eval, evalc)
 import Supercompiler (supercompile)
 
 supercompileWithPrelude :: String -> (Expr, Expr)
@@ -132,7 +132,9 @@ main = defaultMain $ testGroup "Supercompile Test" [
   where
     go e fexpr = let (expr, sexpr) = supercompileWithPrelude e in
       testProperty e $ (\cexpr ->
-        eval (cexpr sexpr) == eval (cexpr expr)) . fexpr
+        let (srexpr, ssteps) = evalc (cexpr sexpr) in
+        let (rexpr, steps) = evalc (cexpr expr) in
+        srexpr == rexpr && ssteps <= steps) . fexpr
     goPred exprText fexpr =
       let (expr, sexpr) = supercompileWithPrelude exprText in
       testGroup exprText [

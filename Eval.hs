@@ -1,13 +1,16 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
--- | The Eval module defines the operational semantics of the core
--- | language.
+{-|
+  The Eval module defines the operational semantics of the core language.
+-}
 module Eval (
   Conf, Env, Stack, StackFrame(Arg, Alts, Update),
-  eval, whnf, emptyEnv, newConf, toExpr, nf, reduce, put, step
+  eval, whnf, evalc, whnfc, emptyEnv, newConf, toExpr,
+  nf, nfc, reduce, reducec, put, step
 ) where
 
 import Data.List (intercalate, delete)
+import Control.Arrow (first)
 
 import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Pat(Pat),
   subst, substAlts, lookupAlt, freeVars, alpha)
@@ -28,14 +31,30 @@ data StackFrame
   | Update Var
   deriving Eq
 
--- | Evaluates the given expression to Normal Form (NF).
--- | It uses alpha to avoid name capture.
+{-|
+  Evaluates the given expression to Normal Form (NF).
+  It uses alpha to avoid name capture.
+-}
 eval :: Expr -> Expr
 eval = toExpr . nf . newConf emptyEnv
 
 -- | Evaluates the given expression to Weak Head Normal Form (WHNF).
 whnf :: Expr -> Expr
 whnf = toExpr . reduce . newConf emptyEnv
+
+{-|
+  Same as 'whnf' but keeping track of the number of steps.
+  See 'reducec'.
+-}
+whnfc :: Expr -> (Expr, Int)
+whnfc = first toExpr . reducec . newConf emptyEnv
+
+{-|
+  Same as 'eval' but keeping track of the number of steps.
+  See 'nfc'.
+-}
+evalc :: Expr -> (Expr, Int)
+evalc = first toExpr . nfc . newConf emptyEnv
 
 -- | Creates an empty environment.
 emptyEnv :: Env
@@ -56,9 +75,11 @@ toExpr conf@(env, stack, expr) = go expr stack
         go expr (Alts alts:stack') = go (Case expr alts) stack'
         go expr (Update var:stack') = go (Let var expr (Var var)) stack'
 
--- | Reduce a state to Normal Form (NF).
--- | A normal form is either a constructor (Con) or
--- | lambda abstraction (Lam).
+{-|
+  Reduce a state to Normal Form (NF).
+  A normal form is either a constructor (Con) or
+  lambda abstraction (Lam).
+-}
 nf :: Conf -> Conf
 nf state = case reduce state of
   (env, [], Con tag args) ->
@@ -66,13 +87,40 @@ nf state = case reduce state of
   (_, _, Con _ _) -> error "Stack/Con"
   state' -> state'
 
--- | Reduce a conf. to Weak Head Normal Form (WHNF).
--- | Lambda abstractions are not further evaluated as in
--- | Head Normal Form (HNF).
+{-|
+  Same as nf but with step count.
+-}
+nfc :: Conf -> (Conf, Int)
+nfc conf = nfc' conf 0
+  where
+    nfc' conf steps = case reducec conf of
+      ((env, [], Con tag args), steps') ->
+        let (cargs, csteps) = unzip $
+              map (first toExpr . nfc . newConf env) args in
+        ((env, [], Con tag cargs), steps' + sum csteps)
+      ((_, _, Con _ _), _) -> error "Stack/Con"
+      (conf', steps') -> (conf', steps')
+
+{-|
+  Reduce a conf. to Weak Head Normal Form (WHNF).
+  Lambda abstractions are not further evaluated as in
+  Head Normal Form (HNF).
+-}
 reduce :: Conf -> Conf
 reduce conf = case step conf of
   Nothing -> conf
   Just conf' -> reduce conf'
+
+{-|
+  'reducec' reduces an expression like 'reduce',
+  but also keeps track of how many reduction steps were done.
+-}
+reducec :: Conf -> (Conf, Int)
+reducec conf = reducec' (conf, 0)
+  where reducec' (conf, steps) =
+          case step conf of
+            Nothing -> (conf, steps)
+            Just conf' -> reducec' (conf', steps + 1)
 
 -- | Puts var bind with expr in the given environment.
 put :: Var -> Expr -> Env -> Env
@@ -81,7 +129,9 @@ put var expr ((var',expr'):env) = if var' == var
   then (var,expr):env
   else (var',expr'):put var expr env
 
--- | Operational semantics with one-step reduction.
+{-|
+  Operational semantics with one-step reduction.
+-}
 step :: Conf -> Maybe Conf
 step (env, stack, expr) = case expr of
   Var var -> case lookup var env of
