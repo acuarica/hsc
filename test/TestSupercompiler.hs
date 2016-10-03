@@ -134,7 +134,8 @@ main = defaultMain $ testGroup "Supercompile Test" [
       testProperty e $ (\cexpr ->
         let (srexpr, ssteps) = evalc (cexpr sexpr) in
         let (rexpr, steps) = evalc (cexpr expr) in
-        srexpr == rexpr && ssteps <= steps) . fexpr
+        --srexpr == rexpr && ssteps <= steps) . fexpr
+        srexpr == rexpr) . fexpr
     goPred exprText fexpr =
       let (expr, sexpr) = supercompileWithPrelude exprText in
       testGroup exprText [
