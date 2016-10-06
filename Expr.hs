@@ -167,8 +167,10 @@ alpha = doAlpha 0
     letSubst var next = doAlpha (next+1) . subst (var, Var (nextVar next))
     nextVar next = "$l_" ++ show next
 
--- | Some common used expressions for easy write of expressions.
--- | These expressions are pretty printed accordingly.
+{-|
+  Some common used expressions for easy write of expressions.
+  These expressions are pretty printed accordingly.
+-}
 true, false, zero, suc, nil, cons :: Expr
 true = con "True"
 false = con "False"

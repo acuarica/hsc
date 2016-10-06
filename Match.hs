@@ -6,6 +6,8 @@ module Match (
   match, match', toLambda, envExpr, freduce, (|~~|), (|><|), (<|)
 ) where
 
+import Data.Maybe (fromJust)
+
 import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Subst, freeVars)
 import Eval (Env, Conf, StackFrame(Arg, Update),
   newConf, emptyEnv, toExpr, reduce)
@@ -89,24 +91,40 @@ match' lhs = toExpr lred
     llam  = toLambda lfv lexpr
     lred  = freduce (newConf emptyEnv llam)
 
+merge :: [Subst] -> [Subst] -> [Subst]
+merge [] ys = ys
+merge xs [] = xs
+merge (x:xs) (y:ys) = merge' x y ++ merge xs (y:ys)
+
+merge' (v1, e1) (v2, e2) = if v1 == v2
+  then fromJust $ e1 |~~| e2
+  else [(v1, e1)]
+
+uni :: [Expr] -> Maybe [Subst]
+uni [] = Just []
+uni [_] = Just []
+uni (x:y:xs) = merge <$> x |~~| y <*> uni (y:xs)
+
 (|~~|) :: Expr -> Expr -> Maybe [Subst]
 (|~~|) (Var v) (Var w) = Just $ if v == w then [] else [(v, Var w)]
 (|~~|) (Var v) e = if v `elem` freeVars e then Nothing else Just [(v, e)]
 (|~~|) e (Var v) = if v `elem` freeVars e then Nothing else Just [(v, e)]
-
--- (|~~|) (Con tag1 args1) (Con tag2 args2) =
---   if tag1 == tag2 && length args1 == length args2
---     then and (zipWith (|~~|) args1 args2)
---     else Nothing
+(|~~|) (Con tag1 args1) (Con tag2 args2) =
+  if tag1 == tag2 && length args1 == length args2
+    then and (zipWith (|~~|) args1 args2)
+    else Nothing
 (|~~|) (Lam v1 e1) (Lam v2 e2) = e1 |~~| e2
-(|~~|) (App f1 v1) (App f2 v2) = (++) <$> f1 |~~| f2 <*> f2 |~~| f2
+(|~~|) (Let v1 e1 b1) (Let v2 e2 b2) = merge <$> e1 |~~| e2 <*> b1 |~~| b2
+(|~~|) (App f1 v1) (App f2 v2) = merge <$> f1 |~~| f2 <*> v1 |~~| v2
 
 (|><|) :: Expr -> Expr -> (Expr, [(Var, Expr)], [(Var, Expr)])
 (|><|) (Var v) (Var w) = if v == w
   then (Var v, [], [])
-  else let newvar = "$x" in (Var newvar, [(newvar, Var v)], [(newvar, Var w)])
+  else let newvar = "$x" in
+    (Var newvar, [(newvar, Var v)], [(newvar, Var w)])
 -- msg (Con tag1 args1) (Con tag2 args2) =
---     tag1 == tag2 && length args1 == length args2 && and (zipWith (<|) args1 args2)
+--     tag1 == tag2 && length args1 == length args2 &&
+-- and (zipWith (<|) args1 args2)
 
 --(|><|) :: Expr -> Expr -> ?
 {-|
@@ -117,7 +135,8 @@ match' lhs = toExpr lred
 -- Coupling
 (<|) (Var _) (Var _) = True
 (<|) (Con tag1 args1) (Con tag2 args2) =
-  tag1 == tag2 && length args1 == length args2 && and (zipWith (<|) args1 args2)
+  tag1 == tag2 && length args1 == length args2 &&
+  and (zipWith (<|) args1 args2)
 (<|) (Lam _ e1) (Lam _ e2) = e1 <| e2
 (<|) (App f1 v1) (App f2 v2) = f1 <| f2 && v1 <| v2
 

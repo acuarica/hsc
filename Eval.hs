@@ -15,16 +15,24 @@ import Control.Arrow (first)
 import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Pat(Pat),
   subst, substAlts, lookupAlt, freeVars, alpha)
 
--- | Represents the configuration of the abstract machine.
+{-|
+  Represents the configuration of the abstract machine.
+-}
 type Conf = (Env, Stack, Expr)
 
--- | Environment that binds variables to values.
+{-|
+  Environment that binds variables to values.
+-}
 type Env = [(Var, Expr)]
 
--- | Stack for application calls.
+{-|
+  Stack for application calls.
+-}
 type Stack = [StackFrame]
 
--- | Stack frame for stack.
+{-|
+  Stack frame for stack.
+-}
 data StackFrame
   = Arg Expr
   | Alts [(Pat, Expr)]
@@ -38,7 +46,9 @@ data StackFrame
 eval :: Expr -> Expr
 eval = toExpr . nf . newConf emptyEnv
 
--- | Evaluates the given expression to Weak Head Normal Form (WHNF).
+{-|
+  Evaluates the given expression to Weak Head Normal Form (WHNF).
+-}
 whnf :: Expr -> Expr
 whnf = toExpr . reduce . newConf emptyEnv
 
@@ -56,18 +66,24 @@ whnfc = first toExpr . reducec . newConf emptyEnv
 evalc :: Expr -> (Expr, Int)
 evalc = first toExpr . nfc . newConf emptyEnv
 
--- | Creates an empty environment.
+{-|
+  Creates an empty environment.
+-}
 emptyEnv :: Env
 emptyEnv = []
 
--- | Given an environment,
--- | creates a new configuration with an empty stack.
+{-|
+  Given an environment,
+  creates a new configuration with an empty stack.
+-}
 newConf :: Env -> Expr -> Conf
 newConf env = (,,) env []
 
--- | Selects the expr from a given configuration:
--- | That is, it uses the expr and the stack.
--- | It does not use the environment.
+{-|
+  Selects the expr from a given configuration:
+  That is, it uses the expr and the stack.
+  It does not use the environment.
+-}
 toExpr :: Conf -> Expr
 toExpr conf@(env, stack, expr) = go expr stack
   where go expr [] = expr
@@ -122,7 +138,9 @@ reducec conf = reducec' (conf, 0)
             Nothing -> (conf, steps)
             Just conf' -> reducec' (conf', steps + 1)
 
--- | Puts var bind with expr in the given environment.
+{-|
+  Puts var bind with expr in the given environment.
+-}
 put :: Var -> Expr -> Env -> Env
 put var expr [] = [(var, expr)]
 put var expr ((var',expr'):env) = if var' == var
@@ -173,7 +191,7 @@ instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)
 
 instance {-# OVERLAPPING #-} Show (Var, Expr) where
-  show (var, expr) = var -- ++ "=" ++ show expr
+  show (var, expr) = var ++ "=" ++ show expr
 
 instance {-# OVERLAPPING #-} Show Stack where
   show stack = intercalate "|" (map ((++) " " . show) stack)

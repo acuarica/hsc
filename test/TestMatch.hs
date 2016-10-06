@@ -6,7 +6,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 import Control.Arrow (second)
 
-import Expr (Expr(Var, Con, App), app, appVars)
+import Expr (Expr(Var, Con, App), app, appVars, substAlts)
 import Parser (parseExpr)
 import Eval (Env, newConf, emptyEnv, eval)
 import Match (match, envExpr, (|~~|), (<|), (|><|))
@@ -113,24 +113,37 @@ msgTest = testGroup "msg ~~>" $
 
 uniTest :: TestTree
 uniTest = testGroup "uni ~~>" $
-  map (\(x,y,v) ->
+  map (\(x, y, s) ->
     testCase (x ++ " |~~| " ++ y) $
-      parseExpr x |~~| parseExpr y @?= v)
+      parseExpr x |~~| parseExpr y @?= s)
   [
-    ("x", "x", []),
-    ("x", "y", [("x", Var "y")])
-    -- ("x", "y", True),
-    -- ("f x", "f y", True),
-    -- ("f a b", "f c d", True),
-    -- ("f a a", "f b b", True),
-    -- ("[1,2,3,x]", "[1,2,3,y]", True),
-    -- --("Succ n", "{n->Succ n}", True),
-    -- ("b", "a b", True),
-    -- ("c b", "c (a b)", True),
-    -- ("d b b", "d (a b) (a b)", True),
-    -- ("a (c b)", "c b", False),
-    -- ("a (c b)", "c (a b)", False),
-    -- ("a (c b)", "a (a (a b))", False)
+    ("x", "x", Just []),
+    ("x", "y", Just [("x", Var "y")]),
+    ("f g", "a b",
+      Just [("f", parseExpr "a"), ("g", parseExpr "b")] ),
+    ("(f g) (a b)", "x y",
+      Just [("x", parseExpr "f g"), ("y", parseExpr "a b")] ),
+    ("(f g) (a b)", "x x",
+      Just [("x", parseExpr "f g"), ("x", parseExpr "a b")] )
+  ]
+
+uniTest' :: TestTree
+uniTest' = testGroup "uni ~~>" $
+  map (\(x, y, s) ->
+    testCase (x ++ " |~~| " ++ y) $
+      let xe = parseExpr x in
+      let ye = parseExpr y in
+      let (Just subst) = xe |~~| ye in
+        substAlts subst xe @?= substAlts subst ye)
+  [
+    ("x", "x", Just []),
+    ("x", "y", Just [("x", Var "y")]),
+    ("f g", "a b",
+      Just [("f", parseExpr "a"), ("g", parseExpr "b")] ),
+    ("(f g) (a b)", "x y",
+      Just [("x", parseExpr "f g"), ("y", parseExpr "a b")] ),
+    ("(f g) (a b)", "x x",
+      Just [("x", parseExpr "f g"), ("x", parseExpr "a b p")] )
   ]
 
 main :: IO ()
@@ -141,5 +154,6 @@ main = defaultMain $
       testMatch2,
       embTest,
       msgTest,
-      uniTest
+      uniTest,
+      uniTest'
     ]
