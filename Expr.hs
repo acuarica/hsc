@@ -1,9 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 
--- | The Expr module defines the type Expr, the core type of the language.
--- | It also contains functions to easily manipulate Expr expressions.
+{-|
+  The Expr module defines the type Expr, the core type of the language.
+  It also contains functions to easily manipulate Expr expressions.
+-}
 module Expr (
-  Expr(Var, Con, Lam, Let, App, Case), Var, Tag, Pat (Pat),
+  Expr(Var, Con, Lam, Let, App, Case), Var, Tag, Pat (Pat), Subst,
   con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
   true, false, zero, suc, nil, cons, bool, nat, list
@@ -13,7 +15,9 @@ import Data.Maybe (fromMaybe)
 import Data.List (nub, delete, (\\), union, intercalate)
 import Control.Arrow (second)
 
--- | The expression type.
+{-|
+  The expression type.
+-}
 data Expr
   = Var  Var
   | Con  Tag  [Expr]
@@ -23,46 +27,69 @@ data Expr
   | Case Expr [(Pat, Expr)]
   deriving Eq
 
--- | Represents identifier variable.
+{-|
+  Represents identifier variable.
+-}
 type Var = String
 
--- | Represents constructor name.
--- | Also called tag to be matched in case expressions.
+{-|
+  Represents constructor name.
+  Also called tag to be matched in case expressions.
+-}
 type Tag = String
 
--- | Case patterns against tag.
+{-|
+  Case patterns against tag.
+-}
 data Pat = Pat Tag [Var] deriving Eq
 
--- | Creates a constructor with the given tag.
+{-|
+  A substitution maps a variable to an expression.
+-}
+type Subst = (Var, Expr)
+
+{-|
+  Creates a constructor with the given tag.
+-}
 con :: Tag -> Expr
 con tag = Con tag []
 
--- | Application of args to expr.
+{-|
+  Applies the list of args to the given expr.
+-}
 app :: Expr -> [Expr] -> Expr
 app expr args = case args of
   [] -> expr
   arg:args' -> app (App expr arg) args'
 
--- | Application of variable names to an expression.
+{-|
+  Application of variable names to an expression.
+-}
 appVars :: Expr -> [Var] -> Expr
 appVars expr = app expr . map Var
 
--- | Returns True if expr is a variable.
--- | False otherwise.
+{-|
+  Returns True if expr is a variable.
+  False otherwise.
+-}
 isVar :: Expr -> Bool
 isVar (Var _) = True
 isVar _ = False
 
--- | Returns True if expr is a constructor with no arguments.
--- | False otherwise.
+{-|
+  Returns True if expr is a constructor with no arguments.
+  False otherwise.
+-}
 isEmptyCon :: Expr -> Bool
 isEmptyCon (Con _ []) = True
 isEmptyCon _ = False
 
--- | Variable substitution.
--- | It substitutes var in bodyexpr only if var is a free variable.
--- | It does not substitute bound variables.
-subst :: (Var, Expr) -> Expr -> Expr
+{-|
+  Variable substitution.
+  It substitutes var in bodyexpr only if var is a free variable.
+  It does not substitute bound variables.
+-}
+subst :: Subst -> Expr -> Expr
 subst (var, valexpr) bodyexpr = case bodyexpr of
   Var var' ->
     if var' == var
@@ -84,18 +111,24 @@ subst (var, valexpr) bodyexpr = case bodyexpr of
     goSubstAlt (Pat tag vars, altexpr) =
       (Pat tag vars, if var `elem` vars then altexpr else goSubst altexpr)
 
--- | Subtitutes a list of bindings in bodyexpr.
-substAlts :: [(Var, Expr)] -> Expr -> Expr
+{-|
+  Subtitutes a list of bindings in bodyexpr.
+-}
+substAlts :: [Subst] -> Expr -> Expr
 substAlts bindings bodyexpr = foldl (flip subst) bodyexpr bindings
 
--- | Lookup the alternative according to the constructor tag.
+{-|
+  Lookup the alternative according to the constructor tag.
+-}
 lookupAlt :: Tag -> [(Pat, Expr)] -> (Pat, Expr)
 lookupAlt tag ((Pat pattag patvars, expr):alts) = if pattag == tag
   then (Pat pattag patvars, expr)
   else lookupAlt tag alts
 lookupAlt tag [] = error $ "lookupAlt: " ++ tag
 
--- | Free variables of an expression.
+{-|
+  Free variables of an expression.
+-}
 freeVars :: Expr -> [Var]
 freeVars expr = case expr of
   Var var -> [var]
@@ -107,12 +140,14 @@ freeVars expr = case expr of
   Case scexpr alts -> nub (freeVars scexpr ++
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
 
--- | Alpha renaming of bound variables.
--- | This property comes handy when evaluating to Normal Form,
--- | since it avoids name capture.
--- | Forward usage:
--- |   let a=c in let b=c in let c=X in a
--- | NOTE: Implementation not finished: Con/Case left to implement.
+{-|
+  Alpha renaming of bound variables.
+  This property comes handy when evaluating to Normal Form,
+  since it avoids name capture.
+  Forward usage:
+    let a=c in let b=c in let c=X in a
+    NOTE: Implementation not finished: Con/Case left to implement.
+-}
 alpha :: Expr -> Expr
 alpha = doAlpha 0
   where

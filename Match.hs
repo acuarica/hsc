@@ -1,12 +1,18 @@
 
--- | The Match module defines how two expressions are equivalent.
-module Match (match, match', toLambda, envExpr, freduce) where
+{-|
+  The Match module defines how two expressions are equivalent.
+-}
+module Match (
+  match, match', toLambda, envExpr, freduce, (|~~|), (|><|), (<|)
+) where
 
-import Expr (Expr(Var, Lam, Let), Var, freeVars)
+import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Subst, freeVars)
 import Eval (Env, Conf, StackFrame(Arg, Update),
   newConf, emptyEnv, toExpr, reduce)
 
--- | freduce reduce also reduces lambda with no arguments.
+{-|
+  freduce reduce also reduces lambda with no arguments.
+-}
 freduce :: Conf -> Conf
 freduce = freduce' 1
   where
@@ -29,27 +35,35 @@ freduce = freduce' 1
 --   where al als (Pat tag vars, altexpr) = (Pat tag vars,
 -- Case altexpr als)
 
--- | Given an Env and an Expr, returns an Expr that includes the Env
--- | by using Let.
+{-|
+  Given an Env and an Expr, returns an Expr that includes the Env
+  by using Let.
+-}
 envToLet :: Env -> Expr -> Expr
 envToLet [] expr = expr
 envToLet ((var, valexpr):env) expr = Let var valexpr (envToLet env expr)
 
--- | Given a Conf, returns the equivalent Expr like toExpr, but also
--- | using the Env.
+{-|
+  Given a Conf, returns the equivalent Expr like toExpr,
+  but also using the Env.
+-}
 envExpr :: Conf -> Expr
 envExpr conf@(env, _, _) = rebuildEnv env (toExpr conf)
   where rebuildEnv [] expr = expr
         rebuildEnv ((var,valexpr):env) expr =
           Let var valexpr (rebuildEnv env expr)
 
--- | Given a list of Var, creates a Lam expression where the variables
--- | becomes arguments of the Lam.
+{-|
+  Given a list of Var, creates a Lam expression where the variables
+  becomes arguments of the Lam.
+-}
 toLambda :: [Var] -> Expr -> Expr
 toLambda vs expr = foldr Lam expr vs
 
--- | Not alpha-equivalence. Free variables equivalence.
--- | Implementation not nice, but nices.
+{-|
+  Not alpha-equivalence. Free variables equivalence.
+  Implementation not nice, but nices.
+-}
 match :: Conf -> Conf -> Bool
 match lhs rhs =
   toExpr lred == toExpr rred
@@ -63,8 +77,10 @@ match lhs rhs =
     lred  = freduce (newConf emptyEnv llam)
     rred  = freduce (newConf emptyEnv rlam)
 
--- | What match is doing, but only for one expression.
--- | Not used in match.
+{-|
+  What match is doing, but only for one expression.
+  Not used in match.
+-}
 match' :: Conf -> Expr
 match' lhs = toExpr lred
   where
@@ -72,3 +88,40 @@ match' lhs = toExpr lred
     lfv   = freeVars lexpr
     llam  = toLambda lfv lexpr
     lred  = freduce (newConf emptyEnv llam)
+
+(|~~|) :: Expr -> Expr -> Maybe [Subst]
+(|~~|) (Var v) (Var w) = Just $ if v == w then [] else [(v, Var w)]
+(|~~|) (Var v) e = if v `elem` freeVars e then Nothing else Just [(v, e)]
+(|~~|) e (Var v) = if v `elem` freeVars e then Nothing else Just [(v, e)]
+
+-- (|~~|) (Con tag1 args1) (Con tag2 args2) =
+--   if tag1 == tag2 && length args1 == length args2
+--     then and (zipWith (|~~|) args1 args2)
+--     else Nothing
+(|~~|) (Lam v1 e1) (Lam v2 e2) = e1 |~~| e2
+(|~~|) (App f1 v1) (App f2 v2) = (++) <$> f1 |~~| f2 <*> f2 |~~| f2
+
+(|><|) :: Expr -> Expr -> (Expr, [(Var, Expr)], [(Var, Expr)])
+(|><|) (Var v) (Var w) = if v == w
+  then (Var v, [], [])
+  else let newvar = "$x" in (Var newvar, [(newvar, Var v)], [(newvar, Var w)])
+-- msg (Con tag1 args1) (Con tag2 args2) =
+--     tag1 == tag2 && length args1 == length args2 && and (zipWith (<|) args1 args2)
+
+--(|><|) :: Expr -> Expr -> ?
+{-|
+  Homeomorphic Embedding relation.
+  Given two expressions e1, e2, we say `e1 <| e2` (e1 is embedded in e2).
+ -}
+(<|) :: Expr -> Expr -> Bool
+-- Coupling
+(<|) (Var _) (Var _) = True
+(<|) (Con tag1 args1) (Con tag2 args2) =
+  tag1 == tag2 && length args1 == length args2 && and (zipWith (<|) args1 args2)
+(<|) (Lam _ e1) (Lam _ e2) = e1 <| e2
+(<|) (App f1 v1) (App f2 v2) = f1 <| f2 && v1 <| v2
+
+-- Diving
+(<|) e1 (App _ e2) = e1 <| e2
+--emb (App _ _) (App _ _) =
+(<|) _ _ = False

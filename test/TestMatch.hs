@@ -9,7 +9,7 @@ import Control.Arrow (second)
 import Expr (Expr(Var, Con, App), app, appVars)
 import Parser (parseExpr)
 import Eval (Env, newConf, emptyEnv, eval)
-import Match
+import Match (match, envExpr, (|~~|), (<|), (|><|))
 
 testMatch :: TestTree
 testMatch = testGroup "match1 ~~>" $
@@ -45,10 +45,14 @@ testMatch2 = testGroup "match2 ~~>" $
     ( ([], [], envExpr (env, [], appVars (Var "map") ["inc", "zs"])),
       (env, [], appVars (Var "map") ["inc", "ys"]), True),
     ( (env, [], appVars (Var "map") ["inc", "ys"]),
-      ([], [], envExpr (env, [], appVars (Var "map") ["inc", "zs"])), True),
+      ([], [],
+        envExpr (env, [], appVars (Var "map") ["inc", "zs"])), True),
     ( (env, [], Con "Cons" [hgy, mhmg]),
       (env, [], Con "Cons" [hgy, mhmg]), True),
-    ( (env, [], parseExpr "case Cons (g y) (map g ys) of Nil->[];Cons y ys->Cons (h y) (map h ys);"),
+    ( (env, [], parseExpr
+      "case Cons (g y) (map g ys) of \
+      \  Nil->[];\
+      \  Cons y ys->Cons (h y) (map h ys);"),
       (env, [], Con "Cons" [hgy, mhmg]), True)
   ]
   where mhmg = app (Var "map") [Var "h", appVars (Var "map") ["g", "ys"]]
@@ -58,7 +62,75 @@ env :: Env
 env = map (second parseExpr)
   [
   ("inc", "{n->Succ n}"),
-  ("map", "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
+  ("map",
+    "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
+  ]
+
+
+embTest :: TestTree
+embTest = testGroup "emb ~~>" $
+  map (\(x,y,v) ->
+    testCase (x ++ " <| " ++ y) $
+      parseExpr x <| parseExpr y @?= v)
+  [
+    ("x", "x", True),
+    ("x", "y", True),
+    ("f x", "f y", True),
+    ("f a b", "f c d", True),
+    ("f a a", "f b b", True),
+    ("[1,2,3,x]", "[1,2,3,y]", True),
+    --("Succ n", "{n->Succ n}", True),
+    ("b", "a b", True),
+    ("c b", "c (a b)", True),
+    ("d b b", "d (a b) (a b)", True),
+    ("a (c b)", "c b", False),
+    ("a (c b)", "c (a b)", False),
+    ("a (c b)", "a (a (a b))", False)
+  ]
+
+
+msgTest :: TestTree
+msgTest = testGroup "msg ~~>" $
+  map (\(x,y,v) ->
+    testCase (x ++ " |><| " ++ y) $
+      parseExpr x |><| parseExpr y @?= v)
+  [
+    ("x", "x", (Var "x", [], [])),
+    ("x", "y", (Var "$x", [("$x", Var "x")], [("$x", Var "y")]))
+    -- ("x", "y", True),
+    -- ("f x", "f y", True),
+    -- ("f a b", "f c d", True),
+    -- ("f a a", "f b b", True),
+    -- ("[1,2,3,x]", "[1,2,3,y]", True),
+    -- --("Succ n", "{n->Succ n}", True),
+    -- ("b", "a b", True),
+    -- ("c b", "c (a b)", True),
+    -- ("d b b", "d (a b) (a b)", True),
+    -- ("a (c b)", "c b", False),
+    -- ("a (c b)", "c (a b)", False),
+    -- ("a (c b)", "a (a (a b))", False)
+  ]
+
+uniTest :: TestTree
+uniTest = testGroup "uni ~~>" $
+  map (\(x,y,v) ->
+    testCase (x ++ " |~~| " ++ y) $
+      parseExpr x |~~| parseExpr y @?= v)
+  [
+    ("x", "x", []),
+    ("x", "y", [("x", Var "y")])
+    -- ("x", "y", True),
+    -- ("f x", "f y", True),
+    -- ("f a b", "f c d", True),
+    -- ("f a a", "f b b", True),
+    -- ("[1,2,3,x]", "[1,2,3,y]", True),
+    -- --("Succ n", "{n->Succ n}", True),
+    -- ("b", "a b", True),
+    -- ("c b", "c (a b)", True),
+    -- ("d b b", "d (a b) (a b)", True),
+    -- ("a (c b)", "c b", False),
+    -- ("a (c b)", "c (a b)", False),
+    -- ("a (c b)", "a (a (a b))", False)
   ]
 
 main :: IO ()
@@ -66,5 +138,8 @@ main = defaultMain $
   testGroup "Supercompiler: match, supercompile/eval"
     [
       testMatch,
-      testMatch2
+      testMatch2,
+      embTest,
+      msgTest,
+      uniTest
     ]
