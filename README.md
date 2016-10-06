@@ -65,4 +65,11 @@ Mention problem about using smallcheck related to depth.
   expressions for one better.
 * Complete Haskell to Core implementation.
 * Fix Eval for normal form (Variable Capture)
+
+## Proposal
+
+* What's the research question? (for Supercompilation)
+* Parser combinator with supercompilation.
+* Rewrite rules or supercompilation?
+* Write down a proposal to convince Nate that supercompilation works.
 * Type-checking by Supercompilation.

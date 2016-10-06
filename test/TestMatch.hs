@@ -130,10 +130,10 @@ uniTest = testGroup "uni ~~>" $
 uniTest' :: TestTree
 uniTest' = testGroup "uni ~~>" $
   map (\(x, y, s) ->
-    testCase (x ++ " |~~| " ++ y) $
-      let xe = parseExpr x in
-      let ye = parseExpr y in
-      let (Just subst) = xe |~~| ye in
+    let xe = parseExpr x in
+    let ye = parseExpr y in
+    let (Just subst) = xe |~~| ye in
+      testCase (x ++ " |~~| " ++ y ++ show subst) $
         substAlts subst xe @?= substAlts subst ye)
   [
     ("x", "x", Just []),
@@ -143,7 +143,12 @@ uniTest' = testGroup "uni ~~>" $
     ("(f g) (a b)", "x y",
       Just [("x", parseExpr "f g"), ("y", parseExpr "a b")] ),
     ("(f g) (a b)", "x x",
-      Just [("x", parseExpr "f g"), ("x", parseExpr "a b p")] )
+      Just [("x", parseExpr "f g"), ("x", parseExpr "a b p")] ),
+    ("Cons x xs", "Cons 2 Nil",
+      Just [] ),
+    ("Branch 2 t t", "Branch v x y", Just []),
+    ("{x->x}", "{y->y}", Just [])
+
   ]
 
 main :: IO ()
