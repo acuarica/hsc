@@ -88,7 +88,6 @@ embTest = testGroup "emb ~~>" $
     ("a (c b)", "a (a (a b))", False)
   ]
 
-
 msgTest :: TestTree
 msgTest = testGroup "msg ~~>" $
   map (\(x,y,v) ->
@@ -111,54 +110,38 @@ msgTest = testGroup "msg ~~>" $
     -- ("a (c b)", "a (a (a b))", False)
   ]
 
-uniTest :: TestTree
-uniTest = testGroup "uni ~~>" $
-  map (\(x, y, s) ->
-    testCase (x ++ " |~~| " ++ y) $
-      parseExpr x |~~| parseExpr y @?= s)
-  [
-    ("x", "x", Just []),
-    ("x", "y", Just [("x", Var "y")]),
-    ("f g", "a b",
-      Just [("f", parseExpr "a"), ("g", parseExpr "b")] ),
-    ("(f g) (a b)", "x y",
-      Just [("x", parseExpr "f g"), ("y", parseExpr "a b")] ),
-    ("(f g) (a b)", "x x",
-      Just [("x", parseExpr "f g"), ("x", parseExpr "a b")] )
-  ]
-
-uniTest' :: TestTree
-uniTest' = testGroup "uni ~~>" $
+unificationTest = testGroup "Unification tests" $
   map (\(x, y, s) ->
     let xe = parseExpr x in
     let ye = parseExpr y in
-    let (Just subst) = xe |~~| ye in
-      testCase (x ++ " |~~| " ++ y ++ show subst) $
-        substAlts subst xe @?= substAlts subst ye)
-  [
-    ("x", "x", Just []),
-    ("x", "y", Just [("x", Var "y")]),
-    ("f g", "a b",
-      Just [("f", parseExpr "a"), ("g", parseExpr "b")] ),
-    ("(f g) (a b)", "x y",
-      Just [("x", parseExpr "f g"), ("y", parseExpr "a b")] ),
-    ("(f g) (a b)", "x x",
-      Just [("x", parseExpr "f g"), ("x", parseExpr "a b p")] ),
-    ("Cons x xs", "Cons 2 Nil",
-      Just [] ),
-    ("Branch 2 t t", "Branch v x y", Just []),
-    ("{x->x}", "{y->y}", Just [])
+    let subst' = xe |~~| ye in
+    let expected = case s of
+          Nothing -> Nothing
+          Just s' -> Just $ map (second parseExpr) s' in
 
+    testGroup (x ++ " |~~| " ++ y ++ " == " ++ show subst)
+      [
+        testCase "Expected" $ xe |~~| ye @?= expected,
+        testCase "Subst" $ True ==> substAlts subst xe @?= substAlts subst ye
+      ]
+  ) [
+    ("x", "x", Just []),
+    ("x", "y", Just [("x", "y")]),
+    ("x", "f x", Nothing),
+    ("f g", "a b", Just [("f", "a"), ("g", "b")] ),
+    ("(f g) (a b)", "x y", Just [("x", "f g"), ("y", "a b")] ),
+    ("(f g) (a b)", "x x", Just [("f", "a"), ("g", "b"), ("x", "a b")]),
+    ("Cons x xs", "Cons 2 Nil", Just [("x", "2"), ("xs", "Nil")]),
+    ("Branch 2 t t", "Branch v x y",
+      Just [("v", "2"), ("x", "y"), ("t", "y")]),
+    ("{x->x}", "{y->y}", Just [])
   ]
 
 main :: IO ()
-main = defaultMain $
-  testGroup "Supercompiler: match, supercompile/eval"
-    [
-      testMatch,
-      testMatch2,
-      embTest,
-      msgTest,
-      uniTest,
-      uniTest'
-    ]
+main = defaultMain $ testGroup "Match" [
+    testMatch,
+    testMatch2,
+    embTest,
+    msgTest,
+    unificationTest
+  ]

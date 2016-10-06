@@ -108,11 +108,11 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
 {-|
   Unification of two expressions.
   Examples:
-    Cons x xs |~~|
-      Cons 2 Nil
-      with subst := [x |-> 2, xs -> Nil]
-    Branch 2 t t |~~| Branch v x y
-      with subst [val |-> 2, t |-> x, x|->y]
+  >  Cons x xs |~~|
+  >    Cons 2 Nil
+  >    with subst := [x |-> 2, xs -> Nil]
+  >  Branch 2 t t |~~| Branch v x y
+  >    with subst [val |-> 2, t |-> x, x|->y]
 -}
 (|~~|) :: Expr -> Expr -> Maybe [Subst]
 (|~~|) (Var v) (Var w) = Just $ if v == w then [] else [(v, Var w)]
