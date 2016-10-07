@@ -2,7 +2,7 @@
 module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit --(testCase, (@?=))
 
 import Control.Arrow (second)
 
@@ -111,30 +111,36 @@ msgTest = testGroup "msg ~~>" $
   ]
 
 unificationTest = testGroup "Unification tests" $
-  map (\(x, y, s) ->
-    let xe = parseExpr x in
-    let ye = parseExpr y in
-    let subst' = xe |~~| ye in
-    let expected = case s of
-          Nothing -> Nothing
-          Just s' -> Just $ map (second parseExpr) s' in
-
-    testGroup (x ++ " |~~| " ++ y ++ " == " ++ show subst)
-      [
-        testCase "Expected" $ xe |~~| ye @?= expected,
-        testCase "Subst" $ True ==> substAlts subst xe @?= substAlts subst ye
-      ]
-  ) [
-    ("x", "x", Just []),
-    ("x", "y", Just [("x", "y")]),
-    ("x", "f x", Nothing),
-    ("f g", "a b", Just [("f", "a"), ("g", "b")] ),
-    ("(f g) (a b)", "x y", Just [("x", "f g"), ("y", "a b")] ),
-    ("(f g) (a b)", "x x", Just [("f", "a"), ("g", "b"), ("x", "a b")]),
-    ("Cons x xs", "Cons 2 Nil", Just [("x", "2"), ("xs", "Nil")]),
-    ("Branch 2 t t", "Branch v x y",
-      Just [("v", "2"), ("x", "y"), ("t", "y")]),
-    ("{x->x}", "{y->y}", Just [])
+  let go tx ty est =
+        let (xe, ye) = (parseExpr tx, parseExpr ty) in
+        let s = xe |~~| ye in
+        let es = map (second parseExpr) <$> est in
+        testGroup (tx ++ " |~~| " ++ ty ++ " == " ++ show s) $
+          testCase "Expected" (xe |~~| ye @?= es) :
+            case s of
+              Nothing -> []
+              Just s' -> [testCase "Subst" $
+                substAlts s' xe @?= substAlts s' ye]
+          in
+  [
+    go "x" "x" $
+      Just [],
+    go "x" "y" $
+      Just [("x", "y")],
+    go "x" "f x"
+      Nothing,
+    go "f g" "a b" $
+      Just [("f", "a"), ("g", "b")],
+    go "(f g) (a b)" "x y" $
+      Just [("x", "f g"), ("y", "a b")],
+    go "(f g) (a b)" "x x" $
+      Just [("f", "a"), ("g", "b"), ("x", "a b")],
+    go "Cons x xs" "Cons 2 Nil" $
+      Just [("x", "2"), ("xs", "Nil")],
+    go "Branch 2 t t" "Branch v x y" $
+      Just [("v", "2"), ("x", "y"), ("t", "y")],
+    go "{x->x}" "{y->y}" $
+      Just []
   ]
 
 main :: IO ()
