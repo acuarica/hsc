@@ -73,3 +73,4 @@ Mention problem about using smallcheck related to depth.
 * Rewrite rules or supercompilation?
 * Write down a proposal to convince Nate that supercompilation works.
 * Type-checking by Supercompilation.
+  Dependent Type-checking by Supercompilation.

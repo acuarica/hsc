@@ -20,38 +20,38 @@ whnfTest = testGroup "whnf" $
 
 whnfcTest :: TestTree
 whnfcTest = testGroup "whnfc" $
-  map (\(a, e, c) ->
-    let (we, steps) = (whnfc . parseExpr) a in
-    testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
-      (we, steps) @?= ((whnf . parseExpr) e, c) )
+  let go a e c =
+        let (we, steps) = (whnfc . parseExpr) a in
+          testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
+            (we, steps) @?= ((whnf . parseExpr) e, c) in
   [
-    ("var", "var", 0),
-    ("A", "A", 0),
-    ("Succ var", "Succ var", 2),
-    ("Succ (A B)", "Succ (A B)", 2),
-    ("Cons A Nil", "[A]", 4),
-    ("Branch A Nil Nil", "Branch A Nil Nil", 6),
-    ("{x->x}", "{x->x}", 0),
-    ("case True of False->A; True->B;", "B", 2),
-    ("{x->x} A", "A", 2),
-    ("let x=A in x", "A", 3),
-    ("let x=A B in x C", "A B C", 7),
-    ("let x=(let y=A in y 0) in x y", "A 0 y", 10)
+    go "var" "var" 0,
+    go "A" "A" 0,
+    go "Succ var" "Succ var" 2,
+    go "Succ (A B)" "Succ (A B)" 2,
+    go "Cons A Nil" "[A]" 4,
+    go "Branch A Nil Nil" "Branch A Nil Nil" 6,
+    go "{x->x}" "{x->x}" 0,
+    go "case True of False->A; True->B;" "B" 2,
+    go "{x->x} A" "A" 2,
+    go "let x=A in x" "A" 3,
+    go "let x=A B in x C" "A B C" 7,
+    go "let x=(let y=A in y 0) in x y" "A 0 y" 10
   ]
 
 evalcTest :: TestTree
 evalcTest = testGroup "evalc" $
-  map (\(a, e, c) ->
-    let (we, steps) = (evalc . parseExpr) a in
-    testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
-      (we, steps) @?= ((eval . parseExpr) e, c) )
+  let go a e c =
+        let (we, steps) = (evalc . parseExpr) a in
+          testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
+            (we, steps) @?= ((eval . parseExpr) e, c) in
   [
-    ("A", "A", 0),
-    ("Succ var", "Succ var", 2),
-    ("Cons A Nil", "[A]", 4),
-    ("Branch A Nil Nil", "Branch A Nil Nil", 6),
-    ("Succ (A B)", "Succ (A B)", 4),
-    ("Cons (A B) (Cons (C D) Nil)", "[A B, C D]", 12)
+    go "A" "A" 0,
+    go "Succ var" "Succ var" 2,
+    go "Cons A Nil" "[A]" 4,
+    go "Branch A Nil Nil" "Branch A Nil Nil" 6,
+    go "Succ (A B)" "Succ (A B)" 4,
+    go "Cons (A B) (Cons (C D) Nil)" "[A B, C D]" 12
   ]
 
 evalTest :: TestTree
