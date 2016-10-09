@@ -1,11 +1,23 @@
 
-# Haskell Supercompiler Project
+# HSC: Haskell Supercompiler
+
+## Introduction
+
+Pushing the Boundaries of Call-by-Need Supercompilation
 
 The Haskell Supercompiler Project explores uses of supercompilation.
 Supercompilation is a program transformation technique due to Turchin.
 The main use so far of supercompilation was program optimization.
 The project aims to support theorem proving on algebraic data structures
 as well.
+
+Supercompilation is a program transformation technique aimed at reduce unnecessary computation when composing functional programs.
+Supercompilation can be used for different purposes.
+It was mainly used for optimization purposes.
+But it has also interesting uses, such as in theorem proving, or logic programming.
+But to date, there is no a mainstream supercompiler used for real academic or commercial projects.
+In this document, we propose to study how in reality supercompilation is
+well-suited for these wide range applications, and what are the short-comings.
 
 ## Modules
 
@@ -69,8 +81,18 @@ Mention problem about using smallcheck related to depth.
 ## Proposal
 
 * What's the research question? (for Supercompilation)
-* Parser combinator with supercompilation.
-* Rewrite rules or supercompilation?
 * Write down a proposal to convince Nate that supercompilation works.
+
+## List of estimated publications
+
+* Visualization tool for supercompilation.
+  Helping to understand supercompilation.
+* Rewrite rules vs. Supercompilation.
+* Parser Combinator with Supercompilation: Better together
 * Type-checking by Supercompilation.
   Dependent Type-checking by Supercompilation.
+  Type inference, and Dependent type inference.
+  How is it related with GADTs?
+* SuperCheck: A property-prover for Haskell based on supercompilation.
+* Int to Peano and back
+  Detecting using of algebraic data type for Supercompilation.

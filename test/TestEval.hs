@@ -11,11 +11,10 @@ import Eval (eval, whnf, evalc, whnfc)
 
 whnfTest :: TestTree
 whnfTest = testGroup "whnf" $
-  map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ e) $
-      (whnf . parseExpr) a @?= (whnf . parseExpr) e)
+  let whnfp = whnf . parseExpr in
+  let go a e = testCase (a ++ " ~~> " ++ e) $ whnfp a @?= whnfp e in
   [
-    ("let x=(let y=A in y 0) in x y", "A 0 y")
+    go "let x=(let y=A in y 0) in x y" "A 0 y"
   ]
 
 whnfcTest :: TestTree
@@ -157,40 +156,39 @@ evalTest = testGroup "eval expr ~~> expr" $
     five  = Con "Succ" [four]
 
 evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
-  map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ e) $
-      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  let evalp = eval . parseExpr in
+  let go a e = testCase (a ++ " ~~> " ++ e) $ evalp a @?= evalp e in
   [
-  ("let x=(let y=Succ in y 0) in y", "y"),
-  ("let x=0 in Succ x", "1"),
-  ("let x=True in [x]", "[True]"),
-  ("let id={a->a} in id [1,2,3,4,5]", "[1,2,3,4,5]"),
-  ("let two={a->{b->a}} in two True False", "True"),
-  ("{a->{b->a}}", "{a->{b->a}}"),
-  ("{b->{a->b} A} B", "B"),
-  ("{a->{x->x} A} B", "A"),
-  ("{x->x} {a->{b->a}}", "{a->{b->a}}"),
-  ("{f->{x->f x}}", "{f->{x->f x}}"),
-  ("let a={f->{x->f x}} in a", "{f->{x->f x}}"),
-  ("{f->{x->f x}} {b->T} F", "T"),
-  ("let a={f->{x->f x}} in a {b->T} F", "T"),
-  ("let a={f->{x->f x}} in a {b->T}", "{x->{b->T} x}"),
-  ("let a={f->{x->f x}} in a {b->Succ b}", "{x->{b->Succ b} x}"),
-  ("{a->Succ (Succ a)} 1", "3"),
-  ("let sumtwo={a->Succ (Succ a)} in sumtwo 1", "3"),
-  ("let a={f->{x->f x}} in a {n->Succ n} 0", "1"),
-  ("let two={a->{b->a}} in {x->x} (two A) ", "{b->A}"),
-  ("let two={a->{b->a}} in let id={c->c} in id two", "{a->{b->a}}"),
-  ("let fst={a->{b->a}} in let id={b->b} in id fst", "{a->{b->a}}"),
-  ("let fst={a->{b->a}} in let id={a->a} in id fst", "{a->{b->a}}"),
-  ("let f={a->{b->a}} in let p=f T in let a={f->{x->f x}} in a p F", "T"),
-  ("let id={a->a} in let a={f->{x->f x}} in a id [1,2,3,4]", "[1,2,3,4]"),
-  ("let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4", "4"),
-  ("let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)", "1"),
-  ("let x=A B in Tup x x", "Tup (A B) (A B)"),
-  ("(let x=F in x) (let x=X in x)", "F X"),
-  ("{n->case n of S n -> n;} (S Z)", "Z"),
-  ("{n->case n of S n -> n;} (S n)", "n")
+  go "let x=(let y=Succ in y 0) in y" "y",
+  go "let x=0 in Succ x" "1",
+  go "let x=True in [x]" "[True]",
+  go "let id={a->a} in id [1,2,3,4,5]" "[1,2,3,4,5]",
+  go "let two={a->{b->a}} in two True False" "True",
+  go "{a->{b->a}}" "{a->{b->a}}",
+  go "{b->{a->b} A} B" "B",
+  go "{a->{x->x} A} B" "A",
+  go "{x->x} {a->{b->a}}" "{a->{b->a}}",
+  go "{f->{x->f x}}" "{f->{x->f x}}",
+  go "let a={f->{x->f x}} in a" "{f->{x->f x}}",
+  go "{f->{x->f x}} {b->T} F" "T",
+  go "let a={f->{x->f x}} in a {b->T} F" "T",
+  go "let a={f->{x->f x}} in a {b->T}" "{x->{b->T} x}",
+  go "let a={f->{x->f x}} in a {b->Succ b}" "{x->{b->Succ b} x}",
+  go "{a->Succ (Succ a)} 1" "3",
+  go "let sumtwo={a->Succ (Succ a)} in sumtwo 1" "3",
+  go "let a={f->{x->f x}} in a {n->Succ n} 0" "1",
+  go "let two={a->{b->a}} in {x->x} (two A) " "{b->A}",
+  go "let two={a->{b->a}} in let id={c->c} in id two" "{a->{b->a}}",
+  go "let fst={a->{b->a}} in let id={b->b} in id fst" "{a->{b->a}}",
+  go "let fst={a->{b->a}} in let id={a->a} in id fst" "{a->{b->a}}",
+  go "let f={a->{b->a}} in let p=f T in let a={f->{x->f x}} in a p F" "T",
+  go "let id={a->a} in let a={f->{x->f x}} in a id [1,2,3,4]" "[1,2,3,4]",
+  go "let cp={a->case a of Zero->0;Succ b->Succ (cp b);} in cp 4" "4",
+  go "let fst={t->case t of Tup x y->x;} in fst (Tup 1 2)" "1",
+  go "let x=A B in Tup x x" "Tup (A B) (A B)",
+  go "(let x=F in x) (let x=X in x)" "F X",
+  go "{n->case n of S n -> n;} (S Z)" "Z",
+  go "{n->case n of S n -> n;} (S n)" "n"
   ]
 
 evalWithPreludeTest :: TestTree
@@ -264,13 +262,12 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
 
 evalLazyTest :: TestTree
 evalLazyTest = testGroup "eval lazy with prelude" $
-  map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ e) $
-      (eval . parseExpr . (++) prelude) a @?= (eval . parseExpr) e)
+  let evalp = eval . parseExpr in
+  let go a e = testCase (a ++ " ~~> " ++ e) $ (evalp . (++) prelude) a @?= evalp e in
   [
-    ("head infA", "A"),
-    ("head (inf 1)", "1"),
-    ("head (tail (tail (tail (inf 1))))", "4")
+    go "head infA" "A",
+    go "head (inf 1)" "1",
+    go "head (tail (tail (tail (inf 1))))" "4"
   ]
   where
     prelude =
