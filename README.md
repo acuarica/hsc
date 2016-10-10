@@ -81,18 +81,43 @@ Mention problem about using smallcheck related to depth.
 ## Proposal
 
 * What's the research question? (for Supercompilation)
-* Write down a proposal to convince Nate that supercompilation works.
+* Language with dependent types based on supercompilation.
 
 ## List of estimated publications
 
-* Visualization tool for supercompilation.
+* Find a first publication topic for next week.
+  Draft of the research question that I want to address.
+  Supercompilation Modulo Theories.
+
+1. Visualization tool for supercompilation.
   Helping to understand supercompilation.
-* Rewrite rules vs. Supercompilation.
-* Parser Combinator with Supercompilation: Better together
-* Type-checking by Supercompilation.
+  CC'17
+2. Parser Combinator with Supercompilation: Better together
+  PLDI'17
+3. Proposal
+  ICSE'17 (DS)
+4. Rewrite rules vs. Supercompilation.
+  ICPC'17
+5. Understanding Rewrite Rules in Hackage.
+  MSR'17
+6. Int to Peano and back
+  Detecting using of algebraic data type for Supercompilation.
+  ECOOP'17
+7. Type-checking by Supercompilation.
   Dependent Type-checking by Supercompilation.
   Type inference, and Dependent type inference.
   How is it related with GADTs?
-* SuperCheck: A property-prover for Haskell based on supercompilation.
-* Int to Peano and back
-  Detecting using of algebraic data type for Supercompilation.
+  Creating a new type system based on Supercompilation.
+  Background on dependent-type checking.
+  What flavor of dependent-type do we want?
+  Error reporting in type-checking.
+  Contracts for JavaScript checked by Supercompilation.
+  Comparing Supercompilation with Z3.
+  Does supercompilation enable you to prove more things than e.g, Z3?
+  Using Z3 in a Supercompiler.
+  Stratego, rewrite rules.
+  Find a reason to why vouch my supercompiler instead of others.
+    There is a special reason to use mine rather others.
+  ICLP'17
+8. SuperCheck: A property-prover for Haskell based on supercompilation.
+  ?

@@ -263,7 +263,8 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
 evalLazyTest :: TestTree
 evalLazyTest = testGroup "eval lazy with prelude" $
   let evalp = eval . parseExpr in
-  let go a e = testCase (a ++ " ~~> " ++ e) $ (evalp . (++) prelude) a @?= evalp e in
+  let tc a e = testCase (a ++ " ~~> " ++ e) in
+  let go a e = tc a e $ (evalp . (++) prelude) a @?= evalp e in
   [
     go "head infA" "A",
     go "head (inf 1)" "1",
