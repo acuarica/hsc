@@ -9,9 +9,45 @@ import Expr (Expr(Var, Con, Lam, Let, App, Case), Pat(Pat),
 import Parser (parseExpr)
 import Eval (eval, whnf, evalc, whnfc)
 
+evalp :: String -> Expr
+evalp = eval . parseExpr
+
+whnfp :: String -> Expr
+whnfp = whnf . parseExpr
+
+prelude :: String
+prelude =
+  "let id={a->a} in \
+  \let app={p->{q->p q}} in \
+  \let inc={n->Succ n} in \
+  \let cp={a->case a of Zero->0;Succ aa->Succ (cp aa);} in \
+  \let cat={xs->{ys->case xs of \
+  \  Nil->ys;\
+  \  Cons z zs->Cons z (cat zs ys);}} in \
+  \let rev={rs-> case rs of \
+  \  Nil->Nil;\
+  \  Cons s ss->cat (rev ss) [s];} in \
+  \let revA={xs->{as->case xs of \
+  \  Nil->as;\
+  \  Cons y ys->revA ys (Cons y as);}} in \
+  \let reverseAccum = {rs->revA rs []} in \
+  \let map={f->{xs->case xs of \
+  \  Nil->Nil;\
+  \  Cons y ys->Cons (f y)(map f ys);}} in \
+  \let plus={n->{m->case n of \
+  \  Zero->m;\
+  \  Succ nn->plus nn (Succ m);}} in \
+  \let mult={n->{m->case n of \
+  \  Zero->0;\
+  \  Succ nn->plus (mult nn m) m;}} in \
+  \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in \
+  \let head={xs->case xs of Cons y ys -> y; } in \
+  \let tail={xs->case xs of Cons y ys -> ys; } in \
+  \let inf={n->Cons n (inf (Succ n))} in \
+  \let infA=Cons A inf in "
+
 whnfTest :: TestTree
 whnfTest = testGroup "whnf" $
-  let whnfp = whnf . parseExpr in
   let go a e = testCase (a ++ " ~~> " ++ e) $ whnfp a @?= whnfp e in
   [
     go "let x=(let y=A in y 0) in x y" "A 0 y"
@@ -22,7 +58,7 @@ whnfcTest = testGroup "whnfc" $
   let go a e c =
         let (we, steps) = (whnfc . parseExpr) a in
           testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
-            (we, steps) @?= ((whnf . parseExpr) e, c) in
+            (we, steps) @?= (whnfp e, c) in
   [
     go "var" "var" 0,
     go "A" "A" 0,
@@ -43,7 +79,7 @@ evalcTest = testGroup "evalc" $
   let go a e c =
         let (we, steps) = (evalc . parseExpr) a in
           testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
-            (we, steps) @?= ((eval . parseExpr) e, c) in
+            (we, steps) @?= (evalp e, c) in
   [
     go "A" "A" 0,
     go "Succ var" "Succ var" 2,
@@ -55,9 +91,7 @@ evalcTest = testGroup "evalc" $
 
 evalTest :: TestTree
 evalTest = testGroup "eval expr ~~> expr" $
-  map (\(a, e) ->
-    testCase (show a ++ " ~~> " ++ show e) $
-      eval a @?= e)
+  map (\(a, e) -> testCase (show a ++ " ~~> " ++ show e) $ eval a @?= e)
   [
     (var, var),
     (con "True", con "True"),
@@ -156,7 +190,6 @@ evalTest = testGroup "eval expr ~~> expr" $
     five  = Con "Succ" [four]
 
 evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
-  let evalp = eval . parseExpr in
   let go a e = testCase (a ++ " ~~> " ++ e) $ evalp a @?= evalp e in
   [
   go "let x=(let y=Succ in y 0) in y" "y",
@@ -194,8 +227,7 @@ evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
 evalWithPreludeTest :: TestTree
 evalWithPreludeTest = testGroup "evalPreludeTest" $
   map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ e) $
-      (eval . parseExpr . (++) prelude) a @?= (eval . parseExpr) e)
+    testCase (a ++ " ~~> " ++ e) $ (evalp . (++) prelude) a @?= evalp e)
   [
     ("x", "x"),
     ("cp 5", "5"),
@@ -233,36 +265,9 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
     ("let multtwo=mult 2 in map multtwo [1,2,3,4,5]", "[2,4,6,8,10]"),
     ("let multtwo=mult 2 in app multtwo 1", "2")
   ]
-  where
-    prelude =
-      "let id={a->a} in \
-      \let app={p->{q->p q}} in \
-      \let inc={n->Succ n} in \
-      \let cp={a->case a of Zero->0;Succ aa->Succ (cp aa);} in \
-      \let cat={xs->{ys->case xs of \
-      \  Nil->ys;\
-      \  Cons z zs->Cons z (cat zs ys);}} in \
-      \let rev={rs-> case rs of \
-      \  Nil->Nil;\
-      \  Cons s ss->cat (rev ss) [s];} in \
-      \let revA={xs->{as->case xs of \
-      \  Nil->as;\
-      \  Cons y ys->revA ys (Cons y as);}} in \
-      \let reverseAccum = {rs->revA rs []} in \
-      \let map={f->{xs->case xs of \
-      \  Nil->Nil;\
-      \  Cons y ys->Cons (f y)(map f ys);}} in \
-      \let plus={n->{m->case n of \
-      \  Zero->m;\
-      \  Succ nn->plus nn (Succ m);}} in \
-      \let mult={n->{m->case n of \
-      \  Zero->0;\
-      \  Succ nn->plus (mult nn m) m;}} in \
-      \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in "
 
 evalLazyTest :: TestTree
 evalLazyTest = testGroup "eval lazy with prelude" $
-  let evalp = eval . parseExpr in
   let tc a e = testCase (a ++ " ~~> " ++ e) in
   let go a e = tc a e $ (evalp . (++) prelude) a @?= evalp e in
   [
@@ -270,32 +275,23 @@ evalLazyTest = testGroup "eval lazy with prelude" $
     go "head (inf 1)" "1",
     go "head (tail (tail (tail (inf 1))))" "4"
   ]
-  where
-    prelude =
-      "let head={xs->case xs of Cons y ys -> y; } in \
-      \let tail={xs->case xs of Cons y ys -> ys; } in \
-      \let inf={n->Cons n (inf (Succ n))} in \
-      \let infA=Cons A inf in "
 
 evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
-  map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ e) $
-      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  let go a e = testCase (a ++ " ~~> " ++ e) $ evalp a @?= evalp e in
   [
-    ("let x=(let y=A in y 0) in x y", "A 0 y"),
-    ("let x=(let y=A in let z=B in C y z) in x y z", "C A B y z"),
-    ("(let x=A in C x) x", "C A x"),
-    ("(let y=A in let z=B in C y z) y z", "C A B y z"),
-    ("case Succ n of Succ n'->A n';", "A n"),
-    ("case Succ n of Succ n->A n;", "A n")
+    go "let x=(let y=A in y 0) in x y" "A 0 y",
+    go "let x=(let y=A in let z=B in C y z) in x y z" "C A B y z",
+    go "(let x=A in C x) x" "C A x",
+    go "(let y=A in let z=B in C y z) y z" "C A B y z",
+    go "case Succ n of Succ n'->A n';" "A n",
+    go "case Succ n of Succ n->A n;" "A n"
   ]
 
+evalForwardDecl :: TestTree
 evalForwardDecl = testGroup "eval w/forward declarations" $
-  map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ e) $
-      (eval . parseExpr) a @?= (eval . parseExpr) e)
+  let go a e = testCase (a ++ " ~~> " ++ e) $ evalp a @?= evalp e in
   [
-    ("let a=b in let b=B in a", "B")
+    go "let a=b in let b=B in a" "B"
   ]
 
 main :: IO ()

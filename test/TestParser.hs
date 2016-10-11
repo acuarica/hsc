@@ -11,9 +11,9 @@ import Parser (parseExpr)
 
 testParser :: TestTree
 testParser = testGroup "Parser.parseExpr str ~> expr" $
-  map (\(a, e) ->
-    testCase (a ++ " ~> " ++ show e) $
-      parseExpr a @?= e)
+  let b = 2+a
+      a = 1 in
+  map (\(a, e) -> testCase (a ++ " ~> " ++ show e) $ parseExpr a @?= e)
   [
     ("x", Var "x"),
     ("$x", Var "$x"),

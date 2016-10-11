@@ -12,8 +12,8 @@ module Eval (
 import Data.List (intercalate, delete)
 import Control.Arrow (first)
 
-import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Pat(Pat),
-  subst, substAlts, lookupAlt, freeVars, alpha)
+import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Alt, Pat(Pat),
+  Binding, subst, substAlts, lookupAlt, freeVars, alpha)
 
 {-|
   Represents the configuration of the abstract machine.
@@ -23,7 +23,7 @@ type Conf = (Env, Stack, Expr)
 {-|
   Environment that binds variables to values.
 -}
-type Env = [(Var, Expr)]
+type Env = [Binding]
 
 {-|
   Stack for application calls.
@@ -35,7 +35,7 @@ type Stack = [StackFrame]
 -}
 data StackFrame
   = Arg Expr
-  | Alts [(Pat, Expr)]
+  | Alts [Alt]
   | Update Var
   deriving Eq
 
@@ -189,9 +189,6 @@ instance {-# OVERLAPPING #-} Show (Stack, Expr) where
 
 instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)
-
-instance {-# OVERLAPPING #-} Show (Var, Expr) where
-  show (var, expr) = var ++ "=" ++ show expr
 
 instance {-# OVERLAPPING #-} Show Stack where
   show stack = intercalate "|" (map ((++) " " . show) stack)

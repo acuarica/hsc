@@ -5,7 +5,8 @@
   It also contains functions to easily manipulate Expr expressions.
 -}
 module Expr (
-  Expr(Var, Con, Lam, Let, App, Case), Var, Tag, Pat (Pat), Subst,
+  Expr(Var, Con, Lam, Let, App, Case), Var, Tag, Alt, Pat (Pat),
+  Binding, Subst,
   con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
   true, false, zero, suc, nil, cons, bool, nat, list
@@ -24,7 +25,7 @@ data Expr
   | Lam  Var  Expr
   | Let  Var  Expr Expr
   | App  Expr Expr
-  | Case Expr [(Pat, Expr)]
+  | Case Expr [Alt]
   deriving Eq
 
 {-|
@@ -39,14 +40,24 @@ type Var = String
 type Tag = String
 
 {-|
+  Represents an alternative within a case expression.
+-}
+type Alt = (Pat, Expr)
+
+{-|
   Case patterns against tag.
 -}
 data Pat = Pat Tag [Var] deriving Eq
 
 {-|
-  A substitution maps a variable to an expression.
+  A binding maps a variable to an expression.
 -}
-type Subst = (Var, Expr)
+type Binding = (Var, Expr)
+
+{-|
+  A substitution is a variable to be replaced with an expression.
+-}
+type Subst = Binding
 
 {-|
   Creates a constructor with the given tag.
@@ -258,8 +269,11 @@ instance Show Expr where
       Just s -> Just s
     showArgs args = unwords (map show args)
 
+instance {-# OVERLAPPING #-} Show Binding where
+  show (var, expr) = var ++ "=" ++ show expr
+
 instance Show Pat where
   show (Pat tag vars) = unwords (tag:vars)
 
-instance {-# OVERLAPPING #-} Show (Pat, Expr) where
+instance {-# OVERLAPPING #-} Show Alt where
   show (pat, alt) = show pat ++ " -> " ++ show alt
