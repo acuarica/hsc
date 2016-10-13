@@ -44,7 +44,7 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("f x y", appVars (Var "f") ["x", "y"]),
     ("f var y", appVars (Var "f") ["var", "y"]),
     ("Succ n", App suc (Var "n")),
-    ("let x=Nil in x", Let "x" nil (Var "x")),
+    ("let x=Nil in x", Let [("x", nil)] (Var "x")),
     ("{x->x}", Lam "x" (Var "x")),
     ("{$x->$x}", Lam "$x" (Var "$x")),
     ("{$x0->$x0}", Lam "$x0" (Var "$x0")),
@@ -52,13 +52,15 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("{x->True}", Lam "x" true),
     ("{x->2}", Lam "x" (nat 2)),
     ("{f->{x->f x}}", Lam "f" (Lam "x" (App (Var "f") (Var "x")))),
-    ("let x={y->y} in x", Let "x" (Lam "y" (Var "y")) (Var "x")),
-    ("let $x={y->y} in $x", Let "$x" (Lam "y" (Var "y")) (Var "$x")),
-    ("let $x0={y->y} in $x0", Let "$x0" (Lam "y" (Var "y")) (Var "$x0")),
-    ("let id={y->y} in id", Let "id" (Lam "y" (Var "y")) (Var "id")),
-    ("let x=0 in Succ x", Let "x" zero (App suc (Var "x"))),
-    ("let $v_0=A in $v_0", Let "$v_0" (con "A") (Var "$v_0")),
-    ("let $v_0 = A in $v_0", Let "$v_0" (con "A") (Var "$v_0")),
+    ("let x={y->y} in x", Let [("x", Lam "y" (Var "y"))] (Var "x")),
+    ("let $x={y->y} in $x", Let [("$x", Lam "y" (Var "y"))] (Var "$x")),
+    ("let id={y->y} in id", Let [("id", Lam "y" (Var "y"))] (Var "id")),
+    ("let x=0 in Succ x", Let [("x", zero)] (App suc (Var "x"))),
+    ("let $v_0=A in $v_0", Let [("$v_0", con "A")] (Var "$v_0")),
+    ("let $v_0 = A in $v_0", Let [("$v_0", con "A")] (Var "$v_0")),
+    ("let x=A;y=B;z=C in x y z",
+      Let [("x", con "A"), ("y", con "B"), ("z", con "C")]
+        (appVars (Var "x") ["y", "z"])),
     ("[]", nil),
     ("  [  ]  ", nil),
     ("[True]", list bool [True]),
@@ -77,10 +79,10 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
     ("A:B:C:D:Nil", list id [con "A", con "B", con "C", con "D"]),
     ("A:B:xs", app cons [con "A", app cons [con "B", Var "xs"]]),
     ("let c=case n of Z->A;S m->B; in c",
-      Let "c" (Case (Var "n") [
+      Let [("c", Case (Var "n") [
         (Pat "Z" [], con "A"),
         (Pat "S" ["m"], con "B")
-      ]) (Var "c")),
+      ])] (Var "c")),
     ("case var of True -> False;",
       Case (Var "var") [
         (Pat "True" [], false)

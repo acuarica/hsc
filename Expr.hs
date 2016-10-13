@@ -5,8 +5,8 @@
   It also contains functions to easily manipulate Expr expressions.
 -}
 module Expr (
-  Expr(Var, Con, Lam, Let, App, Case), Var, Tag, Alt, Pat (Pat),
-  Binding, Subst,
+  Expr(Var, Con, Lam, App, Let, Case), Var, Tag, Binding, Alt, Pat(Pat),
+  Subst,
   con, app, appVars, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
   true, false, zero, suc, nil, cons, bool, nat, list
@@ -23,8 +23,8 @@ data Expr
   = Var  Var
   | Con  Tag  [Expr]
   | Lam  Var  Expr
-  | Let  Var  Expr Expr
   | App  Expr Expr
+  | Let  [Binding] Expr
   | Case Expr [Alt]
   deriving Eq
 
@@ -40,6 +40,11 @@ type Var = String
 type Tag = String
 
 {-|
+  A binding maps a variable to an expression.
+-}
+type Binding = (Var, Expr)
+
+{-|
   Represents an alternative within a case expression.
 -}
 type Alt = (Pat, Expr)
@@ -50,17 +55,12 @@ type Alt = (Pat, Expr)
 data Pat = Pat Tag [Var] deriving Eq
 
 {-|
-  A binding maps a variable to an expression.
--}
-type Binding = (Var, Expr)
-
-{-|
   A substitution is a variable to be replaced with an expression.
 -}
 type Subst = Binding
 
 {-|
-  Creates a constructor with the given tag.
+  Creates an @Expr@ constructor with the given tag.
 -}
 con :: Tag -> Expr
 con tag = Con tag []
@@ -95,6 +95,12 @@ isEmptyCon :: Expr -> Bool
 isEmptyCon (Con _ []) = True
 isEmptyCon _ = False
 
+vars :: [Binding] -> [Var]
+vars = fst . unzip
+
+bindings :: [Binding] -> [Expr]
+bindings = snd . unzip
+
 {-|
   Variable substitution.
   It substitutes var in bodyexpr only if var is a free variable.
@@ -111,11 +117,11 @@ subst (var, valexpr) bodyexpr = case bodyexpr of
     if var' == var
       then Lam var' lamexpr'
       else Lam var' (goSubst lamexpr')
-  Let var' valexpr' inexpr' ->
-    if var' == var
-      then Let var' valexpr' inexpr'
-      else Let var' (goSubst valexpr') (goSubst inexpr')
   App funexpr' valexpr' -> App (goSubst funexpr') (goSubst valexpr')
+  Let binds inexpr' ->
+    if var `elem` vars binds
+      then Let binds inexpr'
+      else Let (map (second goSubst) binds) (goSubst inexpr')
   Case scexpr' alts -> Case (goSubst scexpr') (map goSubstAlt alts)
   where
     goSubst = subst (var, valexpr)
@@ -145,9 +151,10 @@ freeVars expr = case expr of
   Var var -> [var]
   Con _ args -> nub (concatMap freeVars args)
   Lam var lamexpr -> delete var (freeVars lamexpr)
-  Let var valexpr inexpr ->
-    delete var (freeVars inexpr `union` freeVars valexpr)
   App funexpr valexpr -> freeVars funexpr `union` freeVars valexpr
+  Let binds inexpr ->
+    (freeVars inexpr `union` concatMap freeVars (bindings binds)) \\
+      vars binds
   Case scexpr alts -> nub (freeVars scexpr ++
     concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
 
@@ -157,26 +164,45 @@ freeVars expr = case expr of
   since it avoids name capture.
   Forward usage:
     let a=c in let b=c in let c=X in a
-    NOTE: Implementation not finished: Con/Case left to implement.
 -}
 alpha :: Expr -> Expr
-alpha = doAlpha 0
+alpha = snd . doAlpha 0
   where
     doAlpha next expr = case expr of
-      Var var -> Var var
-      Con tag args -> Con tag args
-      Lam var lamexpr -> Lam var (doAlpha (next + 1) lamexpr)
---      Let var valexpr (Let var' valexpr' inexpr') ->
-      Let var valexpr inexpr ->
-        Let (nextVar next) (letSubst var next valexpr)
-          (letSubst var next inexpr)
+      Var var -> (next, Var var)
+      Con tag args -> (next, Con tag args)
+      Lam var lamexpr ->
+        let var' = nextVar next in
+        let (n', lamexpr') = alphaSubst [(var, var')] (next+1) lamexpr in
+        (n', Lam var' lamexpr')
       App funexpr valexpr ->
-        App (doAlpha (next+1) funexpr) (doAlpha (next+1) valexpr)
+        let (next', funexpr') = doAlpha next funexpr in
+        let (next'', valexpr') = doAlpha next' valexpr in
+        (next'', App funexpr' valexpr')
+      Let binds inexpr ->
+        let (vs, bs) = unzip binds in
+        let next' = next + length binds - 1 in
+        let vs' = map nextVar [next .. next'] in
+        let ss = zip vs vs' in
+        let (n', bs') = doLet (next+length binds) ss (zip ss bs) in
+        let (next'', inexpr') = alphaSubst ss n' inexpr in
+        (next'', Let bs' inexpr')
       Case scexpr alts ->
-        Case (doAlpha (next+1) scexpr) $
-          map (second (doAlpha (next+1))) alts
-    letSubst var next = doAlpha (next+1) . subst (var, Var (nextVar next))
-    nextVar next = "$l_" ++ show next
+        let (n', sc') = doAlpha next scexpr in
+        let (n'', as'') = doLet' n' alts in
+        (n'', Case sc' as'')
+    doLet' n [] = (n, [])
+    doLet' n ((p,e):as) =
+      let (next', e') = doAlpha n e in
+      let (n', as') = doLet' next' as in
+      (n', (p, e'):as')
+    doLet n _ [] = (n, [])
+    doLet n ss (((v,v'),e):bs) =
+      let (next', e') = alphaSubst ss n e in
+      let (n', bs') = doLet next' ss bs in
+      (n', (v', e'):bs')
+    alphaSubst ss n = doAlpha n . substAlts (map (second Var) ss)
+    nextVar = (++) "$b_" . show
 
 {-|
   Some common used expressions for easy write of expressions.
@@ -226,9 +252,10 @@ instance Show Expr where
           ((prettyNat <|> prettyList) expr)
       Lam var expr ->
         "{" ++ var ++ "->" ++ show expr ++ "}"
-      Let var valexpr inexpr ->
-        paren par ("let " ++ var ++ "=" ++ show' True valexpr ++ "" ++
-               " in " ++ show inexpr)
+      Let binds inexpr ->
+        paren par ("let " ++
+        unwords (map (\(v, e)->v ++ "=" ++ show' True e) binds) ++
+              " in " ++ show inexpr)
       App funexpr valexpr ->
          paren par (show funexpr ++ " " ++ show' True valexpr)
       Case scexpr cs ->

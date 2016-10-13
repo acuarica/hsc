@@ -12,8 +12,9 @@ module Eval (
 import Data.List (intercalate, delete)
 import Control.Arrow (first)
 
-import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Alt, Pat(Pat),
-  Binding, subst, substAlts, lookupAlt, freeVars, alpha)
+import Expr (
+  Expr(Var, Con, Lam, App, Let, Case), Var, Binding, Alt, Pat(Pat),
+  subst, substAlts, lookupAlt, freeVars, alpha)
 
 {-|
   Represents the configuration of the abstract machine.
@@ -44,7 +45,7 @@ data StackFrame
   It uses alpha to avoid name capture.
 -}
 eval :: Expr -> Expr
-eval = toExpr . nf . newConf emptyEnv
+eval = toExpr . nf . newConf emptyEnv . alpha
 
 {-|
   Evaluates the given expression to Weak Head Normal Form (WHNF).
@@ -89,7 +90,7 @@ toExpr conf@(env, stack, expr) = go expr stack
   where go expr [] = expr
         go expr (Arg arg:stack') = go (App expr arg) stack'
         go expr (Alts alts:stack') = go (Case expr alts) stack'
-        go expr (Update var:stack') = go (Let var expr (Var var)) stack'
+        --go expr (Update var:stack') = go (Let var expr (Var var)) stack'
 
 {-|
   Reduce a state to Normal Form (NF).
@@ -141,11 +142,11 @@ reducec conf = reducec' (conf, 0)
 {-|
   Puts var bind with expr in the given environment.
 -}
-put :: Var -> Expr -> Env -> Env
-put var expr [] = [(var, expr)]
-put var expr ((var',expr'):env) = if var' == var
+put :: Binding -> Env -> Env
+put (var, expr) [] = [(var, expr)]
+put (var, expr) ((var',expr'):env) = if var' == var
   then (var,expr):env
-  else (var',expr'):put var expr env
+  else (var',expr'):put (var, expr) env
 
 {-|
   Operational semantics with one-step reduction.
@@ -160,15 +161,15 @@ step (env, stack, expr) = case expr of
     Alts alts:stack' ->
       let (Pat _ patvars, altexpr) = lookupAlt tag alts
       in Just (env, stack', substAlts (zip patvars args) altexpr)
-    Update x:stack' -> Just (put x val env, stack', val)
+    Update x:stack' -> Just (put (x, val) env, stack', val)
     Arg argexpr:stack' ->
       Just (env, stack', Con tag (args ++ [argexpr]))
   val@(Lam var lamexpr) -> case stack of
     [] -> Nothing
     Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
-    Update x:stack' -> Just (put x val env, stack', val)
-  Let var valexpr inexpr ->
-    Just (put var valexpr env, stack, inexpr)
+    Update x:stack' -> Just (put (x, val) env, stack', val)
+  Let binds inexpr ->
+    Just (foldr put env binds, stack, inexpr)
   App funexpr valexpr ->
     Just (env, Arg valexpr:stack, funexpr)
   Case scexpr alts -> Just (env, Alts alts:stack, scexpr)

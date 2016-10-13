@@ -40,7 +40,8 @@ substTest = testGroup "subst (var, expr) expr ~~> expr" $
     ("let n=A in n", ("n", Var "$0"), "let n=A in n"),
     ("case n of Z->Z;S m->l;", ("n", Var "$0"), "case $0 of Z->Z;S m->l;"),
     ("case n of Z->Z;S m->l;", ("l", Var "$0"), "case n of Z->Z;S m->$0;"),
-    ("case n of Z->Z;S m->m;", ("m", Var "$0"), "case n of Z->Z;S m->m;")
+    ("case n of Z->Z;S m->m;", ("m", Var "$0"), "case n of Z->Z;S m->m;"),
+    ("let x=y; y=A in x", ("y", Var "$0"), "let x=y; y=A in x")
   ]
 
 freeVarsTest :: TestTree
@@ -68,17 +69,23 @@ freeVarsTest = testGroup "freeVars expr ~~> [Var]" $
 
 alphaTest :: TestTree
 alphaTest = testGroup "alpha expr ~~> expr" $
-  map (\(a, e) ->
-    testCase (a ++ " <~~> " ++ e) $
-      (alpha . parseExpr) a @?= (alpha . parseExpr) e)
+  let alphap = alpha . parseExpr in
+  let go a e = testCase (a ++ " <~~> " ++ e ++ " "++show (alphap a)) $
+        alphap a @?= alphap e in
   [
-    ("f x", "f x"),
-    ("let x=A in x", "let y=A in y"),
-    ("let x=A in let y=B in x y", "let u=A in let v=B in u v"),
-    ("(let x=F in x) (let x=X in x)", "(let y=F in y) (let z=X in z)"),
-    ("F (let x=A in x)", "F (let y=A in y)"),
-    ("case x of X -> (let y=A in y);", "case x of X -> (let z=A in z);"),
-    ("case (let x=a in x) of X->A;", "case (let y=a in y) of X->A;")
+    go "f x" "f x",
+    go "{x->x}" "{y->y}",
+    go "{f->{x->f x}}" "{g->{y->g y}}",
+    go "{f->{x->f x}} {a->a}" "{g->{y->g y}} {b->b}",
+    go "let x=A in x" "let y=A in y",
+    go "let x=A in let y=B in x y" "let u=A in let v=B in u v",
+    go "(let x=F in x) (let x=X in x)" "(let y=F in y) (let z=X in z)",
+    go "F (let x=A in x)" "F (let y=A in y)",
+    go "let x=(let f=F;a=A in f a) in x" "let y=(let g=F;b=A in g b) in y",
+    go "let x=(let a=A in a) in (let f=F in f)" "let y=(let b=A in b) in (let g=F in g)",
+    go "case x of X -> (let y=A in y);" "case x of X -> (let z=A in z);",
+    go "case (let x=a in x) of X->A;" "case (let y=a in y) of X->A;",
+    go "let x=A;y=B in x y" "let a=A;b=B in a b"
   ]
 
 main :: IO ()

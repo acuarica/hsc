@@ -1,7 +1,7 @@
 
 module Parser (parseExpr) where
 
-import Expr (Expr(Var, Lam, Let, App, Case), Var, Pat(Pat),
+import Expr (Expr(Var, Lam, App, Let, Case), Var, Binding, Pat(Pat),
   con, app, zero, suc, nil, cons, nat)
 import Data.Char (isDigit, isAlpha, isLower, isUpper)
 import Control.Applicative (Alternative, empty, (<|>), some, many)
@@ -179,12 +179,24 @@ litintp = do { n <- number; return (nat n) }
 letp :: Parser Expr
 letp = do
   reserved "let"
-  var <- varnamep
-  reserved "="
-  valexpr <- exprp
+  binds <- bindsp
+  --var <- varnamep
+  --reserved "="
+  --valexpr <- exprp
   reserved "in"
   inexpr <- exprp
-  return (Let var valexpr inexpr)
+  return (Let binds inexpr)
+
+bindsp :: Parser [Binding]
+bindsp = do
+        var <- varnamep
+        reserved "="
+        valexpr <- exprp
+        (do
+          reserved ";"
+          binds <- bindsp
+          return ((var, valexpr):binds) ) <|>
+          return [(var, valexpr)]
 
 varp :: Parser Expr
 varp = do

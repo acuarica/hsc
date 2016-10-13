@@ -4,7 +4,7 @@ module Main (main) where
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
-import Expr (Expr(Var, Con, Lam, Let, App, Case), Pat(Pat),
+import Expr (Expr(Var, Con, Lam, App, Let, Case), Pat(Pat),
   con, app, zero, suc, cons, nil)
 import Parser (parseExpr)
 import Eval (eval, whnf, evalc, whnfc)
@@ -50,7 +50,8 @@ whnfTest :: TestTree
 whnfTest = testGroup "whnf" $
   let go a e = testCase (a ++ " ~~> " ++ e) $ whnfp a @?= whnfp e in
   [
-    go "let x=(let y=A in y 0) in x y" "A 0 y"
+    go "let x=(let y=A in y 0) in x y" "A 0 y",
+    go "let x=y in let y=A in x" "A"
   ]
 
 whnfcTest :: TestTree
@@ -112,46 +113,47 @@ evalTest = testGroup "eval expr ~~> expr" $
     (App (Lam "x" x) zero, zero),
     (Lam "x" x, Lam "x" x),
     (Lam "f" (Lam "x" (App f x)), Lam "f" (Lam "x" (App f x))),
-    (Let "x" zero x, zero),
-    (Let "x" (Lam "y" y) (Let "z" nil (App x z)), nil),
-    (Let "x" (con "True") (Case x [
+    (Let [("x", zero)] x, zero),
+    (Let [("x", Lam "y" y)] (Let [("z", nil)] (App x z)), nil),
+    (Let [("x", con "True")] (Case x [
         (Pat "False" [], con "True"),
         (Pat "True" [], con "False")
       ]), con "False"),
-    (Let "x" (Lam "y" (Case y [
+    (Let [("x", Lam "y" (Case y [
         (Pat "F" [], con "T"),
         (Pat "T" [], con "F")
-      ])) (Let "z" (con "T") (App x z)), con "F"),
-    (Let "iszero" (Lam "n" (Case n [
+      ]))] (Let [("z", con "T")] (App x z)), con "F"),
+    (Let [("iszero", Lam "n" (Case n [
         (Pat "Zero" [], con "T"),
         (Pat "Succ" ["m"], con "F")
-      ])) (Let "x" two (App iszero x)), con "F"),
-    (Let "iszero" (Lam "n" (Case n [
+      ]))] (Let [("x", two)] (App iszero x)), con "F"),
+    (Let [("iszero", Lam "n" (Case n [
         (Pat "Zero" [], con "T"),
         (Pat "Succ" ["m"], con "F")
-      ])) (Let "x" zero (App iszero x)), con "T"),
-    (Let "plus1" (Lam "n" (App suc n)) (Let "x" one (App plus1 x)), two),
-    (Let "and" (Lam "n" (Lam "m" (Case n [
+      ]))] (Let [("x", zero)] (App iszero x)), con "T"),
+    (Let [("plus1", Lam "n" (App suc n))]
+      (Let [("x", one)] (App plus1 x)), two),
+    (Let [("and", Lam "n" (Lam "m" (Case n [
         (Pat "False" [], con "False"),
         (Pat "True" [], m)
-      ]))) (app (Var "and") [con "True", con "True"]),
+      ])))] (app (Var "and") [con "True", con "True"]),
       con "True"),
-    (Let "pred" (Lam "n" (Case n [
+    (Let [("pred", Lam "n" (Case n [
         (Pat "Zero" [], zero),
         (Pat "Succ" ["n'"], n')
-      ])) (App (Var "pred") zero),
+      ]))] (App (Var "pred") zero),
       zero),
-    (Let "pred" (Lam "n" (Case n [
+    (Let [("pred", Lam "n" (Case n [
         (Pat "Zero" [], zero),
         (Pat "Succ" ["n'"], n')
-      ])) (App (Var "pred") two),
+      ]))] (App (Var "pred") two),
       one),
-    (Let "pl" (Lam "n" (Lam "m" (Case n [
+    (Let [("pl", Lam "n" (Lam "m" (Case n [
         (Pat "Zero" [], m),
         (Pat "Succ" ["x"], App (App (Var "pl") x) (App suc m))
-      ]))) (App (App (Var "pl") three) two),
+      ])))] (App (App (Var "pl") three) two),
       five),
-    (Let "x" (Con "Zero" []) (App (Con "Succ" []) (Var "x")),
+    (Let [("x", Con "Zero" [])] (App (Con "Succ" []) (Var "x")),
       Con "Succ" [Con "Zero" []]),
     (app cons [App f y, app g [f, ys]],
       Con "Cons" [App f y,app g [f, ys]]),
