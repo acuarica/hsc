@@ -121,3 +121,10 @@ Mention problem about using smallcheck related to depth.
   ICLP'17
 8. SuperCheck: A property-prover for Haskell based on supercompilation.
   ?
+
+dependent-type language with supercompilation:
+Advantage : we dont need totality.
+Only provide theorem, supercompilation provides proof?
+
+Where dependent-types fail?
+What's the expressive power of supercompilation? What can they prove? Does it rely on totality?

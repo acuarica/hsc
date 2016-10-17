@@ -5,8 +5,8 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 import Test.Tasty.HUnit (testCase, assertBool)
 
-import Expr (Expr(Var, Con, Lam, Let, App, Case),
-  app, nil, cons, bool, nat, list)
+import Expr (Expr(Var, Con, Lam, App, Let, Case),
+  app, let1, nil, cons, bool, nat, list)
 import Parser (parseExpr)
 import Eval (eval, evalc)
 import Supercompiler (supercompile)
@@ -70,63 +70,63 @@ main :: IO ()
 main = defaultMain $ testGroup "Supercompile Test" [
   testGroup "Eval" [
     go "map inc zs" $
-      Let "zs" . list nat,
+      let1 "zs" . list nat,
     go "map inc zs" $
-      Let "zs" . list bool,
+      let1 "zs" . list bool,
     go "map inc zs" $
-      Let "zs" . list (list nat),
+      let1 "zs" . list (list nat),
     go "map inc" $
       flip App . list nat,
     go "map inc (map inc zs)" $
-      Let "zs" . list nat,
+      let1 "zs" . list nat,
     go "map {n->Succ n} (map {n->Succ(Succ n)} zs)" $
-      \zs -> Let "zs" (list nat zs),
+      \zs -> let1 "zs" (list nat zs),
     go "map h (map g zs)" $
       \zs ->
-        Let "h" (parseExpr
+        let1 "h" (parseExpr
           "{n->Succ n}") .
-        Let "g" (parseExpr
+        let1 "g" (parseExpr
           "{n->case n of Zero->Zero;Succ n'->Succ(Succ (g n'));}") .
-        Let "zs" (list nat zs),
+        let1 "zs" (list nat zs),
     go "let mimi={zs->map inc (map inc zs)} in mimi" $
       flip App . list nat,
     go "c (map inc) (map inc)" $
       flip App . list nat,
     go "append as bs" $
-      \(as, bs) -> Let "as" (list nat as) . Let "bs" (list nat bs),
+      \(as, bs) -> let1 "as" (list nat as) . let1 "bs" (list nat bs),
     go "append (append as bs) cs" $
       \(as, bs, cs) ->
-        Let "as" (list nat as) .
-          Let "bs" (list nat bs) .
-            Let "cs" (list nat cs),
+        let1 "as" (list nat as) .
+          let1 "bs" (list nat bs) .
+            let1 "cs" (list nat cs),
     go "reverse zs" $
-      Let "zs" . list nat,
+      let1 "zs" . list nat,
     go "reverseAccum zs" $
-      Let "zs" . list nat
+      let1 "zs" . list nat
   ],
   testGroup "Predicates" [
     goPred "eqn x x" $
-      Let "x" . nat,
+      let1 "x" . nat,
     goPred "eqn (plus Zero x) x" $
-      Let "x" . nat,
+      let1 "x" . nat,
     goPred "eqn x (plus Zero x)" $
-      Let "x" . nat,
+      let1 "x" . nat,
     goPred "eqn (len (map id zs)) (len zs)" $
-      \zs -> Let "zs" $ list nat zs,
+      \zs -> let1 "zs" $ list nat zs,
     goPred "eqn (len (map f zs)) (len zs)" $
-      \zs -> Let "f" (parseExpr "{n->Succ n}") . Let "zs" (list nat zs),
+      \zs -> let1 "f" (parseExpr "{n->Succ n}") . let1 "zs" (list nat zs),
     goPred "eqn (len (append as bs)) (plus (len as) (len bs))" $
-      \(as, bs) -> Let "as" (list nat as) . Let "bs" (list nat bs),
+      \(as, bs) -> let1 "as" (list nat as) . let1 "bs" (list nat bs),
     goPred "leqn 0 x" $
-      Let "x" . nat,
+      let1 "x" . nat,
     goPred "eqn (len (insertSorted z zs)) (plus 1 (len zs))" $
-      \(z, zs) -> Let "x" (nat z) . Let "zs" (list nat zs)
+      \(z, zs) -> let1 "x" (nat z) . let1 "zs" (list nat zs)
     ],
   testGroup "Invertible Functions" [
     go "eqn x 0" $
-      Let "x" . nat,
+      let1 "x" . nat,
     go "eqn x 5" $
-      Let "x" . nat
+      let1 "x" . nat
     ]
   ]
   where
@@ -147,6 +147,6 @@ main = defaultMain $ testGroup "Supercompile Test" [
       Var _ -> True
       Con tag args -> tag == "True" && null args
       Lam _ lamexpr -> onlyTrue lamexpr
-      Let _ valexpr inexpr -> onlyTrue valexpr && onlyTrue inexpr
+      --Let _ valexpr inexpr -> onlyTrue valexpr && onlyTrue inexpr
       App funexpr valexpr -> onlyTrue funexpr && onlyTrue valexpr
       Case scexpr pats -> onlyTrue scexpr && all (onlyTrue . snd) pats

@@ -14,7 +14,7 @@ import Control.Arrow (first)
 
 import Expr (
   Expr(Var, Con, Lam, App, Let, Case), Var, Binding, Alt, Pat(Pat),
-  subst, substAlts, lookupAlt, freeVars, alpha)
+  let1, subst, substAlts, lookupAlt, freeVars, alpha)
 
 {-|
   Represents the configuration of the abstract machine.
@@ -90,7 +90,9 @@ toExpr conf@(env, stack, expr) = go expr stack
   where go expr [] = expr
         go expr (Arg arg:stack') = go (App expr arg) stack'
         go expr (Alts alts:stack') = go (Case expr alts) stack'
-        --go expr (Update var:stack') = go (Let var expr (Var var)) stack'
+        --go expr (Update var:stack') =
+          --go (let1 var expr (Var var)) stack'
+        go expr (Update var:stack') = go expr stack'
 
 {-|
   Reduce a state to Normal Form (NF).

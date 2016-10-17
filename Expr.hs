@@ -7,7 +7,7 @@
 module Expr (
   Expr(Var, Con, Lam, App, Let, Case), Var, Tag, Binding, Alt, Pat(Pat),
   Subst,
-  con, app, appVars, isVar, isEmptyCon,
+  con, app, appVars, let1, isVar, isEmptyCon,
   subst, substAlts, lookupAlt, freeVars, alpha,
   true, false, zero, suc, nil, cons, bool, nat, list
 ) where
@@ -78,6 +78,12 @@ app expr args = case args of
 -}
 appVars :: Expr -> [Var] -> Expr
 appVars expr = app expr . map Var
+
+{-|
+  Creates a let expression with only one binding.
+-}
+let1 :: Var -> Expr -> Expr -> Expr
+let1 var valexpr = Let [(var, valexpr)]
 
 {-|
   Returns True if expr is a variable.

@@ -36,7 +36,7 @@ supercompileMemo expr =
 
 -- | Rebuilds an expression from the promises.
 fromMemo [] expr0 = expr0
-fromMemo ((var, expr):prom) expr0 = Let var expr (fromMemo prom expr0)
+fromMemo ((var, expr):prom) expr0 = Let [(var, expr)] (fromMemo prom expr0)
 
 -- | Runs the state machine for memo/hist.
 runMemo :: Expr -> ((Var, Expr), (Hist, Env))

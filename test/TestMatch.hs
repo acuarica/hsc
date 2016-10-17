@@ -2,11 +2,11 @@
 module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.HUnit --(testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=))
 
 import Control.Arrow (second)
 
-import Expr (Expr(Var, Con, App), app, appVars, substAlts)
+import Expr (Expr(Var, Con, App), app, appVars, substAlts, alpha)
 import Parser (parseExpr)
 import Eval (Env, newConf, emptyEnv, eval)
 import Match (match, envExpr, (|~~|), (<|), (|><|))
@@ -120,6 +120,7 @@ unificationTest = testGroup "Unification tests" $
             case s of
               Nothing -> []
               Just s' -> [testCase "Subst" $
+                --alpha (substAlts s' xe) @?= alpha (substAlts s' ye)]
                 substAlts s' xe @?= substAlts s' ye]
           in
   [

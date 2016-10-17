@@ -24,7 +24,7 @@ source-repository head
   location: https://github.com/acuarica/hsc.git
 
 library
-  exposed-modules:  Expr, Eval, Match, Splitter, Supercompiler
+  exposed-modules:  Parser, Expr, Eval, Match, Splitter, Supercompiler
   build-depends:    base >= 4.8 && < 5, mtl >= 2.2.1
   hs-source-dirs:   .
   default-language: Haskell98

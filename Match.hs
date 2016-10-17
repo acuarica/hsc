@@ -1,4 +1,3 @@
-
 {-|
   The Match module defines how two expressions are equivalent.
 -}
@@ -43,7 +42,7 @@ freduce = freduce' 1
 -}
 envToLet :: Env -> Expr -> Expr
 envToLet [] expr = expr
-envToLet ((var, valexpr):env) expr = Let var valexpr (envToLet env expr)
+envToLet ((var, valexpr):env) expr = Let [(var, valexpr)] (envToLet env expr)
 
 {-|
   Given a Conf, returns the equivalent Expr like toExpr,
@@ -53,7 +52,7 @@ envExpr :: Conf -> Expr
 envExpr conf@(env, _, _) = rebuildEnv env (toExpr conf)
   where rebuildEnv [] expr = expr
         rebuildEnv ((var,valexpr):env) expr =
-          Let var valexpr (rebuildEnv env expr)
+          Let [(var, valexpr)] (rebuildEnv env expr)
 
 {-|
   Given a list of Var, creates a Lam expression where the variables
@@ -123,7 +122,7 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
     then uni (zipWith (|~~|) args1 args2)
     else Nothing
 (|~~|) (Lam v1 e1) (Lam v2 e2) = e1 |~~| e2
-(|~~|) (Let v1 e1 b1) (Let v2 e2 b2) = merge <$> e1 |~~| e2 <*> b1 |~~| b2
+--(|~~|) (Let v1 e1 b1) (Let v2 e2 b2) = merge <$> e1 |~~| e2 <*> b1 |~~| b2
 (|~~|) (App f1 v1) (App f2 v2) = merge <$> f1 |~~| f2 <*> v1 |~~| v2
 
 {-|

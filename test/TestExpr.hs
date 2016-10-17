@@ -64,7 +64,10 @@ freeVarsTest = testGroup "freeVars expr ~~> [Var]" $
     ("let inc={n->S m} in inc n", ["n", "m"]),
     ("let inc={n->(let s=Succ in s n)} in inc m", ["m"]),
     ("let inc={n->(let s=Succ in s n)} in inc n", ["n"]),
-    ("let inc={n->s (let s=A in s m)} in inc m", ["m", "s"])
+    ("let inc={n->s (let s=A in s m)} in inc m", ["m", "s"]),
+    ("(let x=A in C x) x", ["x"]),
+    ("let a=b in let b=A in a", ["b"]),
+    ("let a=b; b=A in a", [])
   ]
 
 alphaTest :: TestTree
@@ -78,11 +81,13 @@ alphaTest = testGroup "alpha expr ~~> expr" $
     go "{f->{x->f x}}" "{g->{y->g y}}",
     go "{f->{x->f x}} {a->a}" "{g->{y->g y}} {b->b}",
     go "let x=A in x" "let y=A in y",
+    go "let a=m in let b=A in b" "let x=m in let y=A in y",
     go "let x=A in let y=B in x y" "let u=A in let v=B in u v",
     go "(let x=F in x) (let x=X in x)" "(let y=F in y) (let z=X in z)",
     go "F (let x=A in x)" "F (let y=A in y)",
     go "let x=(let f=F;a=A in f a) in x" "let y=(let g=F;b=A in g b) in y",
-    go "let x=(let a=A in a) in (let f=F in f)" "let y=(let b=A in b) in (let g=F in g)",
+    go "let x=(let a=A in a) in (let f=F in f)"
+      "let y=(let b=A in b) in (let g=F in g)",
     go "case x of X -> (let y=A in y);" "case x of X -> (let z=A in z);",
     go "case (let x=a in x) of X->A;" "case (let y=a in y) of X->A;",
     go "let x=A;y=B in x y" "let a=A;b=B in a b"

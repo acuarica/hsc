@@ -5,46 +5,56 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (Expr(Var, Con, Lam, App, Let, Case), Pat(Pat),
-  con, app, zero, suc, cons, nil)
+  con, app, let1, zero, suc, cons, nil, alpha)
 import Parser (parseExpr)
 import Eval (eval, whnf, evalc, whnfc)
 
 evalp :: String -> Expr
-evalp = eval . parseExpr
+evalp = alpha . eval . parseExpr
 
 whnfp :: String -> Expr
 whnfp = whnf . parseExpr
 
 prelude :: String
 prelude =
-  "let id={a->a} in \
-  \let app={p->{q->p q}} in \
-  \let inc={n->Succ n} in \
-  \let cp={a->case a of Zero->0;Succ aa->Succ (cp aa);} in \
-  \let cat={xs->{ys->case xs of \
-  \  Nil->ys;\
-  \  Cons z zs->Cons z (cat zs ys);}} in \
-  \let rev={rs-> case rs of \
-  \  Nil->Nil;\
-  \  Cons s ss->cat (rev ss) [s];} in \
-  \let revA={xs->{as->case xs of \
-  \  Nil->as;\
-  \  Cons y ys->revA ys (Cons y as);}} in \
-  \let reverseAccum = {rs->revA rs []} in \
-  \let map={f->{xs->case xs of \
-  \  Nil->Nil;\
-  \  Cons y ys->Cons (f y)(map f ys);}} in \
-  \let plus={n->{m->case n of \
-  \  Zero->m;\
-  \  Succ nn->plus nn (Succ m);}} in \
-  \let mult={n->{m->case n of \
-  \  Zero->0;\
-  \  Succ nn->plus (mult nn m) m;}} in \
-  \let len={xs->case xs of Nil->0; Cons y ys->Succ (len ys);} in \
-  \let head={xs->case xs of Cons y ys -> y; } in \
-  \let tail={xs->case xs of Cons y ys -> ys; } in \
-  \let inf={n->Cons n (inf (Succ n))} in \
-  \let infA=Cons A inf in "
+  "let \
+  \  id = {a->a} ;\
+  \  app = {p->{q->p q}} ;\
+  \  inc = {n->Succ n} ;\
+  \  copyN = {n->case n of \
+  \    Zero -> 0;\
+  \    Succ n' -> Succ (copyN n');\
+  \  };\
+  \  append = {xs->{ys->case xs of \
+  \    Nil -> ys;\
+  \    Cons x xs' -> Cons x (append xs' ys);\
+  \  }};\
+  \  reverse' = {xs->case xs of \
+  \    Nil -> Nil;\
+  \    Cons x xs' -> append (reverse' xs') [x];\
+  \  };\
+  \  reverse = {xs-> \
+  \    let reverseAccum = {xs->{as->case xs of \
+  \      Nil -> as;\
+  \      Cons y ys -> reverseAccum ys (Cons y as);\
+  \    }} in reverseAccum xs [] }  ;\
+  \  map = {f->{xs->case xs of \
+  \    Nil->Nil;\
+  \    Cons y ys->Cons (f y)(map f ys);\
+  \  }};\
+  \  plus = {n->{m->case n of \
+  \    Zero->m;\
+  \    Succ nn->plus nn (Succ m);\
+  \  }};\
+  \  mult = {n->{m->case n of \
+  \    Zero->0;\
+  \    Succ nn->plus (mult nn m) m;\
+  \  }};\
+  \  len = {xs->case xs of Nil->0; Cons y ys->Succ (len ys);} ; \
+  \  head = {xs->case xs of Cons y ys -> y; } ; \
+  \  tail = {xs->case xs of Cons y ys -> ys; } ; \
+  \  inf = {n->Cons n (inf (Succ n))} ; \
+  \  infA = Cons A inf in "
 
 whnfTest :: TestTree
 whnfTest = testGroup "whnf" $
@@ -92,7 +102,9 @@ evalcTest = testGroup "evalc" $
 
 evalTest :: TestTree
 evalTest = testGroup "eval expr ~~> expr" $
-  map (\(a, e) -> testCase (show a ++ " ~~> " ++ show e) $ eval a @?= e)
+  map (\(a, e) ->
+    testCase (show a ++ " ~~> " ++ show e) $
+      eval a @?= alpha e)
   [
     (var, var),
     (con "True", con "True"),
@@ -113,7 +125,7 @@ evalTest = testGroup "eval expr ~~> expr" $
     (App (Lam "x" x) zero, zero),
     (Lam "x" x, Lam "x" x),
     (Lam "f" (Lam "x" (App f x)), Lam "f" (Lam "x" (App f x))),
-    (Let [("x", zero)] x, zero),
+    (let1 "x" zero x, zero),
     (Let [("x", Lam "y" y)] (Let [("z", nil)] (App x z)), nil),
     (Let [("x", con "True")] (Case x [
         (Pat "False" [], con "True"),
@@ -232,22 +244,23 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
     testCase (a ++ " ~~> " ++ e) $ (evalp . (++) prelude) a @?= evalp e)
   [
     ("x", "x"),
-    ("cp 5", "5"),
-    ("{x->x} (cp 5)", "5"),
+    ("copyN 5", "5"),
+    ("{x->x} (copyN 5)", "5"),
     ("len [1,2,3,4,5,6,7]", "7"),
     ("plus 2 3", "5"),
     ("mult 4 5", "20"),
-    ("cat [1,2,3,4] [5,6,7]", "[1,2,3,4,5,6,7]"),
-    ("cat [] [One,Two,Three]", "[One,Two,Three]"),
-    ("cat [One,Two,Three] []", "[One,Two,Three]"),
-    ("cat (cat [1,2] [3]) [4,5,6]", "[1,2,3,4,5,6]"),
-    ("rev [A,B,C,D]", "[D,C,B,A]"),
-    ("rev []", "[]"),
-    ("rev [One]", "[One]"),
-    ("reverseAccum [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
-    ("revA [A,B,C,D,E,F,G] []", "[G,F,E,D,C,B,A]"),
+    ("append [1,2,3,4] [5,6,7]", "[1,2,3,4,5,6,7]"),
+    ("append [] [One,Two,Three]", "[One,Two,Three]"),
+    ("append [One,Two,Three] []", "[One,Two,Three]"),
+    ("append (append [1,2] [3]) [4,5,6]", "[1,2,3,4,5,6]"),
+    ("reverse' [A,B,C,D]", "[D,C,B,A]"),
+    ("reverse' []", "[]"),
+    ("reverse' [One]", "[One]"),
+    ("reverse []", "[]"),
+    ("reverse [A]", "[A]"),
+    ("reverse [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
     ("map id [A,B,C,D,E]", "[A,B,C,D,E]"),
-    ("rev (map rev [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
+    ("reverse' (map reverse' [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
     ("let plus2={n -> plus 2 n} in plus2 1", "3"),
     ("let multten=mult 10 in multten 1", "10"),
     ("map {a->A} [1,2,3,4,5]", "[A,A,A,A,A]"),
@@ -285,19 +298,14 @@ evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
     go "let x=(let y=A in let z=B in C y z) in x y z" "C A B y z",
     go "(let x=A in C x) x" "C A x",
     go "(let y=A in let z=B in C y z) y z" "C A B y z",
+    go "let a=b in let b=A in b" "A",
+    go "let a=b in let b=A in a" "b",
+    go "(let b=A in b) (let a=b in a)" "A b",
     go "case Succ n of Succ n'->A n';" "A n",
     go "case Succ n of Succ n->A n;" "A n"
-  ]
-
-evalForwardDecl :: TestTree
-evalForwardDecl = testGroup "eval w/forward declarations" $
-  let go a e = testCase (a ++ " ~~> " ++ e) $ evalp a @?= evalp e in
-  [
-    go "let a=b in let b=B in a" "B"
   ]
 
 main :: IO ()
 main = defaultMain $ testGroup "Eval::eval/whnf"
   [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest,
-  evalLazyTest, evalNameCaptureTest, evalForwardDecl, whnfcTest,
-  evalcTest]
+  evalLazyTest, evalNameCaptureTest, whnfcTest, evalcTest]

@@ -1,4 +1,6 @@
-
+{-|
+  Parser for Expr.
+-}
 module Parser (parseExpr) where
 
 import Expr (Expr(Var, Lam, App, Let, Case), Var, Binding, Pat(Pat),
@@ -261,5 +263,8 @@ parseWith p s =
                    " with " ++ show a
     Error msg  -> error $ printf "Parser error: %s in ``%s''" msg s
 
+{-|
+  Given a textual representation of Expr, returns the parsed Expr.
+-}
 parseExpr :: String -> Expr
 parseExpr = parseWith exprp
