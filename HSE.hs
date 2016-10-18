@@ -4,14 +4,14 @@ module HSE where
 import Language.Haskell.Exts hiding (Pat,Var,Let,App,Case,Con,app,name)
 import qualified Language.Haskell.Exts as H
 
-import Expr (Expr(..), Var, Pat(Pat), con, zero)
+import Expr (Expr(Var, Con, Lam, App, Case), Var, Pat(Pat), con, let1, zero)
 
 fromHSE :: Expr -> Module -> Expr
 fromHSE rootExpr (Module _ _ _ _ _ _ decls) =
   foldr foldExpr rootExpr decls
   where foldExpr decl expr = case fromDecl decl of
           Nothing -> expr
-          Just (v, d) -> Let v d expr
+          Just (v, d) -> let1 v d expr
 
 fromDecl :: Decl -> Maybe (Var, Expr)
 fromDecl (PatBind _ (PVar f) (UnGuardedRhs x) (Just (BDecls []))) =
