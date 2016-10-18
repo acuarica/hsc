@@ -7,7 +7,7 @@
 module Expr (
   Expr(Var, Con, Lam, App, Let, Case), Var, Tag, Binding, Alt, Pat(Pat),
   Subst,
-  con, app, appVars, let1, isVar, isEmptyCon,
+  con, app, appVars, let1, isVar, isEmptyCon, bindings,
   subst, substAlts, lookupAlt, freeVars, alpha,
   true, false, zero, suc, nil, cons, bool, nat, list
 ) where

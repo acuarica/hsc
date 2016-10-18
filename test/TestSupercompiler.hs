@@ -6,7 +6,7 @@ import Test.Tasty.QuickCheck (testProperty)
 import Test.Tasty.HUnit (testCase, assertBool)
 
 import Expr (Expr(Var, Con, Lam, App, Let, Case),
-  app, let1, nil, cons, bool, nat, list)
+  app, let1, bindings, nil, cons, bool, nat, list)
 import Parser (parseExpr)
 import Eval (eval, evalc)
 import Supercompiler (supercompile)
@@ -147,6 +147,6 @@ main = defaultMain $ testGroup "Supercompile Test" [
       Var _ -> True
       Con tag args -> tag == "True" && null args
       Lam _ lamexpr -> onlyTrue lamexpr
-      --Let _ valexpr inexpr -> onlyTrue valexpr && onlyTrue inexpr
+      Let binds inexpr -> all onlyTrue (bindings binds) && onlyTrue inexpr
       App funexpr valexpr -> onlyTrue funexpr && onlyTrue valexpr
       Case scexpr pats -> onlyTrue scexpr && all (onlyTrue . snd) pats
