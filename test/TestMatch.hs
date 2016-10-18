@@ -120,8 +120,7 @@ unificationTest = testGroup "Unification tests" $
             case s of
               Nothing -> []
               Just s' -> [testCase "Subst" $
-                --alpha (substAlts s' xe) @?= alpha (substAlts s' ye)]
-                substAlts s' xe @?= substAlts s' ye]
+                alpha (substAlts s' xe) @?= alpha (substAlts s' ye)]
           in
   [
     go "x" "x" $
