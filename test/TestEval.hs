@@ -260,7 +260,7 @@ evalWithPreludeTest = testGroup "evalPreludeTest" $
     ("reverse [A]", "[A]"),
     ("reverse [A,B,C,D,E,F]", "[F,E,D,C,B,A]"),
     ("map id [A,B,C,D,E]", "[A,B,C,D,E]"),
-    ("reverse' (map reverse' [[A,B,C], [D,E], [F]])", "[[F],[E,D],[C,B,A]]"),
+    ("reverse' (map reverse' [[A,B,C], [D,E]])", "[[E,D],[C,B,A]]"),
     ("let plus2={n -> plus 2 n} in plus2 1", "3"),
     ("let multten=mult 10 in multten 1", "10"),
     ("map {a->A} [1,2,3,4,5]", "[A,A,A,A,A]"),

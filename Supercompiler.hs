@@ -13,7 +13,7 @@ import Control.Monad.State (State, state, runState)
 
 import Expr (
   Expr(Var, Con, Let, Case), Var, Pat(Pat),
-  app, appVars, isVar, isEmptyCon, freeVars)
+  app, appVars, let1, isVar, isEmptyCon, freeVars)
 import Eval (
   Conf, Env, StackFrame(Arg, Alts, Update),
   newConf, emptyEnv, toExpr, nf, reduce, put)
@@ -36,7 +36,7 @@ supercompileMemo expr =
 
 -- | Rebuilds an expression from the promises.
 fromMemo [] expr0 = expr0
-fromMemo ((var, expr):prom) expr0 = Let [(var, expr)] (fromMemo prom expr0)
+fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
 
 -- | Runs the state machine for memo/hist.
 runMemo :: Expr -> ((Var, Expr), (Hist, Env))

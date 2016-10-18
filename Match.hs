@@ -8,7 +8,8 @@ module Match (
 import Data.Maybe (fromJust)
 import Data.List (delete)
 
-import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Subst, freeVars)
+import Expr (
+  Expr(Var, Con, Lam, Let, App, Case), Var, Subst, let1, freeVars)
 import Eval (Env, Conf, StackFrame(Arg, Update),
   newConf, emptyEnv, toExpr, reduce)
 
@@ -43,7 +44,7 @@ freduce = freduce' 1
 -}
 envToLet :: Env -> Expr -> Expr
 envToLet [] expr = expr
-envToLet ((var, valexpr):env) expr = Let [(var, valexpr)] (envToLet env expr)
+envToLet ((var, valexpr):env) expr = let1 var valexpr (envToLet env expr)
 
 {-|
   Given a Conf, returns the equivalent Expr like toExpr,
@@ -130,7 +131,8 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
       Just s -> if (v1, Var v2) `elem` s
         then Just $ delete (v1, Var v2) s
         else Nothing
---(|~~|) (Let v1 e1 b1) (Let v2 e2 b2) = merge <$> e1 |~~| e2 <*> b1 |~~| b2
+--(|~~|) (Let v1 e1 b1) (Let v2 e2 b2) =
+  -- merge <$> e1 |~~| e2 <*> b1 |~~| b2
 (|~~|) (App f1 v1) (App f2 v2) = merge <$> f1 |~~| f2 <*> v1 |~~| v2
 
 {-|
