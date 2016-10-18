@@ -36,15 +36,17 @@ The eval module defines the language semantics of the language.
 This module supports two alternatives to reduce expressions,
 one is to normal form, and the other to weak head normal form.
 
-### Spliiter
+### Match
 
+Defines whether two expressions match.
+Also defines unification, homeomorphic embedding, and generalization.
+
+### Supercompiler
+
+Supercompiles an expression.
 The splitter contains two function, one splits an stucked expression,
 and the other, combines, reconstruct the original expression but with the
 splitted parts.
-
-### Supercompile
-
-Supercompiles an expression.
 
 ## Testing
 
@@ -58,7 +60,6 @@ To execute all module tests, run the following:
 cabal run test-expr
 cabal run test-parser
 cabal run test-eval
-cabal run test-splitter
 cabal run test-match
 cabal run test-supercompiler
 ```

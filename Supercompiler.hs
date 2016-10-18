@@ -1,8 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 
--- | Defines the Supercompiler based on the operational semantics of the
--- | language using Eval.
+{-|
+  Defines the Supercompiler based on the operational semantics of the
+  language using Eval.
+-}
 module Supercompiler (
+  Node(VarNode, ArgNode, ConNode, CaseNode),
   Hist, HistNode, HistEdge, supercompile, supercompileMemo
 ) where
 
@@ -10,31 +13,34 @@ import Data.List (intercalate, union)
 import Data.Maybe (isNothing, fromJust)
 import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
+import Control.Arrow (second)
 
 import Expr (
   Expr(Var, Con, Let, Case), Var, Pat(Pat),
-  app, appVars, let1, isVar, isEmptyCon, freeVars)
+  con, app, appVars, let1, isVar, isEmptyCon, freeVars, subst, substAlts)
 import Eval (
   Conf, Env, StackFrame(Arg, Alts, Update),
   newConf, emptyEnv, toExpr, nf, reduce, put)
-import Splitter (
-  Node(VarNode, ArgNode, ConNode, CaseNode),
-  Label(PatLabel, ConLabel),
-  split)
 import Match (match, match', toLambda, envExpr, freduce)
 
--- | Supercompiles an Expr.
+{-|
+  Supercompiles an Expr.
+-}
 supercompile :: Expr -> Expr
 supercompile = fst . supercompileMemo
 
--- | Supercompiles an Expr, and also returns the memo.
+{-|
+  Supercompiles an Expr, and also returns the memo.
+-}
 supercompileMemo :: Expr -> (Expr, ((Var, Expr), (Hist, Env)))
 supercompileMemo expr =
   let rm = runMemo expr in
   let gp ((_, expr0), (_, prom)) = fromMemo prom expr0 in
   (gp rm, rm)
 
--- | Rebuilds an expression from the promises.
+{-|
+  Rebuilds an expression from the promises.
+-}
 fromMemo [] expr0 = expr0
 fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
 
@@ -83,6 +89,51 @@ memo conf@(env, stack, expr) =
         return (var, appVars (Var var) (fvs $ reduce conf))
         --return (var, appVars (Var var) (fvs conf))
   where fvs = freeVars . envExpr
+
+{-|
+  Represents where the expression has been stucked.
+-}
+data Node = VarNode | ArgNode | ConNode | CaseNode deriving Show
+
+{-|
+  Represents how an expression connects to all its splitted childs.
+-}
+data Label = PatLabel Pat | ConLabel String | ArgLabel
+
+instance Show Label where
+  show (PatLabel pat) = show pat
+  show (ConLabel s) = s
+  show ArgLabel = "ArgLabel"
+
+{-|
+  Given a state, returns where to continue the computation.
+  The given conf must be stucked.
+-}
+split :: Conf -> (Node, [(Label, Conf)])
+split s@(env, stack, expr) = case expr of
+  Var var -> case stack of
+    [] -> (VarNode, [])
+    Arg arg:stack' -> (ArgNode, [(ArgLabel, (env, stack', arg))])
+    Alts alts:stack' -> (CaseNode,
+      map (\(Pat tag vars, alt) ->
+        let cVar v = "$" ++ var ++ "_" ++ v in
+        let cVars = map cVar vars in
+        let repl = zip vars (map Var cVars) in
+        let cc = appVars (con tag) cVars in
+        let altExpr = subst (var, cc) $ substAlts repl alt in
+        let altFrame frame = (case frame of
+              Alts alts' ->
+                Alts (map (second (subst (var, cc))) alts') ) in
+        let altStack = map altFrame stack' in
+        let altConf = (env, altStack, altExpr) in
+        (PatLabel (Pat tag cVars), altConf) ) alts)
+    _ -> error $ "Error: split var: " ++ show s
+  Con tag args -> case stack of
+    [] -> (ConNode,
+      map (\(i, e)->
+        (ConLabel $ tag ++ "_" ++ show i, newConf env e))
+          (zip [1..length args] args))
+    _ -> error $ "Spliting with Con and stack: " ++ show stack
 
 -- | Represents a node in the history graph.
 type HistNode = (Var, [Var], Node, Conf, [(Label, Conf)])

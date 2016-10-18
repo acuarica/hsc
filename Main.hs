@@ -11,8 +11,8 @@ import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
 import Expr (Expr(Var, Con, Let), Var)
 import Parser (parseExpr)
-import Splitter (Node(VarNode, ArgNode, ConNode, CaseNode))
-import Supercompiler (Hist, supercompileMemo)
+import Supercompiler (Hist, Node(VarNode, ArgNode, ConNode, CaseNode),
+  supercompileMemo)
 import HSE (fromHSE)
 
 usage :: String
@@ -69,12 +69,13 @@ filterByExt ext fileText = case lookup ext filters of
       ]
 
 pprint :: Expr -> String
-pprint (Let var valexpr inexpr) =
-  "let " ++ var ++ "=" ++ show valexpr ++ "" ++ " in \n" ++ pprint inexpr
+pprint (Let binds inexpr) =
+  "let \n" ++ unwords (map pplet binds) ++ "in \n" ++ pprint inexpr
+  where pplet (var, valexpr) = "  " ++ var ++ "=" ++ show valexpr ++ "\n"
 pprint expr = show expr
 
 caption :: Expr -> String
-caption (Let var valexpr inexpr) = caption inexpr
+caption (Let _ inexpr) = caption inexpr
 caption expr = show expr
 
 writeFileLog :: FilePath -> String -> IO ()
