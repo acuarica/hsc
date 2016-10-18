@@ -6,6 +6,7 @@ module Match (
 ) where
 
 import Data.Maybe (fromJust)
+import Data.List (delete)
 
 import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Subst, freeVars)
 import Eval (Env, Conf, StackFrame(Arg, Update),
@@ -121,7 +122,14 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
   if tag1 == tag2 && length args1 == length args2
     then uni (zipWith (|~~|) args1 args2)
     else Nothing
-(|~~|) (Lam v1 e1) (Lam v2 e2) = e1 |~~| e2
+(|~~|) (Lam v1 e1) (Lam v2 e2) =
+  if v1 == v2
+    then e1 |~~| e2
+    else case e1 |~~| e2 of
+      Nothing -> Nothing
+      Just s -> if (v1, Var v2) `elem` s
+        then Just $ delete (v1, Var v2) s
+        else Nothing
 --(|~~|) (Let v1 e1 b1) (Let v2 e2 b2) = merge <$> e1 |~~| e2 <*> b1 |~~| b2
 (|~~|) (App f1 v1) (App f2 v2) = merge <$> f1 |~~| f2 <*> v1 |~~| v2
 
