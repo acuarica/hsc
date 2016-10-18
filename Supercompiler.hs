@@ -44,13 +44,17 @@ supercompileMemo expr =
 fromMemo [] expr0 = expr0
 fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
 
--- | Runs the state machine for memo/hist.
+{-|
+  Runs the state machine for memo/hist.
+-}
 runMemo :: Expr -> ((Var, Expr), (Hist, Env))
 runMemo expr = runState s (([], []), [])
   where s = memo (newConf emptyEnv expr)
 
--- Runs the supercompiler
--- Conf has to be WHNF?
+{-|
+  Runs the supercompiler
+  Conf has to be WHNF?
+-}
 memo :: Conf -> Memo (Var, Expr)
 memo conf@(env, stack, expr) =
   do
@@ -135,39 +139,58 @@ split s@(env, stack, expr) = case expr of
           (zip [1..length args] args))
     _ -> error $ "Spliting with Con and stack: " ++ show stack
 
--- | Represents a node in the history graph.
+{-|
+  Represents a node in the history graph.
+-}
 type HistNode = (Var, [Var], Node, Conf, [(Label, Conf)])
 
--- | Represents an edge in the history graph.
+{-|
+  Represents an edge in the history graph.
+-}
 type HistEdge = (Var, Label, Var, [Var], Conf)
 
--- | Represents the history graph of memoized expression being
--- | supercompiled.
+{-|
+  Represents the history graph of memoized expression being supercompiled.
+-}
 type Hist = ([HistEdge], [HistNode])
 
+{-|
+-}
 type Memo a = State (Hist, Env) a
 
+{-|
+-}
 recVertex :: [Var] -> Node -> Conf -> [(Label, Conf)] -> Memo Var
 recVertex fv node conf sps = state $ \((es, vs), prom) ->
   let var = "$v_" ++ show (length vs) in
   let vertex = (var, fv, node, conf, sps) in
     (var, ((es, vertex:vs), prom))
 
+{-|
+-}
 recEdge :: HistEdge -> Memo ()
 recEdge edge = state $ \((es, vs), prom) ->
     ((), ((edge:es, vs), prom))
 
+{-|
+-}
 promise :: Var -> Expr -> Memo ()
 promise var expr = state $ \(hist, prom) ->
   ((), (hist, (var, expr):prom))
 
+{-|
+-}
 isin :: Conf -> Memo (Maybe (Var, [Var]))
 isin conf = state $ \(hist@(es, vs), prom) ->
   (lookupMatch vs conf, (hist, prom))
 
+{-|
+-}
 getNext :: Memo Int
 getNext = state $ \(hist@(es, vs), prom) -> (length vs, (hist, prom))
 
+{-|
+-}
 lookupMatch :: [HistNode] -> Conf -> Maybe (Var, [Var])
 lookupMatch [] _ = Nothing
 lookupMatch ((var, vars, node, conf', sps):hist) conf =
