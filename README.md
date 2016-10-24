@@ -71,7 +71,14 @@ Mention problem about using smallcheck related to depth.
 
 ## TODOs
 
+### Dependent-type related
+
 * Implement generalization/distillation.
+  With this, we'll have a minimal working Supercompiler to experiment with.
+*
+
+### Misc
+
 * Check that effectively that supercompiled expression is
   "better" than the input expression.
   What does "better" mean: How do we compare between two equivalent
