@@ -101,9 +101,15 @@ isEmptyCon :: Expr -> Bool
 isEmptyCon (Con _ []) = True
 isEmptyCon _ = False
 
+{-|
+  Retrives the list of variables from a list of bindings.
+-}
 vars :: [Binding] -> [Var]
 vars = fst . unzip
 
+{-|
+  Retrives the list of binded expressions from a list of bindings.
+-}
 bindings :: [Binding] -> [Expr]
 bindings = snd . unzip
 
