@@ -3,7 +3,7 @@
 -}
 module Parser (parseExpr) where
 
-import Expr (Expr(Var, Lam, App, Let, Case), Var, Binding, Pat(Pat),
+import Expr (Expr(Var, Lam, App, Let, Case), Var, Tag, Binding, Pat(Pat),
   con, app, zero, suc, nil, cons, nat)
 import Data.Char (isDigit, isAlpha, isLower, isUpper)
 import Control.Applicative (Alternative, empty, (<|>), some, many)
@@ -159,13 +159,13 @@ p `chainr1` op = do {a <- p; rest a}
   where rest a = (do {f <- op; b <- p; b' <- rest b; return (f a b')})
           <|> return a
 
-exprp :: Parser Expr
+exprp :: (Read v, Read t) => Parser (Expr v t)
 exprp = (termp `chainr1` conslistp) `chainl1` return App
 
-conslistp :: Parser (Expr -> Expr -> Expr)
+conslistp :: (Read v, Read t) => Parser (Expr v t -> Expr v t -> Expr v t)
 conslistp = reserved ":" >> return (App . App cons)
 
-termp :: Parser Expr
+termp :: (Read v, Read t) => Parser (Expr v t)
 termp = litintp
     <|> letp
     <|> casep
@@ -175,10 +175,10 @@ termp = litintp
     <|> parens exprp
     <|> brackets listp
 
-litintp :: Parser Expr
+litintp :: Parser (Expr v Tag)
 litintp = do { n <- number; return (nat n) }
 
-letp :: Parser Expr
+letp :: Parser (Expr Var Tag)
 letp = do
   reserved "let"
   binds <- bindsp
@@ -189,7 +189,7 @@ letp = do
   inexpr <- exprp
   return (Let binds inexpr)
 
-bindsp :: Parser [Binding]
+bindsp :: Parser [Binding Var Tag]
 bindsp = do
         var <- varnamep
         reserved "="
@@ -200,22 +200,23 @@ bindsp = do
           return ((var, valexpr):binds) ) <|>
           return [(var, valexpr)]
 
-varp :: Parser Expr
+varp :: Read v => Parser (Expr v t)
 varp = do
-  var <- varnamep
+  --var <- varnamep
+  var <- read
   return (Var var)
 
-conp :: Parser Expr
+conp :: Parser (Expr v Tag)
 conp = do { tag <- upperword; return (con tag) }
 
-lamp :: Parser Expr
+lamp :: Parser (Expr Var Tag)
 lamp = do
   var <- varnamep
   reserved "->"
   valexpr <- exprp
   return (Lam var valexpr)
 
-casep :: Parser Expr
+casep :: Parser (Expr Var Tag)
 casep = do
   reserved "case"
   scexpr <- exprp
@@ -223,7 +224,7 @@ casep = do
   alts <- some altp
   return (Case scexpr alts)
 
-altp :: Parser (Pat, Expr)
+altp :: Parser (Pat Var Tag, Expr Var Tag)
 altp = do
   tag <- upperword
   vars <- many varnamep
@@ -232,7 +233,7 @@ altp = do
   reserved ";"
   return (Pat tag vars, res)
 
-listp :: Parser Expr
+listp :: Parser (Expr Var Tag)
 listp = (do
       item <- exprp
       (do
@@ -266,5 +267,5 @@ parseWith p s =
 {-|
   Given a textual representation of Expr, returns the parsed Expr.
 -}
-parseExpr :: String -> Expr
+parseExpr :: String -> Expr Var Tag
 parseExpr = parseWith exprp
