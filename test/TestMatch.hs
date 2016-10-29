@@ -89,15 +89,14 @@ embTest = testGroup "emb ~~>" $
   ]
 
 msgTest :: TestTree
-msgTest = testGroup "msg ~~>" $
-  map (\(x,y,v) ->
-    testCase (x ++ " |><| " ++ y) $
-      parseExpr x |><| parseExpr y @?= v)
+msgTest = testGroup "msg ~~>"
   [
-    ("x", "x", (Var "x", [], [])),
-    ("x", "y", (Var "$x", [("$x", Var "x")], [("$x", Var "y")]))
-    -- ("x", "y", True),
-    -- ("f x", "f y", True),
+    go "x" "x"
+      (Var "x", [], []),
+    go "x" "y"
+      (Var "$x", [("$x", Var "x")], [("$x", Var "y")]),
+    go "f x" "f y"
+      (Var "$x", [("$x", Var "x")], [("$x", Var "y")])
     -- ("f a b", "f c d", True),
     -- ("f a a", "f b b", True),
     -- ("[1,2,3,x]", "[1,2,3,y]", True),
@@ -109,6 +108,9 @@ msgTest = testGroup "msg ~~>" $
     -- ("a (c b)", "c (a b)", False),
     -- ("a (c b)", "a (a (a b))", False)
   ]
+  where
+    go x y v = testCase (x ++ " |><| " ++ y) $ domsg x y @?= v
+    domsg x y = parseExpr x |><| parseExpr y
 
 unificationTest = testGroup "Unification tests" $
   let go tx ty est =
@@ -148,6 +150,6 @@ main = defaultMain $ testGroup "Match" [
     testMatch,
     testMatch2,
     embTest,
-    msgTest,
-    unificationTest
+    unificationTest,
+    msgTest
   ]
