@@ -159,13 +159,20 @@ p `chainr1` op = do {a <- p; rest a}
   where rest a = (do {f <- op; b <- p; b' <- rest b; return (f a b')})
           <|> return a
 
-exprp :: (Read v, Read t) => Parser (Expr v t)
+fromRead :: Read a => Parser a
+fromRead = Parser $ \s->
+  let readResult = reads s in
+  if null readResult || length readResult > 1
+    then Error "Read error"
+    else let [(res, cont)] = readResult in Done res 0 cont
+
+exprp :: Parser (Expr Var Tag)
 exprp = (termp `chainr1` conslistp) `chainl1` return App
 
-conslistp :: (Read v, Read t) => Parser (Expr v t -> Expr v t -> Expr v t)
+conslistp :: Parser (Expr Var Tag -> Expr Var Tag -> Expr Var Tag)
 conslistp = reserved ":" >> return (App . App cons)
 
-termp :: (Read v, Read t) => Parser (Expr v t)
+termp :: Parser (Expr Var Tag)
 termp = litintp
     <|> letp
     <|> casep
@@ -200,13 +207,14 @@ bindsp = do
           return ((var, valexpr):binds) ) <|>
           return [(var, valexpr)]
 
-varp :: Read v => Parser (Expr v t)
+varp :: Parser (Expr Var Tag)
 varp = do
-  --var <- varnamep
-  var <- read
+  var <- varnamep
+  --var <- vp
   return (Var var)
 
-conp :: Parser (Expr v Tag)
+--upperword
+conp :: Parser (Expr Var Tag)
 conp = do { tag <- upperword; return (con tag) }
 
 lamp :: Parser (Expr Var Tag)

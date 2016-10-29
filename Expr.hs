@@ -15,7 +15,6 @@ module Expr (
 import Data.Maybe (fromMaybe)
 import Data.List (nub, delete, (\\), union, intercalate)
 import Control.Arrow (second)
-
 import Control.Monad.State (State, state, runState, evalState)
 
 --type Expr = ExprT Var Tag
@@ -217,6 +216,7 @@ alpha e = evalState (alpha' e) 0
 alpha' :: Expr Var t -> VG (Expr Var t)
 alpha' expr = case expr of
   Var var -> return $ Var var
+  Con tag args -> return $ Con tag args
   Lam var lamexpr ->
     do
       newvar <- next
@@ -227,6 +227,18 @@ alpha' expr = case expr of
       funexpr' <- alpha' funexpr
       valexpr' <- alpha' valexpr
       return $ App funexpr' valexpr'
+  Let binds inexpr ->
+    do
+      let (vs, bs) = unzip binds
+      --let next' = next + length binds - 1
+      -- let vs' = map nextVar [next .. next']
+      -- let ss = zip vs vs'
+      -- let (n', bs') = doLet (next+length binds) ss (zip ss bs)
+      -- let (next'', inexpr') = alphaSubst ss n' inexpr
+      inexpr' <- alpha' inexpr
+      return $ Let binds inexpr'
+  --Case scexpr alts ->
+  _ -> return expr
 
 --
 -- alpha' :: Expr Var t -> Expr Var t
@@ -237,7 +249,8 @@ alpha' expr = case expr of
 --       Con tag args -> (next, Con tag args)
 --       Lam var lamexpr ->
 --         let var' = nextVar next in
---         let (n', lamexpr') = alphaSubst [(var, var')] (next+1) lamexpr in
+--         let (n', lamexpr') = alphaSubst [(var, var')]
+                     --(next+1) lamexpr in
 --         (n', Lam var' lamexpr')
 --       App funexpr valexpr ->
 --         let (next', funexpr') = doAlpha next funexpr in
@@ -310,11 +323,12 @@ instance (Show v, Show t) => Show (Expr v t) where
     show' par expr = case expr of
       Var var ->
         show var
-      -- Con tag args -> fromMaybe (if null args
-      --   then show tag
-      --   else paren par
-      --(show tag ++ " " ++ unwords (map (show' True) args)))
-      --     --((prettyNat <|> prettyList) expr)
+      Con tag args -> --fromMaybe (
+        if null args
+          then show tag
+          else "con con args" --paren par
+      -- (show tag ++ " " ++ unwords (map (show' True) args)))
+      --     ((prettyNat <|> prettyList) expr)
 
       Lam var expr ->
         "{" ++ show var ++ "->" ++ show expr ++ "}"
@@ -362,11 +376,11 @@ instance (Show v, Show t) => Show (Expr v t) where
       Just s -> Just s
     showArgs args = unwords (map show args)
 
-instance (Show v, Show t) => Show (Binding v t) where
+instance {-# OVERLAPPING #-} (Show v, Show t) => Show (Binding v t) where
   show (var, expr) = show var ++ "=" ++ show expr
 
 instance (Show v, Show t) => Show (Pat v t) where
   show (Pat tag vars) = show tag ++ " " ++ unwords (map show vars)
 
-instance (Show v, Show t) => Show (Alt v t) where
+instance {-# OVERLAPPING #-} (Show v, Show t) => Show (Alt v t) where
   show (pat, alt) = show pat ++ " -> " ++ show alt
