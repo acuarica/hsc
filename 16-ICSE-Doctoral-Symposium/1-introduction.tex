@@ -1,0 +1,61 @@
+
+\section{Introduction}
+
+Programming paradigms offer a wide variety of abstractions to facility the programmer to solve a determined problem.
+These abstractions can range from control structures in structured programming~\cite{Dijkstra:1972:CIN:1243380.1243381};
+message passing in object oriented programming~\cite{329756};
+facts and rules in logic programming~\cite{Sterling:1986:APA:6686}; and
+function composition, combinators, and intermediate data structures in functional programming~\cite{Hughes:1989:WFP:63410.63411}.
+By using those abstractions, programs are usually quicker to write and easier to understand.
+
+Unfortunately, there has always been a trade-off between abstraction and performance.
+In general, higher-level languages have less performance than lower-level ones.
+
+Among all techniques to optimize and analyze functional programs, the so-called Supercompilation is particularly interesting.
+Supercompilation is a program transformation technique aimed at reducing unnecessary computations.
+It does so by removing abstractions and modularity elaborated by the programmer, giving as output a \emph{``normalized''} program.
+
+The output program then becomes more suitable for further automatic analysis.
+
+Supercompilation can be used for multiple purposes, mainly for program optimization, but also for theorem proving, and logic programming.
+
+But to date, there is no mainstream Supercompiler being used, either in academic or commercial projects.
+The main reason being that Supercompilation has some short-comings, for the studied domains.
+
+In this proposal, we study how actually Supercompilation is well-suited for these wide-range applications.
+We will explore different domains where we believe that Supercompilation might have better results than the current state-of-art.
+Our mail goal is to make Supercompilation practical, by finding the a \emph{``killer application''} for it, or by showing what are the short-comings.
+
+Program optimization is the most well-known use case for Supercompilation.
+Although Supercompilation being a single transformation technique, it can be used for multiple purposes.
+But it is not the only purpose.
+Supercompilation can also be used as a theorem prover.
+Another yet use case for Supercompilation is logic programming.
+It can compute reverse functions.
+Unfortunately, to date, Supercompilation is not being used for any mainstrean commercial project.
+It is not used neither in research projects. Or at least only by they own authors.
+It suffers from code-explosion, and it is time-consuming.
+
+We believe that it is possible to use supercompilation in more restricted domains.
+
+\section{Proposal Outline}
+
+In our research we investigate the feasibility of Supercompilation for specific domains.
+Whether it is worth it
+
+\begin{itemize}
+
+\item Chapter \ref{ch:supercompilation} gives an introduction to Supercompilation.
+
+\item Chapter \ref{ch:gui} we present how supercompilation can be understood from a visual perspective.
+
+\item Chapter \ref{ch:parser-combinators} Parser combinators are high level description on how to parse a given language.
+Because it contains a high-level of composability, supercompilation is the ideal mecanisn to exploit its essence.
+
+\item Chapter \ref{ch:rewrite-rules} shows how the link between Rewrite Rules and Supercompilation.
+
+\item Chapter \ref{ch:dependent-types} discusses about the link between Dependent types and Supercompilation.
+
+\item Chapter \ref{ch:phd-timeline} summarizes the activities carried on so far during my Ph.D. studies.
+
+\end{itemize}
