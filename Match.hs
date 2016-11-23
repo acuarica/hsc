@@ -146,11 +146,14 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
 -- msg (Con tag1 args1) (Con tag2 args2) =
 --     tag1 == tag2 && length args1 == length args2 &&
 -- and (zipWith (<|) args1 args2)
+--(|><|) App funexpr valexpr
 
 --(|><|) :: Expr -> Expr -> ?
+
 {-|
   Homeomorphic Embedding relation.
   Given two expressions e1, e2, we say `e1 <| e2` (e1 is embedded in e2).
+  plus n m <| plus n (Succ m)
  -}
 (<|) :: Expr -> Expr -> Bool
 -- Coupling

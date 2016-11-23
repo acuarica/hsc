@@ -22,6 +22,8 @@ case xs of
 This document uses syntax similar to haskell to describe the
 supercompilation steps.
 
+The symbol := is used to present a definition.
+The symbol ~= is used to shows that this equality follows from a definition.
 
 ### Plus using an accumulator.
 
@@ -34,7 +36,8 @@ plus x y := case x of
 
 plus n m ~= case n of
   Zero -> m
-  Succ n' -> plus n' (Succ m)
+  Succ n' ->
+    {v1 n' m: plus n' (Succ m) ~= let m'=Succ m in plus n' m'}
 ```
 
 ## Reverse with no accumulator

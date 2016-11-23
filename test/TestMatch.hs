@@ -67,51 +67,6 @@ env = map (second parseExpr)
   ]
 
 
-embTest :: TestTree
-embTest = testGroup "emb ~~>" $
-  map (\(x,y,v) ->
-    testCase (x ++ " <| " ++ y) $
-      parseExpr x <| parseExpr y @?= v)
-  [
-    ("x", "x", True),
-    ("x", "y", True),
-    ("f x", "f y", True),
-    ("f a b", "f c d", True),
-    ("f a a", "f b b", True),
-    ("[1,2,3,x]", "[1,2,3,y]", True),
-    --("Succ n", "{n->Succ n}", True),
-    ("b", "a b", True),
-    ("c b", "c (a b)", True),
-    ("d b b", "d (a b) (a b)", True),
-    ("a (c b)", "c b", False),
-    ("a (c b)", "c (a b)", False),
-    ("a (c b)", "a (a (a b))", False)
-  ]
-
-msgTest :: TestTree
-msgTest = testGroup "msg ~~>"
-  [
-    go "x" "x"
-      (Var "x", [], []),
-    go "x" "y"
-      (Var "$x", [("$x", Var "x")], [("$x", Var "y")]),
-    go "f x" "f y"
-      (Var "$x", [("$x", Var "x")], [("$x", Var "y")])
-    -- ("f a b", "f c d", True),
-    -- ("f a a", "f b b", True),
-    -- ("[1,2,3,x]", "[1,2,3,y]", True),
-    -- --("Succ n", "{n->Succ n}", True),
-    -- ("b", "a b", True),
-    -- ("c b", "c (a b)", True),
-    -- ("d b b", "d (a b) (a b)", True),
-    -- ("a (c b)", "c b", False),
-    -- ("a (c b)", "c (a b)", False),
-    -- ("a (c b)", "a (a (a b))", False)
-  ]
-  where
-    go x y v = testCase (x ++ " |><| " ++ y) $ domsg x y @?= v
-    domsg x y = parseExpr x |><| parseExpr y
-
 unificationTest = testGroup "Unification tests" $
   let go tx ty est =
         let (xe, ye) = (parseExpr tx, parseExpr ty) in
@@ -142,14 +97,62 @@ unificationTest = testGroup "Unification tests" $
     go "Branch 2 t t" "Branch v x y" $
       Just [("v", "2"), ("x", "y"), ("t", "y")],
     go "{x->x}" "{y->y}" $
-      Just []
+      Just [],
+    go "plus n m" "plus n' (Succ m')" $
+      Just [("n", "n'"), ("m", "Succ m'")]
   ]
+
+embTest :: TestTree
+embTest = testGroup "emb ~~>" $
+  let go x y v = testCase (x ++ " <| " ++ y) $
+       parseExpr x <| parseExpr y @?= v in
+  [
+    go "x" "x" True,
+    go "x" "y" True,
+    go "f x" "f y" True,
+    go "f a b" "f c d" True,
+    go "f a a" "f b b" True,
+    go "[1,2,3,x]" "[1,2,3,y]" True,
+    --go "Succ n", "{n->Succ n}", True,
+    go "b" "a b" True,
+    go "c b" "c (a b)" True,
+    go "d b b" "d (a b) (a b)" True,
+    go "a (c b)" "c b" False,
+    go "a (c b)" "c (a b)" False,
+    go "a (c b)" "a (a (a b))" False,
+    go "plus n m" "plus n (Succ m)" True,
+    go "plus n (Succ m)" "plus n m" False
+  ]
+
+msgTest :: TestTree
+msgTest = testGroup "msg ~~>"
+  [
+    go "x" "x"
+      (Var "x", [], []),
+    go "x" "y"
+      (Var "$x", [("$x", Var "x")], [("$x", Var "y")]),
+    go "f x" "f y"
+      (Var "$x", [("$x", Var "x")], [("$x", Var "y")])
+    -- ("f a b", "f c d", True),
+    -- ("f a a", "f b b", True),
+    -- ("[1,2,3,x]", "[1,2,3,y]", True),
+    -- --("Succ n", "{n->Succ n}", True),
+    -- ("b", "a b", True),
+    -- ("c b", "c (a b)", True),
+    -- ("d b b", "d (a b) (a b)", True),
+    -- ("a (c b)", "c b", False),
+    -- ("a (c b)", "c (a b)", False),
+    -- ("a (c b)", "a (a (a b))", False)
+  ]
+  where
+    go x y v = testCase (x ++ " |><| " ++ y ++ show v) $ domsg x y @?= v
+    domsg x y = parseExpr x |><| parseExpr y
 
 main :: IO ()
 main = defaultMain $ testGroup "Match" [
     testMatch,
     --testMatch2,
-    embTest,
     unificationTest,
+    embTest,
     msgTest
   ]
