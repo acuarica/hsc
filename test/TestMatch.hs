@@ -148,7 +148,7 @@ unificationTest = testGroup "Unification tests" $
 main :: IO ()
 main = defaultMain $ testGroup "Match" [
     testMatch,
-    testMatch2,
+    --testMatch2,
     embTest,
     unificationTest,
     msgTest

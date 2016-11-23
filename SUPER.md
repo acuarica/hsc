@@ -19,7 +19,27 @@ case xs of
   [] -> []
   y:ys -> S y: h ys
 
--- rev {
+This document uses syntax similar to haskell to describe the
+supercompilation steps.
+
+
+### Plus using an accumulator.
+
+This example shows the need for generalization.
+
+```haskell
+plus x y := case x of
+  Zero -> y
+  Succ x' -> plus x' (Succ y)  -- Non-accum: Succ (plus x' y)
+
+plus n m ~= case n of
+  Zero -> m
+  Succ n' -> plus n' (Succ m)
+```
+
+## Reverse with no accumulator
+
+```haskell
 append xs ys := case xs of
   []     -> ys
   (x:xs') -> x:append xs' ys
@@ -44,17 +64,7 @@ rev xs := case xs of
           }
     }
 }
---} %rev
-
--- { %plus
-plus x y := case x of
-  Zero -> y
-  Succ x' -> plus x' (Succ y)  -- Non-accum: Succ (plus x' y)
-
-plus n m ~= case n of
-  Zero -> m
-  Succ n' -> plus n' (Succ m)
--- } %plus
+```haskell
 
 
 predLenEqualToLen'' :: [a] -> Bool
