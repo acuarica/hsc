@@ -121,7 +121,9 @@ embTest = testGroup "emb ~~>" $
     go "a (c b)" "c (a b)" False,
     go "a (c b)" "a (a (a b))" False,
     go "plus n m" "plus n (Succ m)" True,
-    go "plus n (Succ m)" "plus n m" False
+    go "plus n (Succ m)" "plus n m" False,
+    go "m" "plus n m" False,
+    go "plus n m" "m" False
   ]
 
 msgTest :: TestTree

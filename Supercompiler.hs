@@ -21,7 +21,7 @@ import Expr (
 import Eval (
   Conf, Env, StackFrame(Arg, Alts, Update),
   newConf, emptyEnv, toExpr, nf, reduce, put)
-import Match (match, match', toLambda, envExpr, freduce)
+import Match (match, match', toLambda, envExpr, freduce, (<|))
 
 {-|
   Supercompiles an Expr.
@@ -59,34 +59,43 @@ memo :: Conf -> Memo (Var, Expr)
 memo conf@(env, stack, expr) =
   do
   next <- getNext
-  if next > 10 then return ("??", expr) else
+  if next > 10
+    then return ("??", expr)
+    else
     do
     ii <- isin conf
     if isNothing ii
       then do
-        let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
-        let (node, sps) = split rconf
-        let fv = fvs rconf
-        --let fv = fvs conf
-        v <- recVertex fv node rconf sps
+        ee <- embin conf
+        if isNothing ee
+          then do
+            let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
+            let (node, sps) = split rconf
+            let fv = fvs rconf
+            --let fv = fvs conf
+            v <- recVertex fv node rconf sps
 
-        splits' <- mapM (memo . snd) sps
-        let (childVars, splits) = unzip splits'
-        let ccs = zipWith (\(l,c) v -> (l, v)) sps childVars
+            splits' <- mapM (memo . snd) sps
+            let (childVars, splits) = unzip splits'
+            let ccs = zipWith (\(l,c) v -> (l, v)) sps childVars
 
-        mapM_ (\(l,cv)->recEdge (v, l, cv, fvs conf, conf)) ccs
+            mapM_ (\(l,cv)->recEdge (v, l, cv, fvs conf, conf)) ccs
 
-        let fvl = fvs (reduce conf) `union` fvs rconf
-        let e = toLambda fvl $ case node of
-              VarNode -> vv
-              ArgNode -> app vv splits
-              ConNode -> let Con tag args = vv in app (Con tag []) splits
-              CaseNode -> let alts = zip (fst (unzip sps)) splits in
-                Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
+            let fvl = fvs (reduce conf) `union` fvs rconf
+            let e = toLambda fvl $ case node of
+                  VarNode -> vv
+                  ArgNode -> app vv splits
+                  ConNode -> let Con tag args = vv in app (Con tag []) splits
+                  CaseNode -> let alts = zip (fst (unzip sps)) splits in
+                    Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
 
-        promise v e
-        return (v, appVars (Var v) (fvs $ reduce conf))
-        --return (v, appVars (Var v) fv)
+            promise v e
+            return (v, appVars (Var v) (fvs $ reduce conf))
+            --return (v, appVars (Var v) fv)
+          else do
+            let (var, fv) = fromJust ee
+            return ("EMB:" ++ var ++ "/" ++ unwords fv,
+              appVars (Var var) (fvs $ reduce conf))
       else do
         let (var, fv) = fromJust ii
         --recEdge (parentVar, label, var, fvs conf, conf)
@@ -183,6 +192,27 @@ promise var expr = state $ \(hist, prom) ->
 isin :: Conf -> Memo (Maybe (Var, [Var]))
 isin conf = state $ \(hist@(es, vs), prom) ->
   (lookupMatch vs conf, (hist, prom))
+
+{-|
+-}
+embin :: Conf -> Memo (Maybe (Var, [Var]))
+embin conf = state $ \(hist@(es, vs), prom) ->
+  (lookupEmb vs conf, (hist, prom))
+
+lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var])
+lookupEmb [] _ = Nothing
+lookupEmb ((var, vars, node, conf', sps):hist) conf =
+  if toExpr conf' <| toExpr conf
+    then if False --fvs (reduce conf) /= fvs (reduce conf')
+      then error $ show (fvs $ reduce conf) ++
+        show (fvs $ reduce conf') ++ "\n" ++
+        show conf ++ "\n"++ show conf' ++ "\n" ++
+        show (match' conf) ++ "\n" ++ show (match' conf') ++ "\n" ++
+        show (freeVars $ match' conf) ++ "\n" ++
+        show (freeVars $ match' conf')
+      else Just (var, vars)
+    else lookupEmb hist conf
+  where fvs = freeVars . envExpr
 
 {-|
 -}
