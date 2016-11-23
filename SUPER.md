@@ -64,7 +64,7 @@ rev xs := case xs of
           }
     }
 }
-```haskell
+```
 
 
 predLenEqualToLen'' :: [a] -> Bool
