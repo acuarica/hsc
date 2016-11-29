@@ -1,0 +1,6 @@
+
+let plus = {n->{m->case n of
+  Zero -> m;
+  Succ n' -> Succ (plus n' m);
+}}
+in plus a b

@@ -67,7 +67,7 @@ memo conf@(env, stack, expr) =
     if isNothing ii
       then do
         ee <- embin conf
-        if isNothing ee
+        if isNothing ee || True
           then do
             let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
             let (node, sps) = split rconf

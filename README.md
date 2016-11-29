@@ -136,3 +136,25 @@ Only provide theorem, supercompilation provides proof?
 
 Where dependent-types fail?
 What's the expressive power of supercompilation? What can they prove? Does it rely on totality?
+
+
+
+## Meeting 28/11/2016
+
+* Hybrid partial evalution, does it use whole program analysis?
+* Cost model for haskell. Improvement theory.
+  Improvement Theory and its Applications, David Sands
+  quicksort and insertionsort.
+  http://www.cse.chalmers.se/~dave/papers/hoots97.pdf
+* Rewrite rules for GHC using supercompilaiton.
+  Maybe using equality saturation.
+* Parser combinators using Supercompilation.
+* Run code on random imputs. quickperf?
+* Code explosion. 9.3 section on Max thesis.
+  http://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-835.pdf
+  Solving the code explosion problem and then I have a thesis.
+* Combine supercompilation with profiling.
+  Tune supercompilation at runtime.
+* Looking at a super-optimizer for Haskell.
+  http://www.haskellforall.com/2014/09/morte-intermediate-language-for-super.html
+* Discussion about Languages & Compilers Syllabus.
