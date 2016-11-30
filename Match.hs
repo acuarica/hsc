@@ -157,7 +157,7 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
  -}
 (<|) :: Expr -> Expr -> Bool
 -- Coupling
-(<|) (Var _) (Var _) = True
+(<|) (Var v) (Var v') = True--v == v' --True
 (<|) (Con tag1 args1) (Con tag2 args2) =
   tag1 == tag2 &&
   length args1 == length args2 &&
@@ -167,11 +167,22 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
 
 -- Diving
 (<|) e1 (App _ e2) = e1 <| e2
+
+(<|) e e'@(Case sc alts) =
+  -- Diving in case
+  e <| sc ||
+  -- TODO: Should only be HE in the sc or also the alts?
+  -- any (\(p', e')-> e <| e') alts ||
+  -- Coupling for case
+  coupCase e e'
+  where 
+    -- TODO: Patterns should be a renaming, not syntactially equal.
+    coupCase (Case sc alts) (Case sc' alts') =
+      sc <| sc' &&
+      length alts == length alts' &&
+      and (zipWith (\(p, e) (p', e') -> p == p' && e <| e') alts alts')
+    coupCase _ _ = False
+
+
 --emb (App _ _) (App _ _) =
-
-(<|) (Case sc alts) (Case sc' alts') =
-  sc <| sc' &&
-  length alts == length alts' &&
-  and (zipWith (\(p, e) (p', e') -> p == p' && e <| e') alts alts')
-
 (<|) _ _ = False

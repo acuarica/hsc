@@ -60,7 +60,7 @@ memo :: [Var] -> Conf -> Memo (Var, Expr)
 memo path conf@(env, stack, expr) =
   do
   next <- getNext
-  if next > 5
+  if next > 10
     then return ("??", expr)
     else
     do
@@ -68,7 +68,7 @@ memo path conf@(env, stack, expr) =
     if isNothing ii
       then do
         ee <- embin path conf
-        if isNothing ee -- || True
+        if isNothing ee || isVar expr
           then do
             let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
             let (node, sps) = split rconf
@@ -94,6 +94,7 @@ memo path conf@(env, stack, expr) =
             return (v, appVars (Var v) (fvs $ reduce conf))
             --return (v, appVars (Var v) fv)
           else do
+            -- TODO: Apply generalization.
             let (var, fv) = fromJust ee
             return ("EMB:" ++ var ++ "/" ++ unwords fv,
               appVars (Var var) (fvs $ reduce conf))
@@ -207,14 +208,15 @@ isin conf = state $ \(hist@(es, vs), prom) ->
 embin :: [Var] -> Conf -> Memo (Maybe (Var, [Var]))
 embin path conf =
   trace ("**" ++ show path) $
+  trace ("  -" ++ show (doExpr conf)) $
   state $ \(hist@(es, vs), prom) ->
   (lookupEmb (filter (\(v,_,_,_,_)->v `elem` path) vs) conf, (hist, prom))
+  where doExpr = toExpr . reduce
 
 lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var])
-lookupEmb [] c = trace ("  -" ++ show (doExpr c)) Nothing
-  where doExpr = toExpr . reduce
+lookupEmb [] c = Nothing
 lookupEmb vs@((var, vars, node, conf', sps):hist) conf =
-  trace ("  >" ++ show (doExpr conf') ++ "") $
+  trace ("  >" ++ var ++ ":" ++ show (doExpr conf') ++ "") $
   if doExpr conf' <| doExpr conf || doExpr conf <| doExpr conf' -- || True
     then if False -- True -- False --fvs (reduce conf) /= fvs (reduce conf')
       then error $

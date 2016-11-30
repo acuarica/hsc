@@ -123,7 +123,14 @@ embTest = testGroup "emb ~~>" $
     go "plus n m" "plus n (Succ m)" True,
     go "plus n (Succ m)" "plus n m" False,
     go "m" "plus n m" False,
-    go "plus n m" "m" False
+    go "plus n m" "m" False,
+    go "case zs of Nil->[];Cons r' rs'->append (reverse rs') (Cons r' []);"
+       "case (case $zs_rs' of \
+       \    Nil->[];\
+       \    Cons r' rs'->append (reverse rs') (Cons r' []);) of \
+       \  Nil->Cons $zs_r' [];\
+       \  Cons x' xs'->Cons x' (append xs' (Cons $zs_r' []));"
+       True
   ]
 
 msgTest :: TestTree
