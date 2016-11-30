@@ -15,6 +15,7 @@ import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 import Control.Arrow (second)
 
+import Debug.Trace
 import Expr (
   Expr(Var, Con, Let, Case), Var, Pat(Pat),
   con, app, appVars, let1, isVar, isEmptyCon, freeVars, subst, substAlts)
@@ -49,25 +50,25 @@ fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
 -}
 runMemo :: Expr -> ((Var, Expr), (Hist, Env))
 runMemo expr = runState s (([], []), [])
-  where s = memo (newConf emptyEnv expr)
+  where s = memo [] (newConf emptyEnv expr)
 
 {-|
   Runs the supercompiler
   Conf has to be WHNF?
 -}
-memo :: Conf -> Memo (Var, Expr)
-memo conf@(env, stack, expr) =
+memo :: [Var] -> Conf -> Memo (Var, Expr)
+memo path conf@(env, stack, expr) =
   do
   next <- getNext
-  if next > 10
+  if next > 5
     then return ("??", expr)
     else
     do
     ii <- isin conf
     if isNothing ii
       then do
-        ee <- embin conf
-        if isNothing ee || True
+        ee <- embin path conf
+        if isNothing ee -- || True
           then do
             let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
             let (node, sps) = split rconf
@@ -75,7 +76,7 @@ memo conf@(env, stack, expr) =
             --let fv = fvs conf
             v <- recVertex fv node rconf sps
 
-            splits' <- mapM (memo . snd) sps
+            splits' <- mapM (memo (v:path) . snd) sps
             let (childVars, splits) = unzip splits'
             let ccs = zipWith (\(l,c) v -> (l, v)) sps childVars
 
@@ -117,6 +118,14 @@ instance Show Label where
   show (PatLabel pat) = show pat
   show (ConLabel s) = s
   show ArgLabel = "ArgLabel"
+
+
+-- reduce' :: Conf -> a
+-- reduce' conf =
+--   let rconf@(_, _, vv) = reduce $ freduce $ reduce conf in
+--   let (node, sps) = split rconf in
+--   let splits' = map (memo . snd) sps in error ""
+
 
 {-|
   Given a state, returns where to continue the computation.
@@ -195,24 +204,29 @@ isin conf = state $ \(hist@(es, vs), prom) ->
 
 {-|
 -}
-embin :: Conf -> Memo (Maybe (Var, [Var]))
-embin conf = state $ \(hist@(es, vs), prom) ->
-  (lookupEmb vs conf, (hist, prom))
+embin :: [Var] -> Conf -> Memo (Maybe (Var, [Var]))
+embin path conf =
+  trace ("**" ++ show path) $
+  state $ \(hist@(es, vs), prom) ->
+  (lookupEmb (filter (\(v,_,_,_,_)->v `elem` path) vs) conf, (hist, prom))
 
 lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var])
-lookupEmb [] _ = Nothing
-lookupEmb ((var, vars, node, conf', sps):hist) conf =
-  if toExpr conf' <| toExpr conf
-    then if False --fvs (reduce conf) /= fvs (reduce conf')
-      then error $ show (fvs $ reduce conf) ++
-        show (fvs $ reduce conf') ++ "\n" ++
-        show conf ++ "\n"++ show conf' ++ "\n" ++
-        show (match' conf) ++ "\n" ++ show (match' conf') ++ "\n" ++
-        show (freeVars $ match' conf) ++ "\n" ++
-        show (freeVars $ match' conf')
+lookupEmb [] c = trace ("  -" ++ show (doExpr c)) Nothing
+  where doExpr = toExpr . reduce
+lookupEmb vs@((var, vars, node, conf', sps):hist) conf =
+  trace ("  >" ++ show (doExpr conf') ++ "") $
+  if doExpr conf' <| doExpr conf || doExpr conf <| doExpr conf' -- || True
+    then if False -- True -- False --fvs (reduce conf) /= fvs (reduce conf')
+      then error $
+        show (toExpr conf) ++ "\n"++
+        show (toExpr conf') ++ "\n" ++
+        show vs
       else Just (var, vars)
     else lookupEmb hist conf
-  where fvs = freeVars . envExpr
+  where
+    fvs = freeVars . envExpr
+    doExpr = toExpr . reduce
+
 
 {-|
 -}
