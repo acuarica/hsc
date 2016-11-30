@@ -159,7 +159,8 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
 -- Coupling
 (<|) (Var _) (Var _) = True
 (<|) (Con tag1 args1) (Con tag2 args2) =
-  tag1 == tag2 && length args1 == length args2 &&
+  tag1 == tag2 &&
+  length args1 == length args2 &&
   and (zipWith (<|) args1 args2)
 (<|) (Lam _ e1) (Lam _ e2) = e1 <| e2
 (<|) (App f1 v1) (App f2 v2) = f1 <| f2 && v1 <| v2
@@ -167,4 +168,10 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
 -- Diving
 (<|) e1 (App _ e2) = e1 <| e2
 --emb (App _ _) (App _ _) =
+
+(<|) (Case sc alts) (Case sc' alts') =
+  sc <| sc' &&
+  length alts == length alts' &&
+  and (zipWith (\(p, e) (p', e') -> p == p' && e <| e') alts alts')
+
 (<|) _ _ = False
