@@ -46,6 +46,9 @@ envToLet :: Env -> Expr -> Expr
 envToLet [] expr = expr
 envToLet ((var, valexpr):env) expr = let1 var valexpr (envToLet env expr)
 
+
+
+
 {-|
   Given a Conf, returns the equivalent Expr like toExpr,
   but also using the Env.
