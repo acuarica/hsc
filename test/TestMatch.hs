@@ -127,11 +127,12 @@ embTest = testGroup "emb ~~>" $
     go "case zs of Nil->[];Cons r' rs'->append (reverse rs') (Cons r' []);"
        "case (case $zs_rs' of \
        \    Nil->[];\
-       \    Cons r' rs'->append (reverse rs') (Cons r' []);) of \
+       \    Cons r' rs'->append (reverse rs') (Cons r' []);) of \ 
        \  Nil->Cons $zs_r' [];\
        \  Cons x' xs'->Cons x' (append xs' (Cons $zs_r' []));"
        True
   ]
+
 
 msgTest :: TestTree
 msgTest = testGroup "msg ~~>"
