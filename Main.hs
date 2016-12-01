@@ -10,6 +10,9 @@ import Text.Printf (printf)
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
 import Expr (Expr(Var, Con, Let), Var)
+
+import Eval (eval)
+
 import Parser (parseExpr)
 import Supercompiler (Hist, Node(VarNode, ArgNode, ConNode, CaseNode),
   supercompileMemo)
@@ -100,6 +103,7 @@ main = do
       let noComment = not . isPrefixOf "--" . dropWhile isSpace
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
+      print $ eval expr
       let (sexpr, rm@((v0, e0), (h, _))) = supercompileMemo expr
 
       writeFileLog (makeName fname "hist") (show rm)

@@ -1,0 +1,14 @@
+
+
+let l0 = {cons->{nil-> cons 1 (cons 2 (cons 3 nil))}} in
+let mapl = {f->{l-> {cons->{nil->
+  l {a->{x-> cons (f a) x }} nil
+  }}  }} in
+let foldl = {l->l} in
+let inc={n->Succ n} in
+let plus = {n->{m->case n of
+  Zero -> m;
+  Succ n' -> Succ (plus n' m);
+}} in
+foldl (mapl inc l0) plus Zero
+
