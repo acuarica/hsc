@@ -305,7 +305,32 @@ evalNameCaptureTest = testGroup "eval name capture: eval . parseExpr" $
     go "case Succ n of Succ n->A n;" "A n"
   ]
 
+evalBB = testGroup "eval BB" $
+  let go a e = testCase (a ++ " ~~>" ++ e) $ evalp (prelude ++ a) @?= evalp e in
+  [
+  go "foldl (mapl inc l0) plus Zero" "9"
+  ]
+  where 
+   prelude =
+    "let l0 = {cons->{nil-> cons 1 (cons 2 (cons 3 nil))}} in \
+    \let mapl = {f->{l-> {cons->{nil->l {a->{x-> cons (f a) x }} nil }} }} in \
+    \let foldl = {l->l} in \
+    \let inc={n->Succ n} in \
+    \let plus = {n->{m->case n of \
+    \   Zero -> m;\
+    \   Succ n' -> Succ (plus n' m); \
+    \}} in "
+
 main :: IO ()
-main = defaultMain $ testGroup "Eval::eval/whnf"
-  [whnfTest, evalTest, evalWithParseTest, evalWithPreludeTest,
-  evalLazyTest, evalNameCaptureTest, whnfcTest, evalcTest]
+main = defaultMain $ testGroup "Eval::eval/whnf" [
+  whnfTest,
+  evalTest,
+  evalWithParseTest,
+  evalWithPreludeTest,
+  evalLazyTest,
+  evalNameCaptureTest,
+  whnfcTest,
+  evalcTest,
+  evalBB
+  ]
+
