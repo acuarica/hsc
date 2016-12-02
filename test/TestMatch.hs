@@ -133,7 +133,6 @@ embTest = testGroup "emb ~~>" $
        True
   ]
 
-
 msgTest :: TestTree
 msgTest = testGroup "msg ~~>"
   [
