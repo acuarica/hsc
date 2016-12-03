@@ -120,13 +120,11 @@ instance Show Label where
   show (ConLabel s) = s
   show ArgLabel = "ArgLabel"
 
-
 -- reduce' :: Conf -> a
 -- reduce' conf =
 --   let rconf@(_, _, vv) = reduce $ freduce $ reduce conf in
 --   let (node, sps) = split rconf in
 --   let splits' = map (memo . snd) sps in error ""
-
 
 {-|
   Given a state, returns where to continue the computation.
