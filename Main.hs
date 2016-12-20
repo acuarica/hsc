@@ -61,6 +61,9 @@ makeDot caption var0 (es, vs) = printf
       printf "\t\"%s\" [label=\"{{%s|%s}|%s%s}\"]\n"
         var var (unwords fvs) pnode ports
 
+parseHs :: String -> Expr
+parseHs = fromHSE (Var "root") . fromParseResult . parseFileContents
+
 filterByExt :: String -> String -> Expr
 filterByExt ext fileText = case lookup ext filters of
   Nothing -> error "Extension not found"
@@ -68,7 +71,8 @@ filterByExt ext fileText = case lookup ext filters of
   where
     filters = [
       (".expr", parseExpr),
-      (".hs", fromHSE (Var "root") . fromParseResult . parseFileContents)
+      (".hs", parseHs),
+      (".core", parseHs)
       ]
 
 pprint :: Expr -> String

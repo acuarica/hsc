@@ -7,14 +7,14 @@ import qualified Language.Haskell.Exts as H
 import Expr (
   Expr(Var, Con, Lam, App, Case), Var, Pat(Pat), con, let1, zero)
 
-fromHSE :: Expr -> Module l -> Expr
+fromHSE :: Show l => Expr -> Module l -> Expr
 fromHSE rootExpr (Module _ _ _ _ decls) =
   foldr foldExpr rootExpr decls
   where foldExpr decl expr = case fromDecl decl of
           Nothing -> expr
           Just (v, d) -> let1 v d expr
 
-fromDecl :: Decl l -> Maybe (Var, Expr)
+fromDecl :: Show l => Decl l -> Maybe (Var, Expr)
 fromDecl (PatBind _ (PVar _ f) (UnGuardedRhs _ x) (Just (BDecls _ []))) =
   Just (fromName f, fromExp x)
 fromDecl (PatBind _ (PVar _ f) (UnGuardedRhs _ x) Nothing) =
@@ -23,6 +23,8 @@ fromDecl (FunBind l [Match _ f vars (UnGuardedRhs _ x) (Just (BDecls _ []))]) =
   Just (fromName f, fromExp $ Lambda l vars x)
 fromDecl (FunBind l [Match _ f vars (UnGuardedRhs _ x) Nothing]) =
   Just (fromName f, fromExp $ Lambda l vars x)
+fromDecl (FunBind l [Match _ f vars (UnGuardedRhs _ x) (Just (BDecls _ (d:ds)))]) =
+  unhandle "fromExp:funbind" d
 
 --fromDecl d@(FunBind _ ms) = unhandle "fromDecl:test" d
 
@@ -32,7 +34,7 @@ fromDecl TypeSig{} = Nothing
 fromDecl DataDecl{} = Nothing
 fromDecl TypeDecl{} = Nothing
 fromDecl RulePragmaDecl{} = Nothing
---fromDecl decl = unhandle "fromDecl" decl
+fromDecl decl = unhandle "fromDecl" decl
 
 fromMatch (Match _ f [pat] (UnGuardedRhs _ x) Nothing) =
   (fromPat pat, fromExp x)
@@ -40,7 +42,7 @@ fromMatch (Match _ f [pat] (UnGuardedRhs _ x) (Just (BDecls _ []))) =
   (fromPat pat, fromExp x)
 fromMatch m = unhandle "fromMatch" m
 
-fromExp :: Exp l -> Expr
+fromExp :: Show l => Exp l -> Expr
 fromExp (Lambda _ [] x) = fromExp x
 fromExp (Lambda l (PVar _ (Ident _ x):vars) bod) =
   Lam x $ fromExp $ Lambda l vars bod
@@ -72,10 +74,10 @@ fromExp (Lit l (String _ (x:xs) _)) =
 
 --fromExp (Lit x) = Con noname (prettyPrint x) []
 -- fromExp x@(NegApp _) = Con noname (prettyPrint x) []
--- fromExp (If a b c) = fromExp $ H.Case a [f "True" b, f "False" c]
---     where f con x =
-    --Alt sl (PApp (UnQual $ Ident con) [])
-    --  (UnGuardedRhs x) (Just (BDecls []))
+fromExp (If _l a b c) = fromExp $ H.Case _l a [f "True" b, f "False" c]
+  where
+    f con x = Alt _l (PApp _l (UnQual _l (Ident _l con)) [])
+      (UnGuardedRhs _l x) (Just (BDecls _l []))
 -- fromExp o@(H.Let (BDecls xs) x) =
    --Let noname ((f1,fromExp x):concatMap fromDecl xs) f1
 --     where f1:_ = freshNames o
@@ -88,20 +90,20 @@ fromExp (Lit l (String _ (x:xs) _)) =
 --   Con noname (fromTuple $ replicate n ()) []
 -- fromExp e@(Do stmts) =
 --   error ("fromExp Do: " ++ prettyPrint e ++ "\n --or--\n" ++ show e)
---fromExp e = unhandle "fromExp" e
+fromExp e = unhandle "fromExp" e
 
 fromName :: H.Name l -> Var
 fromName (Ident _ var) = var
 fromName (Symbol _ var) = var
 
-fromAlt :: Alt l -> (Pat, Expr)
+fromAlt :: Show l => Alt l -> (Pat, Expr)
 fromAlt (Alt _ pat (UnGuardedRhs _ bod) (Just (BDecls _ []))) =
   (fromPat pat, fromExp bod)
 fromAlt (Alt _ pat (UnGuardedRhs _ bod) Nothing) =
   (fromPat pat, fromExp bod)
 --fromAlt x = error $ "Unhandled fromAlt: " ++ show x
 
-fromPat :: H.Pat l -> Pat
+fromPat :: Show l => H.Pat l -> Pat
 fromPat (PParen _ x) = fromPat x
 fromPat (PList _ []) = Pat "Nil" []
 fromPat (PApp _ (Special _ (Cons _ )) xs) = Pat "Cons" $ map fromPatVar xs
@@ -111,7 +113,7 @@ fromPat (PTuple _ _ xs) = Pat (fromTuple xs) $ map fromPatVar xs
 fromPat (PApp _ (Special _ (TupleCon _ _ n)) xs) = Pat (fromTuple xs) $
     map fromPatVar xs
 fromPat (PWildCard _) = Pat "_wild" []
---fromPat x = unhandle "fromPat" x
+fromPat x = unhandle "fromPat" x
 
 fromTuple xs = "(" ++ replicate (length xs - 1) ',' ++ ")"
 
