@@ -107,6 +107,9 @@ main = do
       let noComment = not . isPrefixOf "--" . dropWhile isSpace
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
+      putStrLn "Expression to supercompile:"
+      print expr
+      putStrLn "Evaluated expression:"
       print $ eval expr
       let (sexpr, rm@((v0, e0), (h, _))) = supercompileMemo expr
 

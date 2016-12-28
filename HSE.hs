@@ -90,6 +90,7 @@ fromExp (If _l a b c) = fromExp $ H.Case _l a [f "True" b, f "False" c]
 --   Con noname (fromTuple $ replicate n ()) []
 -- fromExp e@(Do stmts) =
 --   error ("fromExp Do: " ++ prettyPrint e ++ "\n --or--\n" ++ show e)
+fromExp (Tuple _l Boxed exps) = Con ("Tuple" ++ show (length exps)) $ map fromExp exps
 fromExp e = unhandle "fromExp" e
 
 fromName :: H.Name l -> Var
@@ -117,14 +118,10 @@ fromPat x = unhandle "fromPat" x
 
 fromTuple xs = "(" ++ replicate (length xs - 1) ',' ++ ")"
 
-fromPatVar :: H.Pat l -> Var
+fromPatVar :: Show l => H.Pat l -> Var
 fromPatVar (PVar _ x) = fromName x
 fromPatVar (PWildCard _) = "$__new__"
---fromPatVar x = unhandle "fromPatVar" x
-
---replaced by l
---sl :: SrcLoc
---sl = SrcLoc "" 0 0
+fromPatVar x = unhandle "fromPatVar" x
 
 unhandle :: (Show a, Pretty a) => String -> a -> t
 unhandle w e = error $ "Unhandled HSE." ++ w ++ ": \n" ++
