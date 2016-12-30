@@ -7,11 +7,12 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Expr (Expr(Var, Lam, Let, App, Case), Pat(Pat),
   con, app, appVars, let1,
   true, false, zero, suc, cons, nil, bool, nat, list)
-import Parser (parseExpr)
+import qualified Parser (parseExpr)
+import qualified FastParser (parseExpr)
 
-testParser :: TestTree
-testParser = testGroup "Parser.parseExpr str ~> expr" $
-  map (\(a, e) -> testCase (a ++ " ~> " ++ show e) $ parseExpr a @?= e)
+testParser :: String -> (String -> Expr) -> TestTree
+testParser msg parseExpr' = testGroup (msg ++ ".parseExpr str ~> expr") $
+  map (\(a, e) -> testCase (a ++ " ~> " ++ show e) $ parseExpr' a @?= e)
   [
     ("x", Var "x"),
     ("$x", Var "$x"),
@@ -115,4 +116,7 @@ testParser = testGroup "Parser.parseExpr str ~> expr" $
   ]
 
 main :: IO ()
-main = defaultMain testParser
+main = defaultMain $ testGroup "Parser/FastParser testing" [
+    testParser "Parser" Parser.parseExpr,
+    testParser "FastParser" FastParser.parseExpr
+  ]

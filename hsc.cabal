@@ -68,3 +68,10 @@ executable test-supercompiler
                     mtl >= 2.2.1
   hs-source-dirs:   . test
   default-language: Haskell98
+
+executable prof-parser
+  main-is:          ProfParser.hs
+  build-depends:    base >= 4.8 && < 5, deepseq >= 1.4
+  hs-source-dirs:   . prof
+  default-language: Haskell98
+  ghc-options:      -O2
