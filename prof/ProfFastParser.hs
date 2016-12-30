@@ -1,8 +1,8 @@
 
-module Main (main) where
+module Main(main) where
 
 import Prof (prof)
-import Parser (parseExpr)
+import FastParser (parseExpr)
 
 main :: IO ()
 main = prof parseExpr
