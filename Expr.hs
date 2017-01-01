@@ -1,13 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 {-|
   The Expr module defines the type Expr, the core type of the language.
   It also contains functions to easily manipulate Expr expressions.
 -}
 module Expr (
-  Expr(Var, Con, Lam, App, Let, Case), Var, Tag, Binding, Alt, Pat(Pat),
-  Subst,
+  Expr(Var, Con, Lam, App, Let, Case), Var, Tag, Binding, Alt, Pat(Pat), Subst,
   con, app, appVars, let1, isVar, isEmptyCon, bindings,
   subst, substAlts, lookupAlt, freeVars, alpha,
   true, false, zero, suc, nil, cons, bool, nat, list
@@ -18,7 +17,6 @@ import Data.List (nub, delete, (\\), union, intercalate)
 import Control.Arrow (second)
 
 import GHC.Generics (Generic)
-import Control.DeepSeq (NFData())
 
 {-|
   The expression type.
@@ -30,7 +28,7 @@ data Expr
   | App  Expr Expr
   | Let  [Binding] Expr
   | Case Expr [Alt]
-  deriving (Eq, Generic, NFData)
+  deriving (Eq, Generic)
 
 {-|
   Represents identifier variable.
@@ -56,7 +54,7 @@ type Alt = (Pat, Expr)
 {-|
   Case patterns against tag.
 -}
-data Pat = Pat Tag [Var] deriving (Eq, Generic, NFData)
+data Pat = Pat Tag [Var] deriving (Eq, Generic)
 
 {-|
   A substitution is a variable to be replaced with an expression.

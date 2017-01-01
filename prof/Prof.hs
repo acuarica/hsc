@@ -6,7 +6,10 @@ import Control.DeepSeq (NFData(), deepseq)
 import Control.Monad (replicateM)
 import Text.Printf (printf)
 
-import Expr (Expr())
+import Expr (Expr(), Pat())
+
+instance NFData Expr
+instance NFData Pat
 
 prelude :: String
 prelude =
@@ -49,34 +52,25 @@ prelude =
   \  inf = {n->Cons n (inf (Succ n))} ; \
   \  infA = Cons A inf in "
 
-prelude1k   = (concat $ replicate     1 prelude) ++ "x"
-prelude10k  = (concat $ replicate    10 prelude) ++ "x"
-prelude100k = (concat $ replicate   100 prelude) ++ "x"
-prelude1m   = (concat $ replicate  1000 prelude) ++ "x"
-prelude10m  = (concat $ replicate 10000 prelude) ++ "x"
+p1k   = (concat $ replicate     1 prelude) ++ "x"
+p10k  = (concat $ replicate    10 prelude) ++ "x"
+p100k = (concat $ replicate   100 prelude) ++ "x"
+p1m   = (concat $ replicate  1000 prelude) ++ "x"
+p10m  = (concat $ replicate 10000 prelude) ++ "x"
 
 profComp :: NFData a => a -> IO Double
-profComp a =
-  do
-    start <- getCPUTime
-    end <- a `deepseq` getCPUTime
-    let diff = (fromIntegral (end - start)) / (10^12)
-    return (diff :: Double)
+profComp a = do
+  start <- getCPUTime
+  end <- a `deepseq` getCPUTime
+  return $ (fromIntegral (end - start)) / (10^12)
 
-ts :: Double -> String
-ts d = printf "%0.3f" d
-
-profParser :: (String -> Expr) -> String -> String -> IO ()
-profParser parseExpr msg s =
-  do
-    diffs <- replicateM 5 (profComp (replicate 10 $ parseExpr s))
-    printf "%s: %s\n" msg (unwords $ map (ts) diffs)
+profParser :: (String -> Expr) -> (String, String) -> IO String
+profParser parseExpr (msg, s) = do
+  diffs <- replicateM 3 (profComp (parseExpr s))
+  return $ printf "%s: %s" msg (unwords $ map (printf "%0.3f") diffs)
 
 prof :: (String -> Expr) -> IO ()
-prof parseExpr =
-  do
-    profParser parseExpr "prelude1k  "   prelude1k
-    profParser parseExpr "prelude10k "  prelude10k
-    profParser parseExpr "prelude100k" prelude100k
-    profParser parseExpr "prelude1m  "   prelude1m
-    profParser parseExpr "prelude10m "  prelude10m
+prof parseExpr = do
+  let ps = [("1k", p1k), ("10k", p10k), ("100k", p100k), ("1m", p1m), ("10m", p10m)]
+  msgs <- mapM (profParser parseExpr) ps
+  putStrLn $ unwords msgs

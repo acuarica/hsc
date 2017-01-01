@@ -12,7 +12,7 @@ import qualified FastParser (parseExpr)
 
 testParser :: String -> (String -> Expr) -> TestTree
 testParser msg parseExpr' = testGroup (msg ++ ".parseExpr str ~> expr") $
-  map (\(a, e) -> testCase (a ++ " ~> " ++ show e) $ parseExpr' a @?= e)
+  map (\(a, e) -> testCase (take 35 a ++ " ~> " ++ take 35 (show e)) $ parseExpr' a @?= e)
   [
     ("x", Var "x"),
     ("$x", Var "$x"),

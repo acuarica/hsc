@@ -47,40 +47,87 @@ some v = pseq (pmap (:) v) (many v)
 many :: Parser a -> Parser [a]
 many v = some v `por` ppure []
 
-char :: Char -> Parser Char
-char x s = case s of []->Error "EOF"; (c:cs)->if c==x then Done c 1 cs else Error [c]
+some'digit s = case digit s of
+  Error msg -> Error msg
+  Done d chars rest -> case some'digit rest of
+    Error msg'p -> Done [d] 0 rest
+    Done a'p c'p r'p -> Done (d:a'p) c'p r'p
 
-natural :: String -> ParserResult Integer
-natural s = case (digits s) of Error m -> Error m; Done ds c r -> Done (read ds) c r
-  where
-    digits s = case digit s of
-      Error msg -> Error msg
-      Done d chars rest -> case digits rest of
-        Error msg'p -> Done [d] 0 rest
-        Done a'p c'p r'p -> Done (d:a'p) c'p r'p
+eeof :: ParserResult a
+eeof = Error "EOF"
 
-string :: String -> Parser String
-string xs s = case xs of
-  [] -> Done [] 0 s
-  (c:cs) -> case (char c s) of
-    Error msg -> Error msg
-    Done _ chars rest -> case (string cs rest) of
-      Error msg' -> Error msg'
-      Done _ chars'' rest'' -> Done (c:cs) (chars+chars'') rest''
+reserved'semi :: String -> ParserResult ()
+reserved'semi s=case s of []->eeof;(c:cs)->if c==';'then spaces'void cs else Error [c]
+reserved'colon s=case s of []->eeof;(c:cs)->if c==':'then spaces'void cs else Error [c]
+reserved'comma s=case s of []->eeof;(c:cs)->if c==','then spaces'void cs else Error [c]
+reserved'equal s=case s of []->eeof;(c:cs)->if c=='='then spaces'void cs else Error [c]
 
-token :: Parser a -> Parser a
-token p =  p `pbind` (\a-> spaces `semi` ppure a)
+reserved'arrow s=case s of
+  []->eeof
+  (c:cs)->if c=='-'
+    then case cs of
+           [] -> eeof
+           (c':cs') -> if c'=='>'
+             then spaces'void cs'
+             else Error [c']
+    else Error [c]
 
-reserved :: String -> Parser String
-reserved t = token (string t)
+reserved'in s=case s of
+  []->eeof
+  (c:cs)->if c=='i'
+    then case cs of
+           [] -> eeof
+           (c':cs') -> if c'=='n'
+             then spaces'void cs'
+             else Error [c']
+    else Error [c]
 
-spaces :: Parser String
-spaces s = case s of
-    [] -> Done [] 0 s
-    (c:cs) -> if c == ' ' || c == '\n' || c == '\r'
-      then case spaces cs of
-             Done cs' chars' rest' -> Done (c:cs') (1+chars') rest'
-      else Done [] 0 s
+reserved'of s=case s of
+  []->eeof
+  (c:cs)->if c=='o'
+    then case cs of
+           [] -> eeof
+           (c':cs') -> if c'=='f'
+             then spaces'void cs'
+             else Error [c']
+    else Error [c]
+
+reserved'let s=case s of
+  []->eeof
+  (c:cs)->if c=='l'
+    then case cs of
+           [] -> eeof
+           (c':cs') -> if c'=='e'
+             then case cs' of
+                    [] -> eeof
+                    (c'':cs'') -> if c''=='t'
+                      then spaces'void cs''
+                      else Error [c'']
+             else Error [c']
+    else Error [c]
+
+reserved'case s=case s of
+  []->eeof
+  (c:cs)->if c=='c'
+    then case cs of
+           [] -> eeof
+           (c':cs') -> if c'=='a'
+             then case cs' of
+                    [] -> eeof
+                    (c'':cs'') -> if c''=='s'
+                      then case cs'' of
+                             [] -> eeof
+                             (c''':cs''') -> if c'''=='e'
+                               then spaces'void cs'''
+                               else Error [c''']
+                      else Error [c'']
+             else Error [c']
+    else Error [c]
+
+spaces'void :: String -> ParserResult ()
+spaces'void s = case s of
+    [] -> Done () 0 s
+    (c:cs) -> if c == ' ' || c == '\n' || c=='\r' then spaces'void cs else Done () 0 s
 
 digit :: Parser Char
 digit s =case s of []->Error "EOF";(c:cs)->if isDigit c then Done c 1 cs else Error "d"
@@ -98,18 +145,6 @@ upperalpha s = case s of
   [] -> Error "EOF"
   (c:cs) -> if isAlpha c && isUpper c then Done c 1 cs else Error "l"
 
-dollar :: Parser Char
-dollar s = case s of []->Error "EOF"; (c:cs)->
-                       if c=='$' then Done '$' 1 cs else Error "$"
-
-underscore :: Parser Char
-underscore s=case s of []->Error"EOF";(c:cs)->
-                         if c=='_' then Done '_' 1 cs else Error "_"
-
-quote :: Parser Char
-quote s = case s of []->Error "EOF";(c:cs)->
-                      if c=='\'' then Done '\'' 1 cs else Error "\'"
-
 string'minus'or :: Parser String
 string'minus'or s = case s of
   [] -> Done "" 0 s
@@ -117,38 +152,42 @@ string'minus'or s = case s of
     then Done "-" 1 cs
     else Done "" 0 s
 
-number :: Parser Int
-number =
-  string'minus'or `pbind` \s->
-  some digit `pbind` \cs->
-  spaces `semi`
-  ppure (read (s ++ cs))
+many'alpha s = case s of
+  [] -> Done [] 0 s
+  (c:cs) -> if isAlpha c
+    then case many'alpha cs of
+      Done a'p c'p r'p -> Done (c:a'p) c'p r'p
+    else Done [] 0 s
 
 lowerword :: Parser String
 lowerword =
   loweralpha `pbind` \c->
-  many alpha `pbind` \cs ->
-  spaces `semi`
+  many'alpha `pbind` \cs ->
+  spaces'void `semi`
   ppure (c:cs)
 
 upperword :: Parser String
 upperword =
   upperalpha `pbind` \c->
-  many alpha `pbind` \cs->
-  spaces `semi`
+  many'alpha `pbind` \cs->
+  spaces'void `semi`
   ppure (c:cs)
 
-paired :: String -> String -> Parser a -> Parser a
-paired o c m = reserved o `semi`  m `pbind` (\n-> reserved c `semi` ppure n )
+reserved'op s=case s of []->eeof;(c:cs)->if c=='('then spaces'void cs else Error [c]
+reserved'cp s=case s of []->eeof;(c:cs)->if c==')'then spaces'void cs else Error [c]
+reserved'ob s=case s of []->eeof;(c:cs)->if c=='{'then spaces'void cs else Error [c]
+reserved'cb s=case s of []->eeof;(c:cs)->if c=='}'then spaces'void cs else Error [c]
+reserved'os s=case s of []->eeof;(c:cs)->if c=='['then spaces'void cs else Error [c]
+reserved'cs s=case s of []->eeof;(c:cs)->if c==']'then spaces'void cs else Error [c]
 
 parens :: Parser a -> Parser a
-parens = paired "(" ")"
+parens m = reserved'op `semi` m `pbind` (\n-> reserved'cp  `semi` ppure n )
 
 braces :: Parser a -> Parser a
-braces = paired "{" "}"
+braces m = reserved'ob `semi` m `pbind` (\n-> reserved'cb `semi` ppure n )
 
 brackets :: Parser a -> Parser a
-brackets = paired "[" "]"
+brackets m = reserved'os `semi` m `pbind` (\n-> reserved'cs `semi` ppure n )
 
 restl p op a = (op `pbind` (\f-> p `pbind` (\b-> restl p op (f a b) ))) `por` ppure a
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
@@ -163,7 +202,7 @@ exprp :: Parser Expr
 exprp = (termp `chainr1` conslistp) `chainl1` ppure App
 
 conslistp :: Parser (Expr -> Expr -> Expr)
-conslistp = (reserved ":") `semi` (ppure (App . (App cons)) )
+conslistp = reserved'colon `semi` (ppure (App . (App cons)) )
 
 termp :: Parser Expr
 termp = litintp
@@ -176,13 +215,17 @@ termp = litintp
     `por` brackets listp
 
 litintp :: Parser Expr
-litintp = number `pbind` (\n-> ppure (nat n) )
+litintp =
+  string'minus'or `pbind` \s->
+  some'digit `pbind` \cs->
+  spaces'void `semi`
+  ppure (nat (read (s ++ cs)))
 
 letp :: Parser Expr
 letp =
-  reserved "let" `semi` (
+  reserved'let  `semi` (
   bindsp `pbind` (\binds->
-  reserved "in" `semi` (
+  reserved'in `semi` (
   exprp `pbind` (\inexpr->
   ppure (Let binds inexpr)
   ))))
@@ -190,10 +233,10 @@ letp =
 bindsp :: Parser [Binding]
 bindsp =
         varnamep `pbind` (\var->
-        reserved "=" `semi` (
+        reserved'equal `semi` (
         exprp `pbind` (\valexpr->
         (
-          reserved ";" `semi` (
+          reserved'semi `semi` (
           bindsp `pbind` (\binds->
           ppure ((var, valexpr):binds) ) )) `por`
           ppure [(var, valexpr)]
@@ -208,16 +251,16 @@ conp = upperword `pbind` (\tag-> ppure (con tag) )
 lamp :: Parser Expr
 lamp =
   varnamep `pbind` (\var->
-  reserved "->" `semi` (
+  reserved'arrow `semi` (
   exprp `pbind` (\valexpr->
   ppure (Lam var valexpr)
   )))
 
 casep :: Parser Expr
 casep =
-  reserved "case" `semi` (
+  reserved'case `semi` (
   exprp `pbind` (\scexpr->
-  reserved "of" `semi` (
+  reserved'of `semi` (
   some altp `pbind` (\alts->
   ppure (Case scexpr alts)
   ))))
@@ -226,16 +269,16 @@ altp :: Parser (Pat, Expr)
 altp =
   upperword `pbind` (\tag->
   many varnamep `pbind` (\vars->
-  reserved "->" `semi` (
+  reserved'arrow `semi` (
   exprp `pbind` (\res->
-  reserved ";" `semi` (
+  reserved'semi `semi` (
   ppure (Pat tag vars, res)
   )))))
 
 listp :: Parser Expr
 listp = (exprp `pbind` (\item->
       (
-        reserved "," `semi` (
+        reserved'comma `semi` (
         listp `pbind` (\rest->
         ppure (app cons [item, rest])))) `por`
         ppure (app cons [item, nil])
@@ -248,14 +291,28 @@ varnamep s = case varid s of
       then Error "let|in|case|of"
       else Done v chars rest
 
+alpha'digit'underscore'quote :: String -> ParserResult Char
+alpha'digit'underscore'quote s = case s of
+  [] -> Error "EOF"
+  (c:cs) -> if isAlpha c || isDigit c || c == '_' || c == '\''
+    then Done c 1 cs
+    else Error [c]
+
+loweralpha'dollar'underscore :: String -> ParserResult Char
+loweralpha'dollar'underscore s = case s of
+  [] -> Error "EOF"
+  (c:cs) -> if (isAlpha c && isLower c) || c == '$' || c == '_'
+    then Done c 1 cs
+    else Error [c]
+
 varid :: Parser Var
-varid z = (loweralpha `por` dollar `por` underscore `pbind` (\c->
-  many (alpha `por` digit `por` underscore `por` quote) `pbind` (\cs->
-  spaces `semi` (
+varid z = (loweralpha'dollar'underscore `pbind` (\c->
+  many (alpha'digit'underscore'quote) `pbind` (\cs->
+  spaces'void `semi` (
   ppure (c:cs)
   )))) z
 
 parseExpr :: String -> Expr
-parseExpr s = case (spaces `semi` exprp) s of
-    Done a c rest -> if null rest then a else error "Parser not consume whole stream"
-    Error msg -> error "Parser error"
+parseExpr s = case (spaces'void `semi` exprp) s of
+  Done a c rest -> if null rest then a else error "Parser not consume whole stream"
+  Error msg -> error "Parser error"

@@ -1,18 +1,8 @@
 
-GHC=ghc
-EXE=PCSimp
-
+BUILD=../dist/build
+RTS=+RTS -s -RTS
 
 all:
-	../dist/build/prof-parser/prof-parser +RTS -s -RTS
-	../dist/build/prof-fastparser/prof-fastparser +RTS -s -RTS
-
-.PHONY: compile, run
-
-compile: $(EXE)
-
-run: compile
-	./$(EXE) +RTS -s -RTS
-
-%: %.hs
-	$(GHC) --make -o $@ -O2 $<
+	cd .. && cabal build prof-parser prof-fastparser
+	$(BUILD)/prof-fastparser/prof-fastparser $(RTS)
+	$(BUILD)/prof-parser/prof-parser $(RTS)
