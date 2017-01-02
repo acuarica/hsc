@@ -2,6 +2,7 @@
 module Prof (prof) where
 
 import System.CPUTime (getCPUTime)
+import System.Environment (getArgs)
 import Control.DeepSeq (NFData(), deepseq)
 import Control.Monad (replicateM)
 import Text.Printf (printf)
@@ -52,6 +53,9 @@ prelude =
   \  inf = {n->Cons n (inf (Succ n))} ; \
   \  infA = Cons A inf in "
 
+p :: Int -> String
+p n = (concat $ replicate n prelude) ++ "x"
+
 p1k   = (concat $ replicate     1 prelude) ++ "x"
 p10k  = (concat $ replicate    10 prelude) ++ "x"
 p100k = (concat $ replicate   100 prelude) ++ "x"
@@ -66,11 +70,19 @@ profComp a = do
 
 profParser :: (String -> Expr) -> (String, String) -> IO String
 profParser parseExpr (msg, s) = do
-  diffs <- replicateM 3 (profComp (parseExpr s))
+  diffs <- replicateM 10 (profComp (parseExpr s))
   return $ printf "%s: %s" msg (unwords $ map (printf "%0.3f") diffs)
 
 prof :: (String -> Expr) -> IO ()
 prof parseExpr = do
-  let ps = [("1k", p1k), ("10k", p10k), ("100k", p100k), ("1m", p1m), ("10m", p10m)]
+  args <- getArgs
+  let ps = [("", p (read (head args)) )]
+  let ps1 = [
+        --("1k", p1k),
+        ("10k", p10k)--,
+        --("100k", p100k),
+        --("1m", p1m),
+        --("10m", p10m)
+        ]
   msgs <- mapM (profParser parseExpr) ps
   putStrLn $ unwords msgs

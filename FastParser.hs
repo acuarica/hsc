@@ -47,6 +47,7 @@ some v = pseq (pmap (:) v) (many v)
 many :: Parser a -> Parser [a]
 many v = some v `por` ppure []
 
+some'digit :: String -> ParserResult String
 some'digit s = case digit s of
   Error msg -> Error msg
   Done d chars rest -> case some'digit rest of
@@ -132,9 +133,6 @@ spaces'void s = case s of
 digit :: Parser Char
 digit s =case s of []->Error "EOF";(c:cs)->if isDigit c then Done c 1 cs else Error "d"
 
-alpha :: Parser Char
-alpha s =case s of []->Error "EOF";(c:cs)->if isAlpha c then Done c 1 cs else Error "a"
-
 loweralpha :: Parser Char
 loweralpha s = case s of
   [] -> Error "EOF"
@@ -159,19 +157,14 @@ many'alpha s = case s of
       Done a'p c'p r'p -> Done (c:a'p) c'p r'p
     else Done [] 0 s
 
-lowerword :: Parser String
-lowerword =
-  loweralpha `pbind` \c->
-  many'alpha `pbind` \cs ->
-  spaces'void `semi`
-  ppure (c:cs)
-
 upperword :: Parser String
-upperword =
-  upperalpha `pbind` \c->
-  many'alpha `pbind` \cs->
-  spaces'void `semi`
-  ppure (c:cs)
+upperword s = case s of
+  [] -> Error "EOF"
+  (c:rest) -> if isAlpha c && isUpper c
+    then case many'alpha rest of
+      Done cs chars' rest' -> case spaces'void rest' of
+        Done _ chars'' rest'' -> Done (c:cs) (1+chars'') rest''
+      else Error "l"
 
 reserved'op s=case s of []->eeof;(c:cs)->if c=='('then spaces'void cs else Error [c]
 reserved'cp s=case s of []->eeof;(c:cs)->if c==')'then spaces'void cs else Error [c]
@@ -243,10 +236,20 @@ bindsp =
         )))
 
 varp :: Parser Expr
-varp = varnamep `pbind` (\var->ppure (Var var))
+varp s = case varid s of
+  Error msg -> Error msg
+  Done v chars rest -> if v=="let" || v== "in" || v=="case" || v=="of"
+    then Error "let|in|case|of"
+    else Done (Var v) chars rest
 
-conp :: Parser Expr
-conp = upperword `pbind` (\tag-> ppure (con tag) )
+conp :: String -> ParserResult Expr
+conp s = case s of
+  [] -> Error "EOF"
+  (c:rest) -> if isAlpha c && isUpper c
+    then case many'alpha rest of
+      Done cs chars' rest' -> case spaces'void rest' of
+        Done _ chars'' rest'' -> Done (con (c:cs)) (1+chars'') rest''
+      else Error "l"
 
 lamp :: Parser Expr
 lamp =
