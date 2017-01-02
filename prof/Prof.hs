@@ -1,8 +1,8 @@
 
 module Prof (prof) where
 
+import Data.List (intercalate)
 import System.CPUTime (getCPUTime)
-import System.Environment (getArgs)
 import Control.DeepSeq (NFData(), deepseq)
 import Control.Monad (replicateM)
 import Text.Printf (printf)
@@ -56,11 +56,11 @@ prelude =
 p :: Int -> String
 p n = (concat $ replicate n prelude) ++ "x"
 
-p1k   = (concat $ replicate     1 prelude) ++ "x"
-p10k  = (concat $ replicate    10 prelude) ++ "x"
-p100k = (concat $ replicate   100 prelude) ++ "x"
-p1m   = (concat $ replicate  1000 prelude) ++ "x"
-p10m  = (concat $ replicate 10000 prelude) ++ "x"
+p1k   = p 1
+p10k  = p 10
+p100k = p 100
+p1m   = p 1000
+p10m  = p 10000
 
 profComp :: NFData a => a -> IO Double
 profComp a = do
@@ -70,19 +70,17 @@ profComp a = do
 
 profParser :: (String -> Expr) -> (String, String) -> IO String
 profParser parseExpr (msg, s) = do
-  diffs <- replicateM 10 (profComp (parseExpr s))
-  return $ printf "%s: %s" msg (unwords $ map (printf "%0.3f") diffs)
+  diffs <- replicateM 3 (profComp (parseExpr s))
+  return $ printf "%s: %s\n" msg (unwords $ map (printf "%0.3f") diffs)
 
 prof :: (String -> Expr) -> IO ()
 prof parseExpr = do
-  args <- getArgs
-  let ps = [("", p (read (head args)) )]
-  let ps1 = [
-        --("1k", p1k),
-        ("10k", p10k)--,
-        --("100k", p100k),
-        --("1m", p1m),
-        --("10m", p10m)
+  let ps = [
+        ("1k", p1k),
+        ("10k", p10k),
+        ("100k", p100k),
+        ("1m", p1m),
+        ("10m", p10m)
         ]
   msgs <- mapM (profParser parseExpr) ps
-  putStrLn $ unwords msgs
+  putStrLn $ intercalate "" msgs
