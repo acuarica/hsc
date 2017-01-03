@@ -11,17 +11,17 @@ module Supercompiler (
 
 import Data.List (intercalate, union)
 import Data.Maybe (isNothing, fromJust)
-import Control.Exception (assert)
+-- import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
 import Control.Arrow (second)
 
 import Debug.Trace
 import Expr (
-  Expr(Var, Con, Let, Case), Var, Pat(Pat),
-  con, app, appVars, let1, isVar, isEmptyCon, freeVars, subst, substAlts)
+  Expr(Var, Con, Case), Var, Pat(Pat),
+  con, app, appVars, let1, isVar, freeVars, subst, substAlts)
 import Eval (
-  Conf, Env, StackFrame(Arg, Alts, Update),
-  newConf, emptyEnv, toExpr, nf, reduce, put)
+  Conf, Env, StackFrame(Arg, Alts),
+  newConf, emptyEnv, toExpr, reduce)
 import Match (match, match', toLambda, envExpr, freduce, (<|))
 
 {-|
@@ -42,6 +42,7 @@ supercompileMemo expr =
 {-|
   Rebuilds an expression from the promises.
 -}
+fromMemo :: Env -> Expr -> Expr
 fromMemo [] expr0 = expr0
 fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
 
@@ -57,7 +58,7 @@ runMemo expr = runState s (([], []), [])
   Conf has to be WHNF?
 -}
 memo :: [Var] -> Conf -> Memo (Var, Expr)
-memo path conf@(env, stack, expr) =
+memo path conf@(_env, _stack, expr) =
   do
   next <- getNext
   if next > 10
@@ -78,7 +79,7 @@ memo path conf@(env, stack, expr) =
 
             splits' <- mapM (memo (v:path) . snd) sps
             let (childVars, splits) = unzip splits'
-            let ccs = zipWith (\(l,c) v -> (l, v)) sps childVars
+            let ccs = zipWith (\(l, _c) u -> (l, u)) sps childVars
 
             mapM_ (\(l,cv)->recEdge (v, l, cv, fvs conf, conf)) ccs
 
@@ -86,20 +87,20 @@ memo path conf@(env, stack, expr) =
             let e = toLambda fvl $ case node of
                   VarNode -> vv
                   ArgNode -> app vv splits
-                  ConNode -> let Con tag args = vv in app (Con tag []) splits
+                  ConNode -> let Con tag _args = vv in app (Con tag []) splits
                   CaseNode -> let alts = zip (fst (unzip sps)) splits in
-                    Case vv (map (\(PatLabel p,e)-> (p, e)) alts)
+                    Case vv (map (\(PatLabel p,pe)-> (p, pe)) alts)
 
             promise v e
             return (v, appVars (Var v) (fvs $ reduce conf))
             --return (v, appVars (Var v) fv)
           else do
             -- TODO: Apply generalization.
-            let (var, fv) = fromJust ee
+            let (var, fv) = traceShow conf $ fromJust ee
             return ("EMB:" ++ var ++ "/" ++ unwords fv,
               appVars (Var var) (fvs $ reduce conf))
       else do
-        let (var, fv) = fromJust ii
+        let (var, _fv) = fromJust ii
         --recEdge (parentVar, label, var, fvs conf, conf)
         return (var, appVars (Var var) (fvs $ reduce conf))
         --return (var, appVars (Var var) (fvs conf))
@@ -198,7 +199,7 @@ promise var expr = state $ \(hist, prom) ->
 {-|
 -}
 isin :: Conf -> Memo (Maybe (Var, [Var]))
-isin conf = state $ \(hist@(es, vs), prom) ->
+isin conf = state $ \(hist@(_es, vs), prom) ->
   (lookupMatch vs conf, (hist, prom))
 
 {-|
@@ -207,13 +208,13 @@ embin :: [Var] -> Conf -> Memo (Maybe (Var, [Var]))
 embin path conf =
   trace ("**" ++ show path) $
   trace ("  -" ++ show (doExpr conf)) $
-  state $ \(hist@(es, vs), prom) ->
+  state $ \(hist@(_es, vs), prom) ->
   (lookupEmb (filter (\(v,_,_,_,_)->v `elem` path) vs) conf, (hist, prom))
   where doExpr = toExpr . reduce
 
 lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var])
-lookupEmb [] c = Nothing
-lookupEmb vs@((var, vars, node, conf', sps):hist) conf =
+lookupEmb [] _c = Nothing
+lookupEmb vs@((var, vars, _node, conf', _sps):hist) conf =
   trace ("  >" ++ var ++ ":" ++ show (doExpr conf') ++ "") $
   if doExpr conf' <| doExpr conf || doExpr conf <| doExpr conf' -- || True
     then if False -- True -- False --fvs (reduce conf) /= fvs (reduce conf')
@@ -224,20 +225,19 @@ lookupEmb vs@((var, vars, node, conf', sps):hist) conf =
       else Just (var, vars)
     else lookupEmb hist conf
   where
-    fvs = freeVars . envExpr
+    _fvs = freeVars . envExpr
     doExpr = toExpr . reduce
-
 
 {-|
 -}
 getNext :: Memo Int
-getNext = state $ \(hist@(es, vs), prom) -> (length vs, (hist, prom))
+getNext = state $ \(hist@(_es, vs), prom) -> (length vs, (hist, prom))
 
 {-|
 -}
 lookupMatch :: [HistNode] -> Conf -> Maybe (Var, [Var])
 lookupMatch [] _ = Nothing
-lookupMatch ((var, vars, node, conf', sps):hist) conf =
+lookupMatch ((var, vars, _node, conf', _sps):hist) conf =
   if match conf conf'
     then if False --fvs (reduce conf) /= fvs (reduce conf')
       then error $ show (fvs $ reduce conf) ++

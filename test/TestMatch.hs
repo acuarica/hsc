@@ -8,7 +8,7 @@ import Control.Arrow (second)
 
 import Expr (Expr(Var, Con, App), app, appVars, substAlts, alpha)
 import Parser (parseExpr)
-import Eval (Env, newConf, emptyEnv, eval)
+import Eval (Env, newConf, emptyEnv)
 import Match (match, envExpr, (|~~|), (<|), (|><|))
 
 testMatch :: TestTree
@@ -34,8 +34,8 @@ testMatch = testGroup "match1 ~~>" $
   ]
   where s = newConf emptyEnv . parseExpr
 
-testMatch2 :: TestTree
-testMatch2 = testGroup "match2 ~~>" $
+_testMatch2 :: TestTree
+_testMatch2 = testGroup "match2 ~~>" $
   map (\(l,r,v) ->
     testCase (show l ++ " =~= " ++ show "") $
       l `match` r @?= v)
@@ -66,7 +66,7 @@ env = map (second parseExpr)
     "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
   ]
 
-
+unificationTest :: TestTree
 unificationTest = testGroup "Unification tests" $
   let go tx ty est =
         let (xe, ye) = (parseExpr tx, parseExpr ty) in

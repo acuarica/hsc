@@ -4,8 +4,7 @@ module HSE where
 import Language.Haskell.Exts hiding (Pat,Var,Let,App,Case,Con,app,name)
 import qualified Language.Haskell.Exts as H
 
-import Expr (
-  Expr(Var, Con, Lam, App, Case), Var, Pat(Pat), con, let1, zero)
+import Expr (Expr(Var, Con, Lam, App, Case), Var, Pat(Pat), con, let1, zero)
 
 fromHSE :: Show l => Expr -> Module l -> Expr
 fromHSE rootExpr (Module _ _ _ _ decls) =
@@ -25,10 +24,8 @@ fromDecl (FunBind l [Match _ f vars (UnGuardedRhs _ x) Nothing]) =
   Just (fromName f, fromExp $ Lambda l vars x)
 fromDecl (FunBind l [Match _ f vars (UnGuardedRhs _ x) (Just (BDecls _ (d:ds)))]) =
   unhandle "fromExp:funbind" d
-
---fromDecl d@(FunBind _ ms) = unhandle "fromDecl:test" d
-
---  Just ("$$", Lam "$scvar" (Case (Var "$scvar") (map fromMatch ms)))
+fromDecl (InstDecl l _overlap _rule (Just [InsDecl l' decl])) =
+  fromDecl decl
 
 fromDecl TypeSig{} = Nothing
 fromDecl DataDecl{} = Nothing
@@ -46,6 +43,8 @@ fromExp :: Show l => Exp l -> Expr
 fromExp (Lambda _ [] x) = fromExp x
 fromExp (Lambda l (PVar _ (Ident _ x):vars) bod) =
   Lam x $ fromExp $ Lambda l vars bod
+fromExp (Lambda _l _pat body) =
+  Lam "?" $ fromExp body
 fromExp (H.App _ x y) = App (fromExp x) (fromExp y)
 fromExp (H.Var _ (UnQual _ name)) = Var (fromName name)
 fromExp (H.Con _ (UnQual _ name)) = con (fromName name)
