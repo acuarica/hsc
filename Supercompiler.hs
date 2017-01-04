@@ -9,7 +9,7 @@ module Supercompiler (
   Hist, HistNode, HistEdge, supercompile, supercompileMemo
 ) where
 
-import Data.List (intercalate, union)
+import Data.List (intercalate, union, nub)
 import Data.Maybe (isNothing, fromJust)
 -- import Control.Exception (assert)
 import Control.Monad.State (State, state, runState)
@@ -17,12 +17,12 @@ import Control.Arrow (second)
 
 import Debug.Trace
 import Expr (
-  Expr(Var, Con, Case), Var, Pat(Pat),
+  Expr(Var, Con, Let, Case), Var, Pat(Pat),
   con, app, appVars, let1, isVar, freeVars, subst, substAlts)
 import Eval (
   Conf, Env, StackFrame(Arg, Alts),
   newConf, emptyEnv, toExpr, reduce)
-import Match (match, match', toLambda, envExpr, freduce, (<|))
+import Match (match, match', toLambda, envExpr, freduce, (<|), (|><|))
 
 {-|
   Supercompiles an Expr.
@@ -96,9 +96,13 @@ memo path conf@(_env, _stack, expr) =
             --return (v, appVars (Var v) fv)
           else do
             -- TODO: Apply generalization.
-            let (var, fv) = traceShow conf $ fromJust ee
+            let (var, fv, gconf) = traceShow conf $ fromJust ee
+            let (gexpr, s, t) = doExpr gconf |><| doExpr conf
             return ("EMB:" ++ var ++ "/" ++ unwords fv,
-              appVars (Var var) (fvs $ reduce conf))
+              Let (nub t) $ appVars (Var var)
+                     --(fvs $ reduce conf)
+                     (  nub  ((fst . unzip) t)  )
+                   )
       else do
         let (var, _fv) = fromJust ii
         --recEdge (parentVar, label, var, fvs conf, conf)
@@ -204,15 +208,17 @@ isin conf = state $ \(hist@(_es, vs), prom) ->
 
 {-|
 -}
-embin :: [Var] -> Conf -> Memo (Maybe (Var, [Var]))
+embin :: [Var] -> Conf -> Memo (Maybe (Var, [Var], Conf))
 embin path conf =
   trace ("**" ++ show path) $
   trace ("  -" ++ show (doExpr conf)) $
   state $ \(hist@(_es, vs), prom) ->
   (lookupEmb (filter (\(v,_,_,_,_)->v `elem` path) vs) conf, (hist, prom))
-  where doExpr = toExpr . reduce
 
-lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var])
+-- where
+doExpr = toExpr . reduce
+
+lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var], Conf)
 lookupEmb [] _c = Nothing
 lookupEmb vs@((var, vars, _node, conf', _sps):hist) conf =
   trace ("  >" ++ var ++ ":" ++ show (doExpr conf') ++ "") $
@@ -222,7 +228,7 @@ lookupEmb vs@((var, vars, _node, conf', _sps):hist) conf =
         show (toExpr conf) ++ "\n"++
         show (toExpr conf') ++ "\n" ++
         show vs
-      else Just (var, vars)
+      else Just (var, vars, conf')
     else lookupEmb hist conf
   where
     _fvs = freeVars . envExpr

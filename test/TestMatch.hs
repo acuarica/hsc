@@ -125,14 +125,12 @@ embTest = testGroup "emb ~~>" [
   where go x y v = testCase (x ++ " <| " ++ y) $ parseExpr x <| parseExpr y @?= v
 
 msgTest :: TestTree
-msgTest = testGroup "msg ~~>"
-  [
-    go "x" "x"
-      (Var "x", [], []),
-    go "x" "y"
-      (Var "$x", [("$x", Var "x")], [("$x", Var "y")]),
-    go "f x" "f y"
-      (Var "$x", [("$x", Var "x")], [("$x", Var "y")])
+msgTest = testGroup "msg ~~>" [
+    go "x" "x" ("x", [], []),
+    go "x" "y" ("$x", [("$x", "x")], [("$x", "y")]),
+    go "f x" "f y" ("$x", [("$x", "x")], [("$x", "y")]),
+    go "plus n m" "plus n (Succ m)"
+      ("plus n $0", [("$0", "m")], [("$0", "Succ m")]),
     -- ("f a b", "f c d", True),
     -- ("f a a", "f b b", True),
     -- ("[1,2,3,x]", "[1,2,3,y]", True),
@@ -143,16 +141,23 @@ msgTest = testGroup "msg ~~>"
     -- ("a (c b)", "c b", False),
     -- ("a (c b)", "c (a b)", False),
     -- ("a (c b)", "a (a (a b))", False)
+    go "case n of Zero->Succ m;Succ n'->plus n' (Succ (Succ m));"
+      "case a of Zero->m;Succ n'->plus n' (Succ m);"
+      ("case $0 of Zero->$1; Succ n'->plus n' (Succ $1);",
+       [("$0", "n"), ("$1", "Succ m")],
+       [("$0", "a"), ("$1", "m")])
   ]
   where
-    go x y v = testCase (x ++ " |><| " ++ y ++ show v) $ domsg x y @?= v
+    go x y v = testCase (x ++ " |><| " ++ y ++ show v) $ domsg x y @?= pv v
     domsg x y = parseExpr x |><| parseExpr y
+    pv (e, s, t) = (parseExpr e, map (\(v',e')->(v',parseExpr e')) s,
+                                 map (\(v',e')->(v',parseExpr e')) t)
 
 main :: IO ()
 main = defaultMain $ testGroup "Match" [
-    testMatch,
+    -- testMatch,
     --testMatch2,
-    unificationTest -- ,
+    -- unificationTest -- ,
     -- embTest,
-    -- msgTest
+    msgTest
   ]

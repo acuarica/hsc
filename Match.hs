@@ -138,20 +138,47 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
   -- merge <$> e1 |~~| e2 <*> b1 |~~| b2
 (|~~|) (App f1 v1) (App f2 v2) = merge <$> f1 |~~| f2 <*> v1 |~~| v2
 
+fst3 :: (a, b, c) -> a
+fst3 (x, _, _) = x
+
+snd'trd :: (a, b, c) -> (b, c)
+snd'trd (_, y, z) = (y, z)
+
 {-|
   Generalization algorithm.
+  plus n m |><| plus n (Succ m) =
+    plus n $0 << $0->m | $0 -> Succ m
 -}
 (|><|) :: Expr -> Expr -> (Expr, [(Var, Expr)], [(Var, Expr)])
 (|><|) (Var v) (Var w) = if v == w
   then (Var v, [], [])
-  else let newvar = "$x" in
-    (Var newvar, [(newvar, Var v)], [(newvar, Var w)])
--- msg (Con tag1 args1) (Con tag2 args2) =
---     tag1 == tag2 && length args1 == length args2 &&
+  else let newvar = "$2" in (Var newvar, [(newvar, Var v)], [(newvar, Var w)])
+(|><|) e@(Con tag args) e'@(Con tag' args') =
+  if tag == tag' && length args == length args'
+  then let a = (zipWith (\x y-> fst3 $ (|><|) x y) args args') in
+    (Con tag a, [], [])
+  else error "Nogen@Con"
 -- and (zipWith (<|) args1 args2)
---(|><|) App funexpr valexpr
-
---(|><|) :: Expr -> Expr -> ?
+(|><|) (App f1 v1) (App f2 v2) =
+  let (fg, fs1, fs2) = f1 |><| f2
+      (vg, vs1, vs2) = v1 |><| v2
+  in  (App fg vg, fs1 ++ vs1, fs2 ++ vs2)
+(|><|) e1 (App _f1 e2) =
+  let (eg, s1, s2) = e1 |><| e2
+      newvar = "$0" in
+  (Var newvar, [(newvar, e1)], [(newvar, App _f1 e2)])
+(|><|) (App _f1 e2) e1 =
+  let (eg, s1, s2) = e1 |><| e2
+      newvar = "$0" in
+  (Var newvar, [(newvar, App _f1 e2)], [(newvar, e1)] )
+(|><|) (Case sc alts) (Case sc' alts') =
+  if length alts == length alts' && and (zipWith (\(p,_)(q,_)->p==q) alts alts')
+  then let as = zipWith ((\(p,i)(_,j)-> (p, fst3 $ i |><| j) )) alts alts'
+           (e, s, t) = sc |><| sc'
+           (s', t') = unzip $ zipWith ((\(p,i)(_,j)-> snd'trd$i |><| j)) alts alts'
+       in  (Case e as, s ++ concat s', t ++ concat t')
+  else error "Nogen@Case"
+(|><|) e e' = error $ show e ++ " |><| " ++ show e'
 
 {-|
   Homeomorphic Embedding relation.
@@ -169,7 +196,7 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
 (<|) (App f1 v1) (App f2 v2) = f1 <| f2 && v1 <| v2
 
 -- Diving
-(<|) e1 (App _ e2) = e1 <| e2
+(<|) e1 (App _f1 e2) = e1 <| e2
 
 (<|) e e'@(Case sc alts) =
   -- Diving in case
