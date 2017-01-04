@@ -139,14 +139,14 @@ subst (var, valexpr) bodyexpr = case bodyexpr of
   Case scexpr' alts -> Case (goSubst scexpr') (map goSubstAlt alts)
   where
     goSubst = subst (var, valexpr)
-    goSubstAlt (Pat tag vars, altexpr) =
-      (Pat tag vars, if var `elem` vars then altexpr else goSubst altexpr)
+    goSubstAlt (Pat tag vars', altexpr) =
+      (Pat tag vars', if var `elem` vars' then altexpr else goSubst altexpr)
 
 {-|
   Subtitutes a list of bindings in bodyexpr.
 -}
 substAlts :: [Subst] -> Expr -> Expr
-substAlts bindings bodyexpr = foldl (flip subst) bodyexpr bindings
+substAlts binds bodyexpr = foldl (flip subst) bodyexpr binds
 
 {-|
   Lookup the alternative according to the constructor tag.
@@ -170,7 +170,7 @@ freeVars expr = case expr of
     (freeVars inexpr `union` concatMap freeVars (bindings binds)) \\
       vars binds
   Case scexpr alts -> nub (freeVars scexpr ++
-    concatMap (\(Pat p vars, e) -> freeVars e \\ vars) alts)
+    concatMap (\(Pat _tag vars', e) -> freeVars e \\ vars') alts)
 
 {-|
   Alpha renaming of bound variables.
@@ -211,7 +211,7 @@ alpha = snd . doAlpha 0
       let (n', as') = doLet' next' as in
       (n', (p, e'):as')
     doLet n _ [] = (n, [])
-    doLet n ss (((v,v'),e):bs) =
+    doLet n ss (((_v, v'),e):bs) =
       let (next', e') = alphaSubst ss n e in
       let (n', bs') = doLet next' ss bs in
       (n', (v', e'):bs')
@@ -264,8 +264,8 @@ instance Show Expr where
         then tag
         else paren par (tag ++ " " ++ unwords (map (show' True) args)))
           ((prettyNat <|> prettyList) expr)
-      Lam var expr ->
-        "{" ++ var ++ "->" ++ show expr ++ "}"
+      Lam var bodyexpr ->
+        "{" ++ var ++ "->" ++ show bodyexpr ++ "}"
       Let binds inexpr ->
         paren par ("let " ++
         unwords (map (\(v, e)->v ++ "=" ++ show' True e) binds) ++
@@ -278,13 +278,13 @@ instance Show Expr where
     paren par s = if par then "(" ++ s ++ ")" else s
     prettyNat expr = case doNat expr of
       (n, Nothing) -> Just (show n)
-      (0, Just expr') -> Nothing
+      (0, Just _expr') -> Nothing
       (n, Just expr') -> Just (show n ++ "@" ++ show' True expr')
     prettyList expr = case doList expr of
       (xs, Nothing) -> Just ("[" ++ int ", " xs ++ "]")
       ([], Just _) -> Nothing
-      (xs, Just expr) ->
-        Just ("(" ++ int ":" xs ++ ":" ++ show expr ++ ")")
+      (xs, Just expr') ->
+        Just ("(" ++ int ":" xs ++ ":" ++ show expr' ++ ")")
     int sep xs = intercalate sep (map show xs)
     doNat expr = case expr of
       Con "Zero" args -> case args of
@@ -295,7 +295,7 @@ instance Show Expr where
         [arg] -> case doNat arg of
           (n, e) -> (n+1, e)
         _ -> error $ "Invalid arguments for Succ: " ++ showArgs args
-      expr' -> (0, Just expr)
+      _expr' -> (0, Just expr)
     doList expr = case expr of
       Con "Nil" args -> case args of
         [] -> ([], Nothing)
@@ -304,7 +304,7 @@ instance Show Expr where
         [item, rest] -> case doList rest of
           (xs, e) -> (item:xs, e)
         _ -> ([], Just expr)
-      expr' -> ([], Just expr)
+      _expr' -> ([], Just expr)
     f <|> g = \expr -> case f expr of
       Nothing -> g expr
       Just s -> Just s
@@ -314,7 +314,7 @@ instance {-# OVERLAPPING #-} Show Binding where
   show (var, expr) = var ++ "=" ++ show expr
 
 instance Show Pat where
-  show (Pat tag vars) = unwords (tag:vars)
+  show (Pat tag vars') = unwords (tag:vars')
 
 instance {-# OVERLAPPING #-} Show Alt where
   show (pat, alt) = show pat ++ " -> " ++ show alt

@@ -78,7 +78,9 @@ unificationTest = testGroup "Unification tests" [
     go "Branch 2 t t" "Branch v x y" $ Just [("v", "2"), ("x", "y"), ("t", "y")],
     go "{x->x}" "{y->y}" $ Just [],
     go "plus n m" "plus n (Succ m)" Nothing,
-    go "plus n m" "plus n' (Succ m')" $ Just [("n", "n'"), ("m", "Succ m'")]
+    go "plus n m" "plus n' (Succ m')" $ Just [("n", "n'"), ("m", "Succ m'")],
+    go "case n of Zero->Succ m;Succ n'->plus n' (Succ (Succ m));"
+      "case a of Zero->m;Succ n'->plus n' (Succ m);" Nothing
   ]
   where
     go tx ty est =
@@ -93,10 +95,7 @@ unificationTest = testGroup "Unification tests" [
                 alpha (substAlts s' xe) @?= alpha (substAlts s' ye)]
 
 embTest :: TestTree
-embTest = testGroup "emb ~~>" $
-  let go x y v = testCase (x ++ " <| " ++ y) $
-       parseExpr x <| parseExpr y @?= v in
-  [
+embTest = testGroup "emb ~~>" [
     go "x" "x" True,
     go "x" "y" True,
     go "f x" "f y" True,
@@ -110,6 +109,7 @@ embTest = testGroup "emb ~~>" $
     go "a (c b)" "c b" False,
     go "a (c b)" "c (a b)" False,
     go "a (c b)" "a (a (a b))" False,
+    go "x" "Succ x" True,
     go "plus n m" "plus n (Succ m)" True,
     go "plus n (Succ m)" "plus n m" False,
     go "m" "plus n m" False,
@@ -117,11 +117,12 @@ embTest = testGroup "emb ~~>" $
     go "case zs of Nil->[];Cons r' rs'->append (reverse rs') (Cons r' []);"
        "case (case $zs_rs' of \
        \    Nil->[];\
-       \    Cons r' rs'->append (reverse rs') (Cons r' []);) of \ 
+       \    Cons r' rs'->append (reverse rs') (Cons r' []);) of \
        \  Nil->Cons $zs_r' [];\
        \  Cons x' xs'->Cons x' (append xs' (Cons $zs_r' []));"
        True
   ]
+  where go x y v = testCase (x ++ " <| " ++ y) $ parseExpr x <| parseExpr y @?= v
 
 msgTest :: TestTree
 msgTest = testGroup "msg ~~>"

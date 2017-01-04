@@ -8,15 +8,14 @@ import Expr (Expr(Var), app, appVars, subst, freeVars, alpha)
 import Parser (parseExpr)
 
 appTest :: TestTree
-appTest = testGroup "app expr [expr] ~~> expr" $
-  map (\(f, args, e) ->
-    testCase (f ++ " " ++ show (map parseExpr args) ++ " ~~> " ++ e) $
-      app (parseExpr f) (map parseExpr args) @?= parseExpr e)
-  [
-    ("{f->{x->f x}}", ["g", "y"], "{f->{x->f x}} g y"),
-    ("Cons", ["x", "xs"], "Cons x xs"),
-    ("Cons", ["x", "Cons y []"], "Cons x (Cons y [])")
+appTest = testGroup "app expr [expr] ~~> expr" [
+    go "{f->{x->f x}}" ["g", "y"] "{f->{x->f x}} g y",
+    go "Cons" ["x", "xs"] "Cons x xs",
+    go "Cons" ["x", "Cons y []"] "Cons x (Cons y [])"
   ]
+  where go f args e =
+          testCase (f ++ " " ++ show (map parseExpr args) ++ " ~~> " ++ e) $
+          app (parseExpr f) (map parseExpr args) @?= parseExpr e
 
 appVarsTest :: TestTree
 appVarsTest = testGroup "appVars expr [var] ~~> expr" $
@@ -45,30 +44,28 @@ substTest = testGroup "subst (var, expr) expr ~~> expr" $
   ]
 
 freeVarsTest :: TestTree
-freeVarsTest = testGroup "freeVars expr ~~> [Var]" $
-  map (\(a, e) ->
-    testCase (a ++ " ~~> " ++ unwords e) $
-      (freeVars . parseExpr) a @?= e)
-  [
-    ("x", ["x"]),
-    ("f x", ["f", "x"]),
-    ("f (g x) (h x y)", ["f", "g", "x", "h", "y"]),
-    ("{n->Succ n}", []),
-    ("{x->Cons x xs}", ["xs"]),
-    ("{x->Cons x xs} x", ["xs", "x"]),
-    ("Succ n", ["n"]),
-    ("Cons x xs", ["x", "xs"]),
-    ("Branch t t", ["t"]),
-    ("let inc={n->S n} in inc m", ["m"]),
-    ("let inc={n->S n} in inc n", ["n"]),
-    ("let inc={n->S m} in inc n", ["n", "m"]),
-    ("let inc={n->(let s=Succ in s n)} in inc m", ["m"]),
-    ("let inc={n->(let s=Succ in s n)} in inc n", ["n"]),
-    ("let inc={n->s (let s=A in s m)} in inc m", ["m", "s"]),
-    ("(let x=A in C x) x", ["x"]),
-    ("let a=b in let b=A in a", ["b"]),
-    ("let a=b; b=A in a", [])
+freeVarsTest = testGroup "freeVars expr ~~> [Var]" [
+    go "x" ["x"],
+    go "f x" ["f", "x"],
+    go "f (g x) (h x y)" ["f", "g", "x", "h", "y"],
+    go "{n->Succ n}" [],
+    go "{x->Cons x xs}" ["xs"],
+    go "{x->Cons x xs} x" ["xs", "x"],
+    go "Succ n" ["n"],
+    go "Cons x xs" ["x", "xs"],
+    go "Branch t t" ["t"],
+    go "let inc={n->S n} in inc m" ["m"],
+    go "let inc={n->S n} in inc n" ["n"],
+    go "let inc={n->S m} in inc n" ["n", "m"],
+    go "let inc={n->(let s=Succ in s n)} in inc m" ["m"],
+    go "let inc={n->(let s=Succ in s n)} in inc n" ["n"],
+    go "let inc={n->s (let s=A in s m)} in inc m" ["m", "s"],
+    go "(let x=A in C x) x" ["x"],
+    go "let a=b in let b=A in a" ["b"],
+    go "let a=b; b=A in a" []
   ]
+  where go a e = testCase (a ++ " ~~> " ++ unwords e) $
+          (freeVars . parseExpr) a @?= e
 
 alphaTest :: TestTree
 alphaTest = testGroup "alpha expr ~~> expr" $
@@ -94,5 +91,10 @@ alphaTest = testGroup "alpha expr ~~> expr" $
   ]
 
 main :: IO ()
-main = defaultMain $ testGroup "Expr"
-  [appTest, appVarsTest, substTest, freeVarsTest, alphaTest]
+main = defaultMain $ testGroup "Expr" [
+  appTest,
+  appVarsTest,
+  substTest,
+  freeVarsTest,
+  alphaTest
+  ]

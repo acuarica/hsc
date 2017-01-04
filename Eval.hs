@@ -9,12 +9,12 @@ module Eval (
   nf, nfc, reduce, reducec, put, step
 ) where
 
-import Data.List (intercalate, delete)
+import Data.List (intercalate)
 import Control.Arrow (first)
 
 import Expr (
   Expr(Var, Con, Lam, App, Let, Case), Var, Binding, Alt, Pat(Pat),
-  let1, subst, substAlts, lookupAlt, freeVars, alpha)
+  subst, substAlts, lookupAlt, alpha)
 
 {-|
   Represents the configuration of the abstract machine.
@@ -86,13 +86,13 @@ newConf env = (,,) env []
   It does not use the environment.
 -}
 toExpr :: Conf -> Expr
-toExpr conf@(env, stack, expr) = go expr stack
+toExpr (_env, stack, expr') = go expr' stack
   where go expr [] = expr
         go expr (Arg arg:stack') = go (App expr arg) stack'
         go expr (Alts alts:stack') = go (Case expr alts) stack'
         --go expr (Update var:stack') =
           --go (let1 var expr (Var var)) stack'
-        go expr (Update var:stack') = go expr stack'
+        go expr (Update _var:stack') = go expr stack'
 
 {-|
   Reduce a state to Normal Form (NF).
@@ -110,9 +110,9 @@ nf state = case reduce state of
   Same as nf but with step count.
 -}
 nfc :: Conf -> (Conf, Int)
-nfc conf = nfc' conf 0
+nfc conf'' = nfc' conf'' (0 :: Integer)
   where
-    nfc' conf steps = case reducec conf of
+    nfc' conf _steps = case reducec conf of
       ((env, [], Con tag args), steps') ->
         let (cargs, csteps) = unzip $
               map (first toExpr . nfc . newConf env) args in
@@ -135,7 +135,7 @@ reduce conf = case step conf of
   but also keeps track of how many reduction steps were done.
 -}
 reducec :: Conf -> (Conf, Int)
-reducec conf = reducec' (conf, 0)
+reducec conf'' = reducec' (conf'', 0)
   where reducec' (conf, steps) =
           case step conf of
             Nothing -> (conf, steps)
