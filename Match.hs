@@ -186,6 +186,5 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
       and (zipWith (\(p, e) (p', e') -> p == p' && e <| e') alts alts')
     coupCase _ _ = False
 
-
 --emb (App _ _) (App _ _) =
 (<|) _ _ = False

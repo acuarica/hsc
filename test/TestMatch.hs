@@ -67,8 +67,21 @@ env = map (second parseExpr)
   ]
 
 unificationTest :: TestTree
-unificationTest = testGroup "Unification tests" $
-  let go tx ty est =
+unificationTest = testGroup "Unification tests" [
+    go "x" "x" $ Just [],
+    go "x" "y" $ Just [("x", "y")],
+    go "x" "f x" Nothing,
+    go "f g" "a b" $ Just [("f", "a"), ("g", "b")],
+    go "(f g) (a b)" "x y" $ Just [("x", "f g"), ("y", "a b")],
+    go "(f g) (a b)" "x x" $ Just [("f", "a"), ("g", "b"), ("x", "a b")],
+    go "Cons x xs" "Cons 2 Nil" $ Just [("x", "2"), ("xs", "Nil")],
+    go "Branch 2 t t" "Branch v x y" $ Just [("v", "2"), ("x", "y"), ("t", "y")],
+    go "{x->x}" "{y->y}" $ Just [],
+    go "plus n m" "plus n (Succ m)" Nothing,
+    go "plus n m" "plus n' (Succ m')" $ Just [("n", "n'"), ("m", "Succ m'")]
+  ]
+  where
+    go tx ty est =
         let (xe, ye) = (parseExpr tx, parseExpr ty) in
         let s = xe |~~| ye in
         let es = map (second parseExpr) <$> est in
@@ -78,29 +91,6 @@ unificationTest = testGroup "Unification tests" $
               Nothing -> []
               Just s' -> [testCase "Subst" $
                 alpha (substAlts s' xe) @?= alpha (substAlts s' ye)]
-          in
-  [
-    go "x" "x" $
-      Just [],
-    go "x" "y" $
-      Just [("x", "y")],
-    go "x" "f x"
-      Nothing,
-    go "f g" "a b" $
-      Just [("f", "a"), ("g", "b")],
-    go "(f g) (a b)" "x y" $
-      Just [("x", "f g"), ("y", "a b")],
-    go "(f g) (a b)" "x x" $
-      Just [("f", "a"), ("g", "b"), ("x", "a b")],
-    go "Cons x xs" "Cons 2 Nil" $
-      Just [("x", "2"), ("xs", "Nil")],
-    go "Branch 2 t t" "Branch v x y" $
-      Just [("v", "2"), ("x", "y"), ("t", "y")],
-    go "{x->x}" "{y->y}" $
-      Just [],
-    go "plus n m" "plus n' (Succ m')" $
-      Just [("n", "n'"), ("m", "Succ m'")]
-  ]
 
 embTest :: TestTree
 embTest = testGroup "emb ~~>" $
@@ -161,7 +151,7 @@ main :: IO ()
 main = defaultMain $ testGroup "Match" [
     testMatch,
     --testMatch2,
-    unificationTest,
-    embTest,
-    msgTest
+    unificationTest -- ,
+    -- embTest,
+    -- msgTest
   ]

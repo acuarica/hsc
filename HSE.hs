@@ -71,6 +71,8 @@ fromExp (Lit l (String _ (x:xs) _)) =
   Con "Cons" [fromExp (Lit l (Char l x "?")),
     fromExp (Lit l (String l xs "?"))]
 
+
+
 --fromExp (Lit x) = Con noname (prettyPrint x) []
 -- fromExp x@(NegApp _) = Con noname (prettyPrint x) []
 fromExp (If _l a b c) = fromExp $ H.Case _l a [f "True" b, f "False" c]

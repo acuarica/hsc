@@ -4,7 +4,7 @@
 module Parser (parseExpr) where
 
 import Expr (Expr(Var, Lam, App, Let, Case), Var, Binding, Pat(Pat),
-  con, app, zero, suc, nil, cons, nat)
+  con, app, nil, cons, nat)
 import Data.Char (isDigit, isAlpha, isLower, isUpper)
 import Control.Applicative (Alternative, empty, (<|>), some, many)
 import Text.Printf (printf)
@@ -21,8 +21,8 @@ data ParserResult a = Error String | Done a Chars String
 newtype Parser a = Parser { parse :: String -> ParserResult a }
 
 instance Functor Parser where
-  fmap f (Parser parse) = Parser (\s ->
-    case parse s of
+  fmap f (Parser p) = Parser (\s ->
+    case p s of
       Error msg -> Error msg
       Done a chars rest -> Done (f a) chars rest
     )
@@ -67,8 +67,8 @@ item = Parser (\s -> case s of
     (c:cs) -> Done c 1 cs)
 
 satisfy :: String -> (Char -> Bool) -> Parser Char
-satisfy msg pred = (>>=) item (\c ->
-  if pred c
+satisfy msg predicate = (>>=) item (\c ->
+  if predicate c
     then return c
     else Parser (const (Error (printf "expecting %s got %c" msg c))))
 
@@ -78,15 +78,12 @@ oneOf s = satisfy s (`elem` s)
 char :: Char -> Parser Char
 char c = satisfy [c] (c ==)
 
-natural :: Parser Integer
-natural = fmap read (some (satisfy "isDigit" isDigit))
-
 string :: String -> Parser String
 string [] = return []
-string (c:cs) = do { char c; string cs; return (c:cs)}
+string (c:cs) = char c >> string cs >> return (c:cs)
 
 token :: Parser a -> Parser a
-token p = do { a <- p; spaces ; return a}
+token p = do { a <- p; spaces >> return a}
 
 reserved :: String -> Parser String
 reserved s = token (string s)
@@ -119,25 +116,25 @@ number :: Parser Int
 number = do
   s <- string "-" <|> return []
   cs <- some digit
-  spaces
+  _ <- spaces
   return (read (s ++ cs))
 
 lowerword :: Parser String
 lowerword = do
   c  <- loweralpha
   cs <- many alpha
-  spaces
+  _ <- spaces
   return (c:cs)
 
 upperword :: Parser String
 upperword = do
   c  <- upperalpha
   cs <- many alpha
-  spaces
+  _ <- spaces
   return (c:cs)
 
 sat :: String -> Parser String -> (String -> Bool) -> Parser String
-sat msg p pred = (>>=) p (\s -> if pred s
+sat msg p predicate = (>>=) p (\s -> if predicate s
     then return s
     else Parser (const (Error (printf "expecting %s got %s" msg s))))
 
@@ -180,22 +177,22 @@ litintp = do { n <- number; return (nat n) }
 
 letp :: Parser Expr
 letp = do
-  reserved "let"
+  _ <- reserved "let"
   binds <- bindsp
   --var <- varnamep
   --reserved "="
   --valexpr <- exprp
-  reserved "in"
+  _ <- reserved "in"
   inexpr <- exprp
   return (Let binds inexpr)
 
 bindsp :: Parser [Binding]
 bindsp = do
         var <- varnamep
-        reserved "="
+        _ <- reserved "="
         valexpr <- exprp
         (do
-          reserved ";"
+          _ <- reserved ";"
           binds <- bindsp
           return ((var, valexpr):binds) ) <|>
           return [(var, valexpr)]
@@ -211,15 +208,15 @@ conp = do { tag <- upperword; return (con tag) }
 lamp :: Parser Expr
 lamp = do
   var <- varnamep
-  reserved "->"
+  _ <- reserved "->"
   valexpr <- exprp
   return (Lam var valexpr)
 
 casep :: Parser Expr
 casep = do
-  reserved "case"
+  _ <- reserved "case"
   scexpr <- exprp
-  reserved "of"
+  _ <- reserved "of"
   alts <- some altp
   return (Case scexpr alts)
 
@@ -227,16 +224,16 @@ altp :: Parser (Pat, Expr)
 altp = do
   tag <- upperword
   vars <- many varnamep
-  reserved "->"
+  _ <- reserved "->"
   res <- exprp
-  reserved ";"
+  _ <- reserved ";"
   return (Pat tag vars, res)
 
 listp :: Parser Expr
 listp = (do
       item <- exprp
       (do
-        reserved ","
+        _ <- reserved ","
         rest <- listp
         return (app cons [item, rest])) <|>
         return (app cons [item, nil])
@@ -250,12 +247,12 @@ varid :: Parser Var
 varid = do
   c  <- loweralpha <|> dollar <|> underscore
   cs <- many (alpha <|> digit <|> underscore <|> quote)
-  spaces
+  _ <- spaces
   return (c:cs)
 
 parseWith :: Show a => Parser a -> String -> a
 parseWith p s =
-  case parse (do { spaces; p }) s of
+  case parse (spaces >> p) s of
     Done a _ [] -> a
     Done a chars rest -> error $
       "Parser didn't consume entire stream: <<" ++ rest ++ ">> " ++
