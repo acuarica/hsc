@@ -17,11 +17,11 @@ import Control.Arrow (second)
 
 import Debug.Trace
 import Expr (
-  Expr(Var, Con, Let, Case), Var, Pat(Pat),
+  Expr(Var, Con, Let, Case, Lam, App), Var, Pat(Pat),
   con, app, appVars, let1, isVar, freeVars, subst, substAlts)
 import Eval (
   Conf, Env, StackFrame(Arg, Alts),
-  newConf, emptyEnv, toExpr, reduce)
+  newConf, emptyEnv, toExpr, reduce, whnf)
 import Match (match, match', toLambda, envExpr, freduce, (<|), (|><|))
 
 {-|
@@ -52,6 +52,9 @@ fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
 runMemo :: Expr -> ((Var, Expr), (Hist, Env))
 runMemo expr = runState s (([], []), [])
   where s = memo [] (newConf emptyEnv expr)
+isCon :: Conf -> Bool
+isCon (_, _, Con _ _) = True
+isCon _ = False
 
 {-|
   Runs the supercompiler
@@ -69,7 +72,7 @@ memo path conf@(_env, _stack, expr) =
     if isNothing ii
       then do
         ee <- embin path conf
-        if isNothing ee || isVar expr
+        if isNothing ee || isVar expr || isCon (reduce conf)
           then do
             let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
             let (node, sps) = split rconf
@@ -96,12 +99,16 @@ memo path conf@(_env, _stack, expr) =
             --return (v, appVars (Var v) fv)
           else do
             -- TODO: Apply generalization.
-            let (var, fv, gconf) = traceShow conf $ fromJust ee
+            let (var, fv, gconf) =  -- traceShow (reduce conf) $
+                  fromJust ee
             let (gexpr, s, t) = doExpr gconf |><| doExpr conf
             return ("EMB:" ++ var ++ "/" ++ unwords fv,
-              Let (nub t) $ appVars (Var var)
+              -- Let (nub t) $
+              App (Lam "$_" (Var "$_")) $
+              app (Var var)
                      --(fvs $ reduce conf)
-                     (  nub  ((fst . unzip) t)  )
+                     -- (  nub  ((fst . unzip) t)  )
+                     $ (snd . unzip) (nub t)
                    )
       else do
         let (var, _fv) = fromJust ii
@@ -210,8 +217,8 @@ isin conf = state $ \(hist@(_es, vs), prom) ->
 -}
 embin :: [Var] -> Conf -> Memo (Maybe (Var, [Var], Conf))
 embin path conf =
-  trace ("**" ++ show path) $
-  trace ("  -" ++ show (doExpr conf)) $
+  -- trace ("**" ++ show path) $
+  -- trace ("  -" ++ show (doExpr conf)) $
   state $ \(hist@(_es, vs), prom) ->
   (lookupEmb (filter (\(v,_,_,_,_)->v `elem` path) vs) conf, (hist, prom))
 
@@ -221,7 +228,7 @@ doExpr = toExpr . reduce
 lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var], Conf)
 lookupEmb [] _c = Nothing
 lookupEmb vs@((var, vars, _node, conf', _sps):hist) conf =
-  trace ("  >" ++ var ++ ":" ++ show (doExpr conf') ++ "") $
+  -- trace ("  >" ++ var ++ ":" ++ show (doExpr conf') ++ "") $
   if doExpr conf' <| doExpr conf || doExpr conf <| doExpr conf' -- || True
     then if False -- True -- False --fvs (reduce conf) /= fvs (reduce conf')
       then error $

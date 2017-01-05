@@ -9,6 +9,8 @@ module Eval (
   nf, nfc, reduce, reducec, put, step
 ) where
 
+import Debug.Trace
+
 import Data.List (intercalate)
 import Control.Arrow (first)
 
@@ -154,7 +156,8 @@ put (var, expr) ((var',expr'):env) = if var' == var
   Operational semantics with one-step reduction.
 -}
 step :: Conf -> Maybe Conf
-step (env, stack, expr) = case expr of
+step conf'@(env, stack, expr) = -- traceShow conf' $
+  case expr of
   Var var -> case lookup var env of
     Nothing -> Nothing
     Just val -> Just (env, Update var:stack, val)
