@@ -52,9 +52,14 @@ fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
 runMemo :: Expr -> ((Var, Expr), (Hist, Env))
 runMemo expr = runState s (([], []), [])
   where s = memo [] (newConf emptyEnv expr)
+
 isCon :: Conf -> Bool
 isCon (_, _, Con _ _) = True
 isCon _ = False
+
+isVar' :: Conf -> Bool
+isVar' (_, _, Var _) = True
+isVar' _ = False
 
 {-|
   Runs the supercompiler
@@ -64,7 +69,7 @@ memo :: [Var] -> Conf -> Memo (Var, Expr)
 memo path conf@(_env, _stack, expr) =
   do
   next <- getNext
-  if next > 10
+  if next > 20
     then return ("??", expr)
     else
     do
@@ -72,7 +77,14 @@ memo path conf@(_env, _stack, expr) =
     if isNothing ii
       then do
         ee <- embin path conf
+        let genIsVarOrNoEmb = if isNothing ee
+              then True
+              else let (var, fv, gconf) = fromJust ee
+                       (gexpr, s, t) = doExpr gconf |><| doExpr conf
+                    in isVar gexpr
+        -- FIXME: Merge this if w/ HE and generalization. Use only generalization.
         if isNothing ee || isVar expr || isCon (reduce conf)
+          || genIsVarOrNoEmb -- || next < 10
           then do
             let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
             let (node, sps) = split rconf
@@ -101,8 +113,10 @@ memo path conf@(_env, _stack, expr) =
             -- TODO: Apply generalization.
             let (var, fv, gconf) =  -- traceShow (reduce conf) $
                   fromJust ee
-            let (gexpr, s, t) = doExpr gconf |><| doExpr conf
-            return ("EMB:" ++ var ++ "/" ++ unwords fv,
+            let gen@(gexpr, s, t) = doExpr gconf |><| doExpr conf
+            return $ traceShow gen
+            -- let t' = (nub t)
+             ("EMB:" ++ var ++ "/" ++ unwords fv,
               -- Let (nub t) $
               App (Lam "$_" (Var "$_")) $
               app (Var var)

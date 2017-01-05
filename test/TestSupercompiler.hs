@@ -70,7 +70,7 @@ supercompileWithPrelude exprText = (expr, sexpr)
       \    False -> Cons y (insertSorted x ys);;}} in "
 
 testEvalSupercompiled :: TestTree
-testEvalSupercompiled = testGroup "Eval" [
+testEvalSupercompiled = testGroup "supercompile|eval" [
     go "map inc zs" $
       let1 "zs" . list nat,
     go "map inc zs" $
@@ -117,7 +117,7 @@ testEvalSupercompiled = testGroup "Eval" [
         srexpr == rexpr) . fexpr
 
 testPredicates :: TestTree
-testPredicates = testGroup "Predicates" [
+testPredicates = testGroup "supercompile Predicates" [
     goPred "eqn x x" $
       let1 "x" . nat,
     goPred "eqn (plus Zero x) x" $
@@ -152,7 +152,7 @@ testPredicates = testGroup "Predicates" [
         Case scexpr pats -> onlyTrue scexpr && all (onlyTrue . snd) pats
 
 testInvertible :: TestTree
-testInvertible = testGroup "Invertible Functions" [
+testInvertible = testGroup "supercompile Invertible Functions" [
     go "eqn x 0" $
       let1 "x" . nat,
     go "eqn x 5" $
@@ -167,8 +167,8 @@ testInvertible = testGroup "Invertible Functions" [
         srexpr == rexpr) . fexpr
 
 main :: IO ()
-main = defaultMain $ testGroup "Supercompile Test" [
-  testEvalSupercompiled --,
-  -- testPredicates,
-  -- testInvertible
+main = defaultMain $ testGroup "Supercompiler" [
+  testEvalSupercompiled,
+  testPredicates,
+  testInvertible
   ]

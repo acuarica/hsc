@@ -116,7 +116,7 @@ testParser msg parseExpr' = testGroup (msg ++ ".parseExpr str ~> expr") $
   ]
 
 main :: IO ()
-main = defaultMain $ testGroup "Parser/FastParser testing" [
+main = defaultMain $ testGroup "Parser" [
     testParser "Parser" Parser.parseExpr,
     testParser "FastParser" FastParser.parseExpr
   ]

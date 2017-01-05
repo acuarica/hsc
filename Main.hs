@@ -1,6 +1,8 @@
 
 module Main (main) where
 
+import System.IO (hPutStrLn, stderr)
+
 import Data.List (intercalate, isPrefixOf)
 import Data.Char (isSpace)
 import System.Exit (exitFailure)
@@ -88,7 +90,7 @@ caption expr = show expr
 writeFileLog :: FilePath -> String -> IO ()
 writeFileLog fileName content =
   do
-    putStrLn $ "[Writing " ++ fileName ++ "]"
+    hPutStrLn stderr $ "{- Writing " ++ fileName ++ " -}"
     writeFile fileName content
     return ()
 
@@ -102,19 +104,22 @@ main = do
     else do
       let fname = head args
       let ext = takeExtension fname
-      putStrLn $ "[Supercompiling " ++ fname ++ "]"
+      putStrLn $ "{- Supercompiling " ++ fname ++ " -}"
       content <- readFile fname
       let noComment = not . isPrefixOf "--" . dropWhile isSpace
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
-      putStrLn "Expression to supercompile:"
-      print expr
-      putStrLn "Evaluated expression:"
-      print $ eval expr
       let (sexpr, rm@((v0, e0), (h, _))) = supercompileMemo expr
 
       writeFileLog (makeName fname "hist") (show rm)
       writeFileLog (makeName fname "sexpr") (pprint sexpr)
       writeFileLog (makeName fname "dot") (makeDot (caption expr) v0 h)
+
+      putStrLn "-- Expression to supercompile"
+      print expr
+      putStrLn "-- Evaluated expression"
+      print $ eval expr
+      putStrLn "-- Supercompiled expression"
+      putStrLn $ pprint sexpr
 
       return ()

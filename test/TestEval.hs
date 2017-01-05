@@ -124,10 +124,7 @@ evalcTest = testGroup "evalc" $
 
 evalTest :: TestTree
 evalTest = testGroup "eval expr ~~> expr" $
-  map (\(a, e) ->
-    testCase (show a ++ " ~~> " ++ show e) $
-      eval a @?= alpha e)
-  [
+  map (\(a, e) -> testCase (show a ++ " ~~> " ++ show e) $ eval a @?= alpha e) [
     (var, var),
     (con "True", con "True"),
     (cons, cons),
@@ -224,9 +221,7 @@ evalTest = testGroup "eval expr ~~> expr" $
     five  = Con "Succ" [four]
 
 evalWithParseTest :: TestTree
-evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
-  let go a e = testCase (a ++ " ~~> " ++ e) $ evalp a @?= evalp e in
-  [
+evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" [
   go "let x=(let y=Succ in y 0) in y" "y",
   go "let x=0 in Succ x" "1",
   go "let x=True in [x]" "[True]",
@@ -258,6 +253,7 @@ evalWithParseTest = testGroup "evalWithParse:eval . parseExpr" $
   go "{n->case n of S n -> n;} (S Z)" "Z",
   go "{n->case n of S n -> n;} (S n)" "n"
   ]
+  where go a e = testCase (a ++ " ~~> " ++ e) $ evalp a @?= evalp e
 
 evalWithPreludeTest :: TestTree
 evalWithPreludeTest = testGroup "evalPreludeTest" $
@@ -349,16 +345,18 @@ evalBB = testGroup "eval BB" $
     \}} in "
 
 main :: IO ()
-main = defaultMain $ testGroup "Eval::eval/whnf" [
-  -- whnfTest,
-  -- evalTest,
-  -- evalWithParseTest,
-  -- evalWithPreludeTest,
-  -- evalLazyTest,
-  -- evalNameCaptureTest,
-  -- whnfcTest,
-  -- evalcTest,
-  -- evalBB,
-  whnfWithPreludeTest 
-  ]
-
+main = defaultMain $ testGroup "Eval" [
+  testGroup "whnf" [
+    whnfTest,
+    whnfcTest,
+    whnfWithPreludeTest
+    ],
+  testGroup "eval" [
+    evalTest,
+    evalWithParseTest,
+    evalWithPreludeTest,
+    evalLazyTest,
+    evalNameCaptureTest,
+    evalcTest,
+    evalBB
+  ]]

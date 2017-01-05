@@ -8,6 +8,8 @@ module Match (
 import Data.Maybe (fromJust)
 import Data.List (delete)
 
+import Debug.Trace
+
 import Expr (
   Expr(Var, Con, Lam, Let, App, Case), Var, Subst, let1, freeVars)
 import Eval (Env, Conf, StackFrame(Arg, Update),
@@ -171,13 +173,15 @@ snd'trd (_, y, z) = (y, z)
   let (eg, s1, s2) = e1 |><| e2
       newvar = "$0" in
   (Var newvar, [(newvar, App _f1 e2)], [(newvar, e1)] )
-(|><|) (Case sc alts) (Case sc' alts') =
+(|><|) expr@(Case sc alts) expr'@(Case sc' alts') =
   if length alts == length alts' && and (zipWith (\(p,_)(q,_)->p==q) alts alts')
   then let as = zipWith ((\(p,i)(_,j)-> (p, fst3 $ i |><| j) )) alts alts'
            (e, s, t) = sc |><| sc'
            (s', t') = unzip $ zipWith ((\(p,i)(_,j)-> snd'trd$i |><| j)) alts alts'
        in  (Case e as, s ++ concat s', t ++ concat t')
-  else error "Nogen@Case"
+  else trace ("Nogen@Case: " ++ show expr ++ "\n" ++ show expr') $
+    let newvar = "$3"
+     in (Var newvar, [(newvar, expr)], [(newvar, expr')])
 (|><|) e e' = error $ show e ++ " |><| " ++ show e'
 
 {-|
