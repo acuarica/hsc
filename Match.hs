@@ -179,7 +179,7 @@ snd'trd (_, y, z) = (y, z)
            (e, s, t) = sc |><| sc'
            (s', t') = unzip $ zipWith ((\(p,i)(_,j)-> snd'trd$i |><| j)) alts alts'
        in  (Case e as, s ++ concat s', t ++ concat t')
-  else trace ("Nogen@Case: " ++ show expr ++ "\n" ++ show expr') $
+  else -- trace ("Nogen@Case: " ++ show expr ++ "\n" ++ show expr') $
     let newvar = "$3"
      in (Var newvar, [(newvar, expr)], [(newvar, expr')])
 (|><|) e e' = error $ show e ++ " |><| " ++ show e'
@@ -209,7 +209,7 @@ snd'trd (_, y, z) = (y, z)
   -- any (\(p', e')-> e <| e') alts ||
   -- Coupling for case
   coupCase e e'
-  where 
+  where
     -- TODO: Patterns should be a renaming, not syntactially equal.
     coupCase (Case sc alts) (Case sc' alts') =
       sc <| sc' &&

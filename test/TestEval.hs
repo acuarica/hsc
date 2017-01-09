@@ -87,12 +87,7 @@ whnfWithPreludeTest = testGroup "whnf w/Prelude" [
   where go a e = testCase (a ++ " ~~> " ++ e) $ whnfp (pp ++ a) @?= whnfp e
 
 whnfcTest :: TestTree
-whnfcTest = testGroup "whnfc" $
-  let go a e c =
-        let (we, steps) = (whnfc . parseExpr) a in
-          testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
-            (we, steps) @?= (whnfp e, c) in
-  [
+whnfcTest = testGroup "whnfc" [
     go "var" "var" 0,
     go "A" "A" 0,
     go "Succ var" "Succ var" 2,
@@ -104,16 +99,15 @@ whnfcTest = testGroup "whnfc" $
     go "{x->x} A" "A" 2,
     go "let x=A in x" "A" 3,
     go "let x=A B in x C" "A B C" 7,
-    go "let x=(let y=A in y 0) in x y" "A 0 y" 10
+    go "let x=(let y=A in y 0) in x y" "A 0 y" 10,
+    go "let snd={x->{y->case x of A->y;}}; sqr={n->snd n n} in sqr (sqr A)" "A" 4,
+    go "let fcap={n->y} in {x->{y->fcap x}} A B" "y" 5
   ]
+  where go a e c = testCase (a ++ " ~~>(" ++ show c ++ ") " ++ e) $
+          whnfc (parseExpr a) @?= (whnfp e, c)
 
 evalcTest :: TestTree
-evalcTest = testGroup "evalc" $
-  let go a e c =
-        let (we, steps) = (evalc . parseExpr) a in
-          testCase (a ++ " ~~>(" ++ show steps ++ ") " ++ e) $
-            (we, steps) @?= (evalp e, c) in
-  [
+evalcTest = testGroup "evalc" [
     go "A" "A" 0,
     go "Succ var" "Succ var" 2,
     go "Cons A Nil" "[A]" 4,
@@ -121,6 +115,8 @@ evalcTest = testGroup "evalc" $
     go "Succ (A B)" "Succ (A B)" 4,
     go "Cons (A B) (Cons (C D) Nil)" "[A B, C D]" 12
   ]
+  where go a e c = testCase (a ++ " ~~>(" ++ show c ++ ") " ++ e) $
+          evalc (parseExpr a) @?= (evalp e, c)
 
 evalTest :: TestTree
 evalTest = testGroup "eval expr ~~> expr" $

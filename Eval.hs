@@ -154,6 +154,17 @@ put (var, expr) ((var',expr'):env) = if var' == var
 
 {-|
   Operational semantics with one-step reduction.
+
+  let
+  copy={x->
+    case x of
+      Zero->Zero;
+      Succ x'->Succ (copy x')};
+  root=copy (Succ 1)
+  in
+  root
+
+  root =>
 -}
 step :: Conf -> Maybe Conf
 step conf'@(env, stack, expr) = -- traceShow conf' $
@@ -172,6 +183,7 @@ step conf'@(env, stack, expr) = -- traceShow conf' $
   val@(Lam var lamexpr) -> case stack of
     [] -> Nothing
     Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
+    -- Arg argexpr:stack' -> Just (put (var, argexpr) env, stack', lamexpr)
     Update x:stack' -> Just (put (x, val) env, stack', val)
   Let binds inexpr ->
     Just (foldr put env binds, stack, inexpr)

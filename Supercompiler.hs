@@ -84,7 +84,7 @@ memo path conf@(_env, _stack, expr) =
                     in isVar gexpr
         -- FIXME: Merge this if w/ HE and generalization. Use only generalization.
         if isNothing ee || isVar expr || isCon (reduce conf)
-          || genIsVarOrNoEmb -- || next < 10
+          || genIsVarOrNoEmb || next < 10
           then do
             let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
             let (node, sps) = split rconf
@@ -114,7 +114,7 @@ memo path conf@(_env, _stack, expr) =
             let (var, fv, gconf) =  -- traceShow (reduce conf) $
                   fromJust ee
             let gen@(gexpr, s, t) = doExpr gconf |><| doExpr conf
-            return $ traceShow gen
+            return $ -- traceShow gen
             -- let t' = (nub t)
              ("EMB:" ++ var ++ "/" ++ unwords fv,
               -- Let (nub t) $
