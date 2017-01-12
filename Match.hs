@@ -8,8 +8,6 @@ module Match (
 import Data.Maybe (fromJust)
 import Data.List (delete)
 
-import Debug.Trace
-
 import Expr (
   Expr(Var, Con, Lam, Let, App, Case), Var, Subst, let1, freeVars)
 import Eval (Env, Conf, StackFrame(Arg, Update),
@@ -47,9 +45,6 @@ freduce = freduce' 1
 envToLet :: Env -> Expr -> Expr
 envToLet [] expr = expr
 envToLet ((var, valexpr):env) expr = let1 var valexpr (envToLet env expr)
-
-
-
 
 {-|
   Given a Conf, returns the equivalent Expr like toExpr,

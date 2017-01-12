@@ -1,86 +1,58 @@
 
 module Main (main) where
 
+import Control.Arrow (second)
+
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
-import Control.Arrow (second)
-
-import Expr (Expr(Var, Con, App), app, appVars, substAlts, alpha)
+import Expr (substAlts, alpha)
 import Parser (parseExpr)
-import Eval (Env, newConf, emptyEnv)
-import Match (match, envExpr, (|~~|), (<|), (|><|))
+import Eval (newConf, emptyEnv)
+import Match (match, (|~~|), (<|), (|><|))
 
-testMatch :: TestTree
-testMatch = testGroup "match1 ~~>" $
-  map (\(x,y,v) ->
-    testCase (x ++ " =~= " ++ y) $
-      match (s x) (s y) @?= v)
-  [
-  ("x", "y", True),
-  ("f x", "f y", True),
-  ("f a b", "f c d", True),
-  ("f a a", "f b b", True),
-  ("[1,2,3,x]", "[1,2,3,y]", True),
-  ("{n->Succ n}", "Succ n", True),
-  ("{n->Succ n}", "Succ m", True),
-  ("Succ n", "{n->Succ n}", True),
-  ("let inc={n->Succ n} in inc x", "let inc={n->Succ n} in inc y", True),
-  ("let i={n->Succ n} in i a", "let i={n->Succ n} in i b", True),
-  ("let i={n->Succ n} in i", "let i={n->Succ n} in i", True),
-  ("let i={n->Succ n} in i", "{n->Succ n}", True),
-  ("let i={n->Succ n} in i", "Succ n", True),
-  ("let i={n->S n} in i", "let i={n->S n} in let id={x->x} in i m", True)
+matchTest :: TestTree
+matchTest = testGroup "match" [
+  go "x" "y" True,
+  go "f x" "f y" True,
+  go "f a b" "f c d" True,
+  go "f a a" "f b b" True,
+  go "f a a" "f b c" False,
+  go "[1,2,3,4]" "[1,2,3,4]" True,
+  go "[1,2,3,4]" "[1,2,3,5]" False,
+  go "[1,2,3,4]" "[1,2,3]" False,
+  go "[1,2,3,x]" "[1,2,3,x]" True,
+  go "[1,2,3,x]" "[1,2,3,y]" True,
+  go "{n->Succ n}" "Succ n" True,
+  go "{n->Succ n}" "Succ m" True,
+  go "Succ n" "{n->Succ n}" True,
+  go "let inc={n->Succ n} in inc x" "let inc={n->Succ n} in inc y" True,
+  go "let i={n->Succ n} in i a" "let i={n->Succ n} in i b" True,
+  go "let i={n->Succ n} in i" "let i={n->Succ n} in i" True,
+  go "let i={n->Succ n} in i" "{n->Succ n}" True,
+  go "let i={n->Succ n} in i" "Succ n" True,
+  go "let i={n->S n} in i" "let i={n->S n} in let id={x->x} in i m" True
   ]
-  where s = newConf emptyEnv . parseExpr
-
-_testMatch2 :: TestTree
-_testMatch2 = testGroup "match2 ~~>" $
-  map (\(l,r,v) ->
-    testCase (show l ++ " =~= " ++ show "") $
-      l `match` r @?= v)
-  [
-    ( (env, [], appVars (Var "map") ["inc", "zs"]),
-      (env, [], appVars (Var "map") ["inc", "ys"]), True),
-    ( ([], [], envExpr (env, [], appVars (Var "map") ["inc", "zs"])),
-      (env, [], appVars (Var "map") ["inc", "ys"]), True),
-    ( (env, [], appVars (Var "map") ["inc", "ys"]),
-      ([], [],
-        envExpr (env, [], appVars (Var "map") ["inc", "zs"])), True),
-    ( (env, [], Con "Cons" [hgy, mhmg]),
-      (env, [], Con "Cons" [hgy, mhmg]), True),
-    ( (env, [], parseExpr
-      "case Cons (g y) (map g ys) of \
-      \  Nil->[];\
-      \  Cons y ys->Cons (h y) (map h ys);"),
-      (env, [], Con "Cons" [hgy, mhmg]), True)
-  ]
-  where mhmg = app (Var "map") [Var "h", appVars (Var "map") ["g", "ys"]]
-        hgy = App (Var "h") $ App (Var "g") (Var "y")
-
-env :: Env
-env = map (second parseExpr)
-  [
-  ("inc", "{n->Succ n}"),
-  ("map",
-    "{f->{xs->case xs of Nil->[];Cons y ys->Cons (f y) (map f ys);}}")
-  ]
+  where
+    go x y v = testCase (x ++ op v ++ y) $ match (s x) (s y) @?= v
+    op v = if v then " ~ " else " !~ "
+    s = newConf emptyEnv . parseExpr
 
 unificationTest :: TestTree
-unificationTest = testGroup "Unification tests" [
-    go "x" "x" $ Just [],
-    go "x" "y" $ Just [("x", "y")],
-    go "x" "f x" Nothing,
-    go "f g" "a b" $ Just [("f", "a"), ("g", "b")],
-    go "(f g) (a b)" "x y" $ Just [("x", "f g"), ("y", "a b")],
-    go "(f g) (a b)" "x x" $ Just [("f", "a"), ("g", "b"), ("x", "a b")],
-    go "Cons x xs" "Cons 2 Nil" $ Just [("x", "2"), ("xs", "Nil")],
-    go "Branch 2 t t" "Branch v x y" $ Just [("v", "2"), ("x", "y"), ("t", "y")],
-    go "{x->x}" "{y->y}" $ Just [],
-    go "plus n m" "plus n (Succ m)" Nothing,
-    go "plus n m" "plus n' (Succ m')" $ Just [("n", "n'"), ("m", "Succ m'")],
-    go "case n of Zero->Succ m;Succ n'->plus n' (Succ (Succ m));"
-      "case a of Zero->m;Succ n'->plus n' (Succ m);" Nothing
+unificationTest = testGroup "unification" [
+  go "x" "x" $ Just [],
+  go "x" "y" $ Just [("x", "y")],
+  go "x" "f x" Nothing,
+  go "f g" "a b" $ Just [("f", "a"), ("g", "b")],
+  go "(f g) (a b)" "x y" $ Just [("x", "f g"), ("y", "a b")],
+  go "(f g) (a b)" "x x" $ Just [("f", "a"), ("g", "b"), ("x", "a b")],
+  go "Cons x xs" "Cons 2 Nil" $ Just [("x", "2"), ("xs", "Nil")],
+  go "Branch 2 t t" "Branch v x y" $ Just [("v", "2"), ("x", "y"), ("t", "y")],
+  go "{x->x}" "{y->y}" $ Just [],
+  go "plus n m" "plus n (Succ m)" Nothing,
+  go "plus n m" "plus n' (Succ m')" $ Just [("n", "n'"), ("m", "Succ m'")] -- ,
+    -- go "case n of Zero->Succ m;Succ n'->plus n' (Succ (Succ m));"
+    --   "case a of Zero->m;Succ n'->plus n' (Succ m);" Nothing
   ]
   where
     go tx ty est =
@@ -113,14 +85,14 @@ embTest = testGroup "emb ~~>" [
     go "plus n m" "plus n (Succ m)" True,
     go "plus n (Succ m)" "plus n m" False,
     go "m" "plus n m" False,
-    go "plus n m" "m" False,
-    go "case zs of Nil->[];Cons r' rs'->append (reverse rs') (Cons r' []);"
-       "case (case $zs_rs' of \
-       \    Nil->[];\
-       \    Cons r' rs'->append (reverse rs') (Cons r' []);) of \
-       \  Nil->Cons $zs_r' [];\
-       \  Cons x' xs'->Cons x' (append xs' (Cons $zs_r' []));"
-       True
+    go "plus n m" "m" False -- ,
+    -- go "case zs of Nil->[];Cons r' rs'->append (reverse rs') (Cons r' []);"
+    --    "case (case $zs_rs' of \
+    --    \    Nil->[];\
+    --    \    Cons r' rs'->append (reverse rs') (Cons r' []);) of \
+    --    \  Nil->Cons $zs_r' [];\
+    --    \  Cons x' xs'->Cons x' (append xs' (Cons $zs_r' []));"
+    --    True
   ]
   where go x y v = testCase (x ++ " <| " ++ y) $ parseExpr x <| parseExpr y @?= v
 
@@ -130,7 +102,7 @@ msgTest = testGroup "msg ~~>" [
     go "x" "y" ("$x", [("$x", "x")], [("$x", "y")]),
     go "f x" "f y" ("$x", [("$x", "x")], [("$x", "y")]),
     go "plus n m" "plus n (Succ m)"
-      ("plus n $0", [("$0", "m")], [("$0", "Succ m")]),
+      ("plus n $0", [("$0", "m")], [("$0", "Succ m")]) -- ,
     -- ("f a b", "f c d", True),
     -- ("f a a", "f b b", True),
     -- ("[1,2,3,x]", "[1,2,3,y]", True),
@@ -141,23 +113,22 @@ msgTest = testGroup "msg ~~>" [
     -- ("a (c b)", "c b", False),
     -- ("a (c b)", "c (a b)", False),
     -- ("a (c b)", "a (a (a b))", False)
-    go "case n of Zero->Succ m;Succ n'->plus n' (Succ (Succ m));"
-      "case a of Zero->m;Succ n'->plus n' (Succ m);"
-      ("case $0 of Zero->$1; Succ n'->plus n' (Succ $1);",
-       [("$0", "n"), ("$1", "Succ m")],
-       [("$0", "a"), ("$1", "m")])
+    -- go "case n of Zero->Succ m;Succ n'->plus n' (Succ (Succ m));"
+    --   "case a of Zero->m;Succ n'->plus n' (Succ m);"
+    --   ("case $0 of Zero->$1; Succ n'->plus n' (Succ $1);",
+    --    [("$0", "n"), ("$1", "Succ m")],
+    --    [("$0", "a"), ("$1", "m")])
   ]
   where
     go x y v = testCase (x ++ " |><| " ++ y ++ show v) $ domsg x y @?= pv v
     domsg x y = parseExpr x |><| parseExpr y
-    pv (e, s, t) = (parseExpr e, map (\(v',e')->(v',parseExpr e')) s,
-                                 map (\(v',e')->(v',parseExpr e')) t)
+    pv (e, s, t) = (parseExpr e, map (second parseExpr) s,
+                                 map (second parseExpr) t)
 
 main :: IO ()
 main = defaultMain $ testGroup "Match" [
-    -- testMatch,
-    --testMatch2,
-    -- unificationTest -- ,
-    -- embTest,
-    msgTest
+  matchTest,
+  unificationTest,
+  embTest,
+  msgTest
   ]
