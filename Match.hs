@@ -68,29 +68,15 @@ toLambda vs expr = foldr Lam expr vs
   Implementation not nice, but nices.
 -}
 match :: Conf -> Conf -> Bool
-match lhs rhs =
-  toExpr lred == toExpr rred
-  where
-    lexpr = envExpr $ reduce lhs
-    rexpr = envExpr $ reduce rhs
-    lfv   = freeVars lexpr
-    rfv   = freeVars rexpr
-    llam  = toLambda lfv lexpr
-    rlam  = toLambda rfv rexpr
-    lred  = freduce (newConf emptyEnv llam)
-    rred  = freduce (newConf emptyEnv rlam)
+match lhs rhs = match' lhs == match' rhs
 
 {-|
   What match is doing, but only for one expression.
   Not used in match.
 -}
 match' :: Conf -> Expr
-match' lhs = toExpr lred
-  where
-    lexpr = envExpr $ reduce lhs
-    lfv   = freeVars lexpr
-    llam  = toLambda lfv lexpr
-    lred  = freduce (newConf emptyEnv llam)
+match' = toExpr . freduce . newConf emptyEnv . llam . envExpr . reduce
+  where llam expr = toLambda (freeVars expr) expr
 
 merge :: [Subst] -> [Subst] -> [Subst]
 merge [] ys = ys
