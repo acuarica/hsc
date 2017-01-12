@@ -70,7 +70,7 @@ supercompileWithPrelude exprText = (expr, sexpr)
       \    False -> Cons y (insertSorted x ys);;}} in "
 
 testEvalSupercompiled :: TestTree
-testEvalSupercompiled = testGroup "supercompile|eval" [
+testEvalSupercompiled = testGroup "eval" [
     go "map inc zs" $
       let1 "zs" . list nat,
     go "map inc zs" $
