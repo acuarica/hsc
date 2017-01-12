@@ -28,16 +28,6 @@ freduce = freduce' 1
           _ -> error $ "Stack not empty in freduce" ++ show stack
       _ -> (env, stack, expr)
 
--- simp :: Conf -> Conf
--- simp conf@(env, stack, expr) = case expr of
---   Var var -> case stack of
---     Alts alts:Alts alts':stack' ->
---       (env, stack', Case (Var var) (map (al alts') alts))
---     _ -> conf
---   _ -> conf
---   where al als (Pat tag vars, altexpr) = (Pat tag vars,
--- Case altexpr als)
-
 {-|
   Given an Env and an Expr, returns an Expr that includes the Env
   by using Let.
