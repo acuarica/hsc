@@ -117,7 +117,7 @@ testEvalSupercompiled = testGroup "supercompile|eval" [
         srexpr == rexpr) . fexpr
 
 testPredicates :: TestTree
-testPredicates = testGroup "supercompile Predicates" [
+testPredicates = testGroup "supercompile predicates" [
     goPred "eqn x x" $
       let1 "x" . nat,
     goPred "eqn (plus Zero x) x" $

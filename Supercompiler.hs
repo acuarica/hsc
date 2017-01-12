@@ -15,14 +15,13 @@ import Data.Maybe (isNothing, fromJust)
 import Control.Monad.State (State, state, runState)
 import Control.Arrow (second)
 
-import Debug.Trace
 import Expr (
   Expr(Var, Con, Let, Case, Lam, App), Var, Pat(Pat),
   con, app, appVars, let1, isVar, freeVars, subst, substAlts)
 import Eval (
   Conf, Env, StackFrame(Arg, Alts),
   newConf, emptyEnv, toExpr, reduce, whnf)
-import Match (match, match', toLambda, envExpr, freduce, (<|), (|><|))
+import Match (match, toLambda, envExpr, freduce, (<|), (|><|))
 
 {-|
   Supercompiles an Expr.
@@ -269,10 +268,10 @@ lookupMatch ((var, vars, _node, conf', _sps):hist) conf =
     then if False --fvs (reduce conf) /= fvs (reduce conf')
       then error $ show (fvs $ reduce conf) ++
         show (fvs $ reduce conf') ++ "\n" ++
-        show conf ++ "\n"++ show conf' ++ "\n" ++
-        show (match' conf) ++ "\n" ++ show (match' conf') ++ "\n" ++
-        show (freeVars $ match' conf) ++ "\n" ++
-        show (freeVars $ match' conf')
+        show conf ++ "\n"++ show conf' ++ "\n" -- ++
+        -- show (match' conf) ++ "\n" ++ show (match' conf') ++ "\n" ++
+        -- show (freeVars $ match' conf) ++ "\n" ++
+        -- show (freeVars $ match' conf')
       else Just (var, vars)
     else lookupMatch hist conf
   where fvs = freeVars . envExpr

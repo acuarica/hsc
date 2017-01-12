@@ -1,17 +1,14 @@
 {-|
   The Match module defines how two expressions are equivalent.
+  It also defines how to generalize two expressions.
 -}
-module Match (
-  match, match', toLambda, envExpr, freduce, (|~~|), (|><|), (<|)
-) where
+module Match (match, toLambda, envExpr, freduce, (|~~|), (|><|), (<|)) where
 
 import Data.Maybe (fromJust)
 import Data.List (delete)
 
-import Expr (
-  Expr(Var, Con, Lam, Let, App, Case), Var, Subst, let1, freeVars)
-import Eval (Env, Conf, StackFrame(Arg, Update),
-  newConf, emptyEnv, toExpr, reduce)
+import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Subst, let1, freeVars)
+import Eval (Env, Conf, StackFrame(Arg), newConf, emptyEnv, toExpr, reduce)
 
 {-|
   freduce reduce also reduces lambda with no arguments.
@@ -58,15 +55,10 @@ toLambda vs expr = foldr Lam expr vs
   Implementation not nice, but nices.
 -}
 match :: Conf -> Conf -> Bool
-match lhs rhs = match' lhs == match' rhs
-
-{-|
-  What match is doing, but only for one expression.
-  Not used in match.
--}
-match' :: Conf -> Expr
-match' = toExpr . freduce . newConf emptyEnv . llam . envExpr . reduce
-  where llam expr = toLambda (freeVars expr) expr
+match lhs rhs = matchnf lhs == matchnf rhs
+  where
+    matchnf = toExpr . freduce . newConf emptyEnv . lam . envExpr . reduce
+    lam expr = toLambda (freeVars expr) expr
 
 merge :: [Subst] -> [Subst] -> [Subst]
 merge [] ys = ys

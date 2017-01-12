@@ -77,19 +77,6 @@ testParser msg parseExpr' = testGroup (msg ++ ".parseExpr str ~> expr") [
     go "A:B:C:Nil" $ list id [con "A", con "B", con "C"],
     go "A:B:C:D:Nil" $ list id [con "A", con "B", con "C", con "D"],
     go "A:B:xs" $ app cons [con "A", app cons [con "B", Var "xs"]],
-    go "let c=case n of Z->A;S m->B;;d=case m of B l r->C;T->D; in c d" $
-      Let [("c", Case (Var "n") [
-        (Pat "Z" [], con "A"),
-        (Pat "S" ["m"], con "B")
-      ]), ("d", Case (Var "m") [
-        (Pat "B" ["l", "r"], con "C"),
-        (Pat "T" [], con "D")
-      ])] (App (Var "c") (Var "d")),
-    go "let c=case n of Z->A;S m->B; in c" $
-      Let [("c", Case (Var "n") [
-        (Pat "Z" [], con "A"),
-        (Pat "S" ["m"], con "B")
-      ])] (Var "c"),
     go "case var of True -> False;" $
       Case (Var "var") [
         (Pat "True" [], false)
@@ -112,7 +99,20 @@ testParser msg parseExpr' = testGroup (msg ++ ".parseExpr str ~> expr") [
         (Pat "True" [], false),
         (Pat "False" [], true),
         (Pat "Just" ["n"], Var "m")
-      ]
+      ],
+    go "let c=case n of Z->A;S m->B;;d=case m of B l r->C;T->D; in c d" $
+      Let [("c", Case (Var "n") [
+        (Pat "Z" [], con "A"),
+        (Pat "S" ["m"], con "B")
+      ]), ("d", Case (Var "m") [
+        (Pat "B" ["l", "r"], con "C"),
+        (Pat "T" [], con "D")
+      ])] (App (Var "c") (Var "d")),
+    go "let c=case n of Z->A;S m->B; in c" $
+      Let [("c", Case (Var "n") [
+        (Pat "Z" [], con "A"),
+        (Pat "S" ["m"], con "B")
+      ])] (Var "c")
   ]
   where go a e = testCase (trunc 70 (a ++ " ~> " ++ show e)) $ parseExpr' a @?= e
 
