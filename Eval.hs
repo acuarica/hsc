@@ -9,8 +9,6 @@ module Eval (
   nf, nfc, reduce, reducec, put, step
 ) where
 
-import Debug.Trace
-
 import Data.List (intercalate)
 import Control.Arrow (first)
 
