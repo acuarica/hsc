@@ -165,7 +165,7 @@ put (var, expr) ((var',expr'):env) = if var' == var
   root =>
 -}
 step :: Conf -> Maybe Conf
-step conf'@(env, stack, expr) = -- traceShow conf' $
+step (env, stack, expr) =
   case expr of
   Var var -> case lookup var env of
     Nothing -> Nothing
@@ -183,6 +183,7 @@ step conf'@(env, stack, expr) = -- traceShow conf' $
     Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
     -- Arg argexpr:stack' -> Just (put (var, argexpr) env, stack', lamexpr)
     Update x:stack' -> Just (put (x, val) env, stack', val)
+    Alts _alts:_stack' -> error "Can't do a case for lambda"
   Let binds inexpr ->
     Just (foldr put env binds, stack, inexpr)
   App funexpr valexpr ->

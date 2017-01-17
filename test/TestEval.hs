@@ -69,7 +69,9 @@ whnfTest = testGroup "whnf" $
   let go a e = testCase (a ++ " ~~> " ++ e) $ whnfp a @?= whnfp e in
   [
     go "let x=(let y=A in y 0) in x y" "A 0 y",
-    go "let x=y in let y=A in x" "A"
+    go "let x=y in let y=A in x" "A",
+    go "case {x->x} A of A->B;" "B",
+    go "case {x->x} of A->B;" "D",
   ]
 
 pp = "let \
