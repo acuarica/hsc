@@ -9,10 +9,10 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Expr (substAlts, alpha)
 import Parser (parseExpr)
 import Eval (newConf, emptyEnv)
-import Match (matchnf, (|~~|), (<|), (|><|))
+import Match (match, (|~~|), (<|), (|><|))
 
-matchnfTest :: TestTree
-matchnfTest = testGroup "matchnf" [
+matchTest :: TestTree
+matchTest = testGroup "matchnf" [
   go "x" "y" True,
   go "f x" "f y" True,
   go "f a b" "f c d" True,
