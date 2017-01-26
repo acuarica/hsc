@@ -20,6 +20,7 @@ supercompileWithPrelude exprText = (expr, sexpr)
       \let app={p->{q->p q}} in \
       \let c={p->{q->{x->p (q x)}}} in \
       \let inc={n->Succ n} in \
+      \let not={x->case x of False->True; True->False;} in \
       \let copyn={n->case n of \
       \  Zero -> 0;\
       \  Succ n' -> Succ (copyn n');} in \
@@ -106,7 +107,9 @@ testEvalSupercompiled = testGroup "eval" [
     go "reverse zs" $
       let1 "zs" . list nat,
     go "reverseAccum zs" $
-      let1 "zs" . list nat
+      let1 "zs" . list nat -- ,
+    -- go "T (map inc [1,2,3]) (map not [False, True])" $
+      
   ]
   where
     go e fexpr = let (expr, sexpr) = supercompileWithPrelude e in
