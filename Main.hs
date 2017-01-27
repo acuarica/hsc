@@ -1,6 +1,8 @@
 
 module Main (main) where
 
+import Data.Tree
+
 import System.IO (hPutStrLn, stderr)
 
 import Data.List (intercalate, isPrefixOf)
@@ -13,11 +15,10 @@ import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
 import Expr (Expr(Var, Con, Let), Var)
 
-import Eval (eval)
+import Eval -- (Conf, eval, step)
 
 import Parser (parseExpr)
-import Supercompiler (Hist, Node(VarNode, ArgNode, ConNode, CaseNode),
-  supercompileMemo)
+import Supercompiler -- (Hist, Node(VarNode, ArgNode, ConNode, CaseNode), supercompileMemo)
 import HSE (fromHSE)
 
 usage :: String
@@ -94,6 +95,25 @@ writeFileLog fileName content =
     writeFile fileName content
     return ()
 
+-- data Tree a = Leaf a | Branch [Tree a]
+
+cc :: (Node, [(Label, Conf)]) -> [Conf]
+cc (_, cs) = snd $ unzip cs
+
+split' = cc . split
+
+trace :: Conf -> Tree Conf
+trace conf = case step conf of
+  Nothing -> Node conf (map trace $ split' conf)
+  Just conf' -> Node conf [trace conf']
+
+-- printTrace :: [Conf] -> IO ()
+-- printTrace = foldr ((>>) . print) (return ())
+
+depth :: Int -> Tree a -> Tree a
+depth 1 (Node x xs) = Node x []
+depth n (Node x xs) = Node x (fmap (depth (n - 1)) xs)
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -121,5 +141,7 @@ main = do
       print $ eval expr
       putStrLn "-- Supercompiled expression"
       putStrLn $ pprint sexpr
+
+      putStrLn $ drawTree $ fmap show $ depth 10 $ trace $ newConf emptyEnv expr
 
       return ()

@@ -6,7 +6,8 @@
 -}
 module Supercompiler (
   Node(VarNode, ArgNode, ConNode, CaseNode),
-  Hist, HistNode, HistEdge, supercompile, supercompileMemo
+  Hist, HistNode, HistEdge, supercompile, supercompileMemo,
+  split, Label
 ) where
 
 import Data.List (intercalate, union, nub)

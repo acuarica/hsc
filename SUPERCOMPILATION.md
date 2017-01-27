@@ -1,8 +1,6 @@
 
 # Supercompilation
 
-
-
 inc n = S n
 map f xs = case xs of [] -> []; y:ys -> (f y):map f ys
 root = map inc

@@ -268,13 +268,15 @@ instance Show Expr where
         "{" ++ var ++ "->" ++ show bodyexpr ++ "}"
       Let binds inexpr ->
         paren par ("let " ++
-        unwords (map (\(v, e)->v ++ "=" ++ show' True e) binds) ++
+        unwords (map (\(v, e)->showLetbind v e) binds) ++
               " in " ++ show inexpr)
       App funexpr valexpr ->
          paren par (show funexpr ++ " " ++ show' True valexpr)
       Case scexpr cs ->
         "case " ++ show scexpr ++ " of " ++
         foldr (\ (p, e) s -> show p ++ "->" ++ show e ++ ";" ++ s) "" cs
+    showLetbind v (Lam v' e') = showLetbind (v ++ " " ++ v') e'
+    showLetbind v e = v ++ "=" ++ show' True e
     paren par s = if par then "(" ++ s ++ ")" else s
     prettyNat expr = case doNat expr of
       (n, Nothing) -> Just (show n)
@@ -311,7 +313,7 @@ instance Show Expr where
     showArgs args = unwords (map show args)
 
 instance {-# OVERLAPPING #-} Show Binding where
-  show (var, expr) = var ++ "=" ++ show expr
+  show (var, expr) = var ++ "=..." -- ++ show expr
 
 instance Show Pat where
   show (Pat tag vars') = unwords (tag:vars')
