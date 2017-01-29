@@ -1,0 +1,5 @@
+
+let
+inf={x->inf x}
+in
+inf Zero

@@ -1,0 +1,5 @@
+
+let
+inf={x->inf (Succ x)}
+in
+inf Zero

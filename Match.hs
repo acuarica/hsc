@@ -99,9 +99,11 @@ uni (x:y:xs) = merge <$> x <*> uni (y:xs)
       Just s -> if (v1, Var v2) `elem` s
         then Just $ delete (v1, Var v2) s
         else Nothing
---(|~~|) (Let v1 e1 b1) (Let v2 e2 b2) =
-  -- merge <$> e1 |~~| e2 <*> b1 |~~| b2
 (|~~|) (App f1 v1) (App f2 v2) = merge <$> f1 |~~| f2 <*> v1 |~~| v2
+-- TODO: To implement
+(|~~|) _ _ = Nothing
+-- (|~~|) (Let v1 b1) (Let v2 b2) = Nothing
+  -- merge <$> e1 |~~| e2 <*> b1 |~~| b2
 
 fst3 :: (a, b, c) -> a
 fst3 (x, _, _) = x

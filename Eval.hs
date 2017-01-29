@@ -169,7 +169,9 @@ step (env, stack, expr) =
   case expr of
   Var var -> case lookup var env of
     Nothing -> Nothing
-    Just val -> Just (env, Update var:stack, val)
+    Just val -> case val of
+      Lam _ _ -> Just (env, stack, val)
+      _ -> Just (env, Update var:stack, val)
   val@(Con tag args) -> case stack of
     [] -> Nothing
     Alts alts:stack' ->
@@ -190,22 +192,22 @@ step (env, stack, expr) =
     Just (env, Arg valexpr:stack, funexpr)
   Case scexpr alts -> Just (env, Alts alts:stack, scexpr)
 
-instance Show StackFrame where
-  show frame = case frame of
-    Alts alts -> "Alts:" ++ show alts
-    Arg expr -> "#(" ++ show expr ++ ")"
-    Update var -> "Update:" ++ var
-
 instance {-# OVERLAPPING #-} Show Conf where
   show (env, stack, expr) =
-    "<" ++ show env ++ " |" ++ show stack ++ " | " ++ show expr ++ " >"
+    "<" ++ show env ++ " | " ++ show stack ++ " | " ++ show expr ++ " >"
 
 instance {-# OVERLAPPING #-} Show (Stack, Expr) where
   show (stack, expr) =
-    "<%" ++ show stack ++ " | " ++ show expr ++ " %>"
+    "<" ++ show stack ++ " | " ++ show expr ++ " >"
 
 instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)
 
 instance {-# OVERLAPPING #-} Show Stack where
-  show stack = intercalate "|" (map ((++) " " . show) stack)
+  show stack = intercalate "/" (map ((++) "" . show) stack)
+
+instance Show StackFrame where
+  show frame = case frame of
+    Alts alts -> "?" ++ show alts
+    Arg expr -> show expr
+    Update var -> "@" ++ var

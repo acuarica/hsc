@@ -319,4 +319,4 @@ instance Show Pat where
   show (Pat tag vars') = unwords (tag:vars')
 
 instance {-# OVERLAPPING #-} Show Alt where
-  show (pat, alt) = show pat ++ " -> " ++ show alt
+  show (pat, alt) = show pat ++ "->" ++ show alt
