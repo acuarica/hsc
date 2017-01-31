@@ -1,5 +1,6 @@
-let reverseAccum'={xs->{as->case xs of
+let
+reverseAccum'={xs->{as->case xs of
   Nil->as;
-  Cons y ys->reverseAccum' ys (Cons y as);}} in
-let reverseAccum={rs->reverseAccum' rs []} in
-reverseAccum zs
+  Cons y ys->reverseAccum' ys (Cons y as);}};
+reverseAccum={rs->reverseAccum' rs []}
+in reverseAccum zs
