@@ -6,7 +6,7 @@
 module Eval (
   Conf, Env, Stack, StackFrame(Arg, Alts, Update),
   eval, whnf, evalc, whnfc, emptyEnv, newConf, toExpr,
-  nf, nfc, reduce, reducec, put, step
+  nf, nfc, reduce, reducec, put, step, newConf'
 ) where
 
 import Data.List (intercalate)
@@ -79,6 +79,9 @@ emptyEnv = []
 -}
 newConf :: Env -> Expr -> Conf
 newConf env = (,,) env []
+
+newConf' :: Expr -> Conf
+newConf' = (,,) emptyEnv []
 
 {-|
   Selects the expr from a given configuration:

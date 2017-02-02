@@ -313,7 +313,7 @@ instance Show Expr where
     showArgs args = unwords (map show args)
 
 instance {-# OVERLAPPING #-} Show Binding where
-  show (var, expr) = var ++ "=..." -- ++ show expr
+  show (var, expr) = var ++ "=" ++ show expr
 
 instance Show Pat where
   show (Pat tag vars') = unwords (tag:vars')

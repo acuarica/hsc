@@ -5,9 +5,9 @@ import Data.Tree
 
 import System.IO (hPutStrLn, stderr)
 
-import Data.Maybe (isJust)
+import Data.Maybe -- (isJust)
 
-import Data.List (intercalate, isPrefixOf)
+import Data.List -- (intercalate, isPrefixOf)
 import Data.Char (isSpace)
 import System.Exit (exitFailure)
 import System.Environment (getArgs)
@@ -112,9 +112,9 @@ drive conf = case step conf of
 -- expr (_, _, e) = e
 
 uni :: Conf -> Conf -> Bool
-uni (env, _, e) (env', _, e') = case e |~~| e' of
+uni (env, s, e) (env', s', e') = case e |~~| e' of
   Nothing -> False
-  Just xs -> all (\(v,e)->isVar e && n v env && n (let Var v'=e in v') env') xs
+  Just xs -> null s && null s' && all (\(v,e)->isVar e && n v env && n (let Var v'=e in v') env') xs
 
 n :: Var -> Env -> Bool
 n v ls = v `notElem` (fst . unzip) ls
@@ -125,15 +125,35 @@ term t = term' [] t
           then Node conf []
           else Node conf (fmap (term' (conf:xs)) cs)
 
+isLet (Let _ _) = True
+isLet (Lam _ _ ) = True
+isLet _ = False
+
+isGen :: Conf -> Conf -> Bool
+isGen (_, _, e) (_, _, e') = not (isLet e) && not (isLet e') &&
+  let (eg, s, s') = e |><| e' in not $ isVar eg
+
+isEmb :: Conf -> Conf -> Bool
+isEmb (_, [], e) (_, [], e') = e' <| e
+isEmb (_, _, e) (_, _, e') = False
+
+g (_, _, e) (_, _, e') = let x@(eg, s, s') = e |><| e' in x
+
+-- gen :: Tree Conf -> Tree (String, Conf )
+gen t = gen' [] t
+  where gen' xs (Node conf cs) = let c = find (isEmb conf) xs in if isJust c
+          then Node (conf, show $ g (fromJust c) conf ) []
+          else Node (conf, "") (fmap (gen' (conf:xs)) cs)
+
 -- printTrace :: [Conf] -> IO ()
 -- printTrace = foldr ((>>) . print) (return ())
 
-depth :: Int -> Tree a -> Tree a
-depth 1 (Node x _xs) = Node x []
-depth n (Node x xs) = Node x (fmap (depth (n - 1)) xs)
+-- depth :: Int -> Tree a -> Tree a
+-- depth 1 (Node x _xs) = Node x []
+-- depth n (Node x xs) = Node x (fmap (depth (n - 1)) xs)
 
-dropEnv :: Conf -> (Stack, Expr)
-dropEnv (_env, stack, expr) = (stack, expr)
+-- dropEnv :: (String, Conf) -> (Stack, Expr)
+dropEnv ((_env, stack, expr), s) = (s, (stack, expr))
 
 main :: IO ()
 main = do
@@ -163,8 +183,7 @@ main = do
       -- print $ eval expr
       -- putStrLn "-- Supercompiled expression"
       -- putStrLn $ pprint sexpr
-
-      -- putStrLn $ drawTree $ fmap (show . dropEnv) $ depth 20 $ trace $ newConf emptyEnv expr
-      putStrLn $ drawTree $ fmap (show . dropEnv) $ term $ drive $ newConf emptyEnv expr
+      let sup = gen . term . drive . newConf'
+      putStrLn $ drawTree $ fmap (show . dropEnv) $ sup expr
 
       return ()

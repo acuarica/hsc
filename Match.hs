@@ -147,7 +147,8 @@ snd'trd (_, y, z) = (y, z)
   else -- trace ("Nogen@Case: " ++ show expr ++ "\n" ++ show expr') $
     let newvar = "$3"
      in (Var newvar, [(newvar, expr)], [(newvar, expr')])
-(|><|) e e' = error $ show e ++ " |><| " ++ show e'
+(|><|) e e' = (Var "?", [], [])
+-- (|><|) e e' = error $ "gen: " ++ show e ++ " |><| " ++ show e'
 
 {-|
   Homeomorphic Embedding relation.
