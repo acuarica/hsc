@@ -268,7 +268,7 @@ instance Show Expr where
         "{" ++ var ++ "->" ++ show bodyexpr ++ "}"
       Let binds inexpr ->
         paren par ("let " ++
-        unwords (map (\(v, e)->showLetbind v e) binds) ++
+        unwords (map (uncurry showLetbind) binds) ++
               " in " ++ show inexpr)
       App funexpr valexpr ->
          paren par (show funexpr ++ " " ++ show' True valexpr)

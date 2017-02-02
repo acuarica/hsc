@@ -107,9 +107,17 @@ split' = cc . split
 drive :: Conf -> Tree Conf
 drive conf = case step conf of
   Nothing -> Node conf (map drive $ split' conf)
-  Just conf' -> Node conf [drive conf']
+  Just conf' -> if isLet' conf || not (emptyStack conf)
+    then drive conf'
+    else Node conf [drive conf']
+
+isLet' (_, _, (Let _ _)) = True
+isLet' _ = False
 
 -- expr (_, _, e) = e
+
+emptyStack (_, [], _) = True
+emptyStack _ = False
 
 uni :: Conf -> Conf -> Bool
 uni (env, s, e) (env', s', e') = case e |~~| e' of
@@ -119,11 +127,12 @@ uni (env, s, e) (env', s', e') = case e |~~| e' of
 n :: Var -> Env -> Bool
 n v ls = v `notElem` (fst . unzip) ls
 
-term :: Tree Conf -> Tree Conf
+term :: Tree Conf -> Tree (Conf, String)
 term t = term' [] t
-  where term' xs (Node conf cs) = if any (uni conf) xs
-          then Node conf []
-          else Node conf (fmap (term' (conf:xs)) cs)
+
+term' xs (Node conf cs) = let c = find (uni conf) xs in if isJust c
+          then Node ( conf, show $ fromJust c  )[]
+          else Node ( conf , "" )(fmap (term' (conf:xs)) cs)
 
 isLet (Let _ _) = True
 isLet (Lam _ _ ) = True
@@ -139,11 +148,15 @@ isEmb (_, _, e) (_, _, e') = False
 
 g (_, _, e) (_, _, e') = let x@(eg, s, s') = e |><| e' in x
 
--- gen :: Tree Conf -> Tree (String, Conf )
+gen :: Tree (Conf, String) -> Tree (Conf, String)
 gen t = gen' [] t
-  where gen' xs (Node conf cs) = let c = find (isEmb conf) xs in if isJust c
-          then Node (conf, show $ g (fromJust c) conf ) []
-          else Node (conf, "") (fmap (gen' (conf:xs)) cs)
+  where gen' xs (Node (conf, s) cs) = let c = find (isEmb conf) xs in if isJust c
+          then
+            let x@(eg, s, s') = g (fromJust c) conf
+                (env, _, _) = conf
+                cg = newConf env eg in
+            Node (cg, show x) [(gen . term' xs . drive  )cg]
+          else Node (conf, s) (fmap (gen' (conf:xs)) cs)
 
 -- printTrace :: [Conf] -> IO ()
 -- printTrace = foldr ((>>) . print) (return ())
@@ -171,7 +184,7 @@ main = do
       let noComment = not . isPrefixOf "--" . dropWhile isSpace
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
-      -- let (sexpr, rm@((v0, e0), (h, _))) = supercompileMemo expr
+      let (sexpr, rm@((v0, e0), (h, _))) = supercompileMemo expr
 
       -- writeFileLog (makeName fname "hist") (show rm)
       -- writeFileLog (makeName fname "sexpr") (pprint sexpr)
@@ -183,7 +196,9 @@ main = do
       -- print $ eval expr
       -- putStrLn "-- Supercompiled expression"
       -- putStrLn $ pprint sexpr
+
       let sup = gen . term . drive . newConf'
+      -- let sup e = fmap drive $ newConf' e
       putStrLn $ drawTree $ fmap (show . dropEnv) $ sup expr
 
       return ()
