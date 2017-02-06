@@ -15,6 +15,8 @@ import System.FilePath (takeExtension)
 import Text.Printf (printf)
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
+import Control.Exception (assert)
+
 import Expr -- (Expr(Var, Con, Let), Var)
 
 import Eval -- (Conf, eval, step)
@@ -111,6 +113,24 @@ drive conf = case step conf of
     then drive conf'
     else Node conf [drive conf']
 
+dust :: Tree Conf -> Tree Conf
+dust = id
+
+-- dust (Node conf cs) = if isLet' conf -- || not (emptyStack conf)
+--   then if length cs == 1 then dust $ head cs else error $ show $ length cs
+--   else Node conf (map dust cs)
+
+type Id = [Int]
+
+-- inc (x:xs) = (x+1:xs)
+
+name :: Tree a -> Tree (Id, a)
+name t = name' [1] t
+
+name' :: Id -> Tree a -> Tree (Id, a)
+name' id (Node x cs) = let n = length cs in
+  Node (id, x) ( zipWith (\k v -> name' (k:id) v) [1..n] cs )
+
 isLet' (_, _, (Let _ _)) = True
 isLet' _ = False
 
@@ -119,20 +139,20 @@ isLet' _ = False
 emptyStack (_, [], _) = True
 emptyStack _ = False
 
-uni :: Conf -> Conf -> Bool
-uni (env, s, e) (env', s', e') = case e |~~| e' of
+uni :: Conf -> (Id, Conf  )-> Bool
+uni (env, s, e) (id,(env', s', e')) = case e |~~| e' of
   Nothing -> False
   Just xs -> null s && null s' && all (\(v,e)->isVar e && n v env && n (let Var v'=e in v') env') xs
 
 n :: Var -> Env -> Bool
 n v ls = v `notElem` (fst . unzip) ls
 
-term :: Tree Conf -> Tree (Conf, String)
+term :: Tree (Id, Conf  )-> Tree (Id, Conf, String)
 term t = term' [] t
 
-term' xs (Node conf cs) = let c = find (uni conf) xs in if isJust c
-          then Node ( conf, show $ fromJust c  )[]
-          else Node ( conf , "" )(fmap (term' (conf:xs)) cs)
+term' xs (Node (id, conf  )cs) = let c = find (uni conf) xs in if isJust c
+          then let cc=fromJust c in Node ( fst cc, conf, show $ cc)[]
+          else Node ( id, conf , "" )(fmap (term' ((id,conf):xs)) cs)
 
 isLet (Let _ _) = True
 isLet (Lam _ _ ) = True
@@ -142,21 +162,21 @@ isGen :: Conf -> Conf -> Bool
 isGen (_, _, e) (_, _, e') = not (isLet e) && not (isLet e') &&
   let (eg, s, s') = e |><| e' in not $ isVar eg
 
-isEmb :: Conf -> Conf -> Bool
-isEmb (_, [], e) (_, [], e') = e' <| e
-isEmb (_, _, e) (_, _, e') = False
+isEmb :: Conf -> (Id, Conf  )-> Bool
+isEmb (_, [], e) (_, (_, [], e')) = e' <| e
+isEmb (_, _, e) (_, (_, _, e')) = False
 
 g (_, _, e) (_, _, e') = let x@(eg, s, s') = e |><| e' in x
 
-gen :: Tree (Conf, String) -> Tree (Conf, String)
+gen :: Tree (Id, Conf, String) -> Tree (Id, Conf, String)
 gen t = gen' [] t
-  where gen' xs (Node (conf, s) cs) = let c = find (isEmb conf) xs in if isJust c
+  where gen' xs (Node (id, conf, s) cs) = let c = find (isEmb conf) xs in if isJust c
           then
-            let x@(eg, s, s') = g (fromJust c) conf
+            let x@(eg, s, s') = g (snd $ fromJust c) conf
                 (env, _, _) = conf
                 cg = newConf env eg in
-            Node (cg, show x) [(gen . term' xs . drive  )cg]
-          else Node (conf, s) (fmap (gen' (conf:xs)) cs)
+            Node (fst $ fromJust c, cg, show x) [(gen . term' xs . name' id . drive  )cg]
+          else Node (id, conf, s) (fmap (gen' ((id, conf ):xs)) cs)
 
 -- printTrace :: [Conf] -> IO ()
 -- printTrace = foldr ((>>) . print) (return ())
@@ -166,7 +186,10 @@ gen t = gen' [] t
 -- depth n (Node x xs) = Node x (fmap (depth (n - 1)) xs)
 
 -- dropEnv :: (String, Conf) -> (Stack, Expr)
-dropEnv ((_env, stack, expr), s) = (s, (stack, expr))
+dropEnv (id, (_env, stack, expr), s) = (reverse id, s, (stack, expr))
+
+-- residuate (Node (id, (_,s,e)) cs) = case e of
+--   Var var ->
 
 main :: IO ()
 main = do
@@ -197,8 +220,7 @@ main = do
       -- putStrLn "-- Supercompiled expression"
       -- putStrLn $ pprint sexpr
 
-      let sup = gen . term . drive . newConf'
-      -- let sup e = fmap drive $ newConf' e
+      let sup = gen . term . name . dust . drive . newConf'
       putStrLn $ drawTree $ fmap (show . dropEnv) $ sup expr
 
       return ()

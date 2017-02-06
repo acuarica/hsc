@@ -35,6 +35,7 @@ executable hsc
                     haskell-src-exts >=1.17, filepath, containers
   hs-source-dirs:   .
   default-language: Haskell98
+  ghc-options:      -fno-ignore-asserts
 
 executable test-parser
   main-is:          TestParser.hs
