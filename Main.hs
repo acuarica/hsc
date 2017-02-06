@@ -1,8 +1,6 @@
 
 module Main (main) where
 
-import Data.Tree
-
 import System.IO (hPutStrLn, stderr)
 
 import Data.Maybe -- (isJust)
@@ -22,6 +20,7 @@ import Expr -- (Expr(Var, Con, Let), Var)
 import Eval -- (Conf, eval, step)
 
 import Parser (parseExpr)
+import Tree (Tree(Node), draw)
 import Supercompiler -- (Hist, Node(VarNode, ArgNode, ConNode, CaseNode), supercompileMemo)
 import HSE (fromHSE)
 import Match
@@ -106,14 +105,16 @@ cc (_, cs) = snd $ unzip cs
 split' :: Conf -> [Conf]
 split' = cc . split
 
-drive :: Conf -> Tree Conf
+data Edge = Step
+
+drive :: Conf -> Tree Conf Edge
 drive conf = case step conf of
   Nothing -> Node conf (map drive $ split' conf)
   Just conf' -> if isLet' conf || not (emptyStack conf)
     then drive conf'
-    else Node conf [drive conf']
+    else Node conf [(Step, drive conf')]
 
-dust :: Tree Conf -> Tree Conf
+dust :: Tree Conf Edge -> Tree Conf Edge
 dust = id
 
 -- dust (Node conf cs) = if isLet' conf -- || not (emptyStack conf)
@@ -124,10 +125,10 @@ type Id = [Int]
 
 -- inc (x:xs) = (x+1:xs)
 
-name :: Tree a -> Tree (Id, a)
+name :: Tree a e -> Tree (Id, a) e
 name t = name' [1] t
 
-name' :: Id -> Tree a -> Tree (Id, a)
+name' :: Id -> Tree a e -> Tree (Id, a) e
 name' id (Node x cs) = let n = length cs in
   Node (id, x) ( zipWith (\k v -> name' (k:id) v) [1..n] cs )
 
@@ -147,7 +148,7 @@ uni (env, s, e) (id,(env', s', e')) = case e |~~| e' of
 n :: Var -> Env -> Bool
 n v ls = v `notElem` (fst . unzip) ls
 
-term :: Tree (Id, Conf  )-> Tree (Id, Conf, String)
+term :: Tree (Id, Conf) e -> Tree (Id, Conf, String) e
 term t = term' [] t
 
 term' xs (Node (id, conf  )cs) = let c = find (uni conf) xs in if isJust c
@@ -168,7 +169,7 @@ isEmb (_, _, e) (_, (_, _, e')) = False
 
 g (_, _, e) (_, _, e') = let x@(eg, s, s') = e |><| e' in x
 
-gen :: Tree (Id, Conf, String) -> Tree (Id, Conf, String)
+gen :: Tree (Id, Conf, String) e -> Tree (Id, Conf, String) e
 gen t = gen' [] t
   where gen' xs (Node (id, conf, s) cs) = let c = find (isEmb conf) xs in if isJust c
           then
@@ -201,7 +202,7 @@ main = do
     else do
       let fname = head args
       let ext = takeExtension fname
-      putStrLn $ "{- Supercompiling " ++ fname ++ " -}"
+      -- putStrLn $ "{- Supercompiling " ++ fname ++ " -}"
       content <- readFile fname
 
       let noComment = not . isPrefixOf "--" . dropWhile isSpace
@@ -220,7 +221,7 @@ main = do
       -- putStrLn "-- Supercompiled expression"
       -- putStrLn $ pprint sexpr
 
-      let sup = gen . term . name . dust . drive . newConf'
-      putStrLn $ drawTree $ fmap (show . dropEnv) $ sup expr
+      -- let sup = gen . term . name . dust . drive . newConf'
+      -- putStrLn $ drawTree $ fmap (show . dropEnv) $ sup expr
 
       return ()
