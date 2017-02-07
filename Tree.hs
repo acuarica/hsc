@@ -1,22 +1,30 @@
 
 module Tree
-  (Tree(Node), draw)
+  (Tree(Node), depth, draw)
 where
 
-data Tree a e = Node a [(e, Tree a e)]
+import Control.Arrow (second)
 
-type Forest a e = [(e, Tree a e)]
+data Tree e a = Node a (Forest e a)
 
-draw :: (Show a, Show e) => Tree a e -> String
-draw t0 = unlines $ draw' t0
+type Forest e a = [(e, Tree e a)]
+
+depth :: Int -> Tree e a -> Tree e a
+depth n (Node x ts) = Node x $ if n == 0
+  then []
+  else map (second $ depth (n - 1)) ts
+
+draw :: (Show e, Show a) => Tree e a -> String
+draw = unlines . draw'
   where
-    draw' :: (Show a, Show e) => Tree a e -> [String]
-    draw' (Node x ts0) = lines (show x) ++ drawForest ts0
-
-    drawForest :: (Show a, Show e) => Forest a e -> [String]
+    draw' :: (Show e, Show a) => Tree e a -> [String]
+    draw' (Node x ts) = show x : drawForest ts
+    drawForest :: (Show e, Show a) => Forest e a -> [String]
     drawForest [] = []
     drawForest [(e, t)] = "|" : shift e "`- " "   " (draw' t)
     drawForest ((e, t):ts) = "|" : shift e "+- " "|  " (draw' t) ++ drawForest ts
-
     shift :: Show e => e -> String -> String -> [String] -> [String]
     shift e first other = zipWith (++) ((first++show e ++ " -> "):repeat other)
+
+instance Functor (Tree e) where
+  fmap f (Node x ts) = Node (f x) (map (second $ fmap f) ts)

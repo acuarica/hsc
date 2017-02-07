@@ -8,40 +8,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 import Expr (substAlts, alpha)
 import Parser (parseExpr)
--- import Eval (newConf, emptyEnv)
 import Match ((|~~|), (<|), (|><|))
-
--- matchTest :: TestTree
--- matchTest = testGroup "matchnf" [
---   go "x" "y" True,
---   go "f x" "f y" True,
---   go "f a b" "f c d" True,
---   go "f a a" "f b b" True,
---   go "f a a" "f b c" False,
---   go "f a b" "f b a" True,
---   go "[1,2,3,4]" "[1,2,3,4]" True,
---   go "[1,2,3,4]" "[1,2,3,5]" False,
---   go "[1,2,3,4]" "[1,2,3]" False,
---   go "[1,2,3,x]" "[1,2,3,x]" True,
---   go "[1,2,3,x]" "[1,2,3,y]" True,
---   go "{n->Succ n}" "Succ n" True,
---   go "{n->Succ n}" "Succ m" True,
---   go "Succ n" "{n->Succ n}" True,
---   go "{x->{y->Tuple x y}}" "Tuple a b" True,
---   go "{x->{y->Tuple x y}}" "Tuple a a" False,
---   go "{x->{y->T x y}}" "{x->{y->T y x}}" False,
---   go "{x->{y->T y x}}" "T a b" False,
---   go "let inc={n->Succ n} in inc x" "let inc={n->Succ n} in inc y" True,
---   go "let i={n->Succ n} in i a" "let i={n->Succ n} in i b" True,
---   go "let i={n->Succ n} in i" "let i={n->Succ n} in i" True,
---   go "let i={n->Succ n} in i" "{n->Succ n}" True,
---   go "let i={n->Succ n} in i" "Succ n" True,
---   go "let i={n->S n} in i" "let i={n->S n} in let id={x->x} in i m" True
---   ]
---   where
---     go x y v = testCase (x ++ op v ++ y) $ match (s x) (s y) @?= v
---     op v = if v then " ~ " else " !~ "
---     s = newConf emptyEnv . parseExpr
 
 unificationTest :: TestTree
 unificationTest = testGroup "unification" [
@@ -127,7 +94,6 @@ msgTest = testGroup "msg ~~>" [
 
 main :: IO ()
 main = defaultMain $ testGroup "Match" [
-  -- matchTest,
   unificationTest,
   embTest,
   msgTest

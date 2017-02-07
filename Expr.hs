@@ -7,7 +7,7 @@
 -}
 module Expr (
   Expr(Var, Con, Lam, App, Let, Case), Var, Tag, Binding, Alt, Pat(Pat), Subst,
-  con, app, appVars, let1, isVar, isEmptyCon, bindings,
+  con, app, appVars, let1, isVar, isEmptyCon, isLet, isCase, bindings,
   subst, substAlts, lookupAlt, freeVars, alpha,
   true, false, zero, suc, nil, cons, bool, nat, list
 ) where
@@ -102,6 +102,22 @@ isVar _ = False
 isEmptyCon :: Expr -> Bool
 isEmptyCon (Con _ []) = True
 isEmptyCon _ = False
+
+{-|
+  Return True if the given expression is a let-expression.
+  False otherwise.
+-}
+isLet :: Expr -> Bool
+isLet (Let _binds _inexpr) = True
+isLet _ = False
+
+{-|
+  Return True if the given expression is a case-expression.
+  False otherwise.
+-}
+isCase :: Expr -> Bool
+isCase (Case _scexpr _alts) = True
+isCase _ = False
 
 {-|
   Retrives the list of variables from a list of bindings.

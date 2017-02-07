@@ -2,63 +2,12 @@
   The Match module defines how two expressions are equivalent.
   It also defines how to generalize two expressions.
 -}
-module Match (match, toLambda, envExpr, freduce, (|~~|), (|><|), (<|)) where
+module Match ((|~~|), (|><|), (<|)) where
 
 import Data.Maybe (fromJust)
 import Data.List (delete)
 
-import Expr (Expr(Var, Con, Lam, Let, App, Case), Var, Subst, let1, freeVars)
-import Eval (Env, Conf, StackFrame(Arg), newConf, emptyEnv, toExpr, reduce)
-
-{-|
-  freduce reduce also reduces lambda with no arguments.
--}
-freduce :: Conf -> Conf
-freduce = freduce' 1
-  where
-   v = Var . (++) "$m_" . show
-   freduce' next conf = let (env, stack, expr) = reduce conf in
-    case expr of
-      Lam var lamexpr ->
-        case stack of
-          [] -> freduce' (next + 1) (env, [Arg (v next)], Lam var lamexpr)
-          _ -> error $ "Stack not empty in freduce" ++ show stack
-      _ -> (env, stack, expr)
-
-{-|
-  Given an Env and an Expr, returns an Expr that includes the Env
-  by using Let.
--}
-envToLet :: Env -> Expr -> Expr
-envToLet [] expr = expr
-envToLet ((var, valexpr):env) expr = let1 var valexpr (envToLet env expr)
-
-{-|
-  Given a Conf, returns the equivalent Expr like toExpr,
-  but also using the Env.
--}
-envExpr :: Conf -> Expr
-envExpr conf@(env, _, _) = rebuildEnv env (toExpr conf)
-  where rebuildEnv [] expr = expr
-        rebuildEnv ((var,valexpr):env) expr =
-          Let [(var, valexpr)] (rebuildEnv env expr)
-
-{-|
-  Given a list of Var, creates a Lam expression where the variables
-  becomes arguments of the Lam.
--}
-toLambda :: [Var] -> Expr -> Expr
-toLambda vs expr = foldr Lam expr vs
-
-{-|
-  Not alpha-equivalence. Free variables equivalence.
-  Implementation not nice, but nices.
--}
-match :: Conf -> Conf -> Bool
-match lhs rhs = matchnf lhs == matchnf rhs
-  where
-    matchnf = toExpr . freduce . newConf emptyEnv . lam . envExpr . reduce
-    lam expr = toLambda (freeVars expr) expr
+import Expr (Expr(Var, Con, Lam, App, Case), Var, Subst, freeVars)
 
 merge :: [Subst] -> [Subst] -> [Subst]
 merge [] ys = ys

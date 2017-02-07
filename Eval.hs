@@ -5,8 +5,8 @@
 -}
 module Eval (
   Conf, Env, Stack, StackFrame(Arg, Alts, Update),
-  eval, whnf, evalc, whnfc, emptyEnv, newConf, toExpr,
-  nf, nfc, reduce, reducec, put, step, newConf'
+  eval, whnf, evalc, whnfc, initEnv, initConf, newConf, dropEnv,
+  toExpr, nf, nfc, reduce, reducec, step
 ) where
 
 import Data.List (intercalate)
@@ -45,33 +45,40 @@ data StackFrame
   It uses alpha to avoid name capture.
 -}
 eval :: Expr -> Expr
-eval = toExpr . nf . newConf emptyEnv . alpha
+eval = toExpr . nf . initConf . alpha
 
 {-|
   Evaluates the given expression to Weak Head Normal Form (WHNF).
 -}
 whnf :: Expr -> Expr
-whnf = toExpr . reduce . newConf emptyEnv
+whnf = toExpr . reduce . initConf
 
 {-|
   Same as 'whnf' but keeping track of the number of steps.
   See 'reducec'.
 -}
 whnfc :: Expr -> (Expr, Int)
-whnfc = first toExpr . reducec . newConf emptyEnv
+whnfc = first toExpr . reducec . initConf
 
 {-|
   Same as 'eval' but keeping track of the number of steps.
   See 'nfc'.
 -}
 evalc :: Expr -> (Expr, Int)
-evalc = first toExpr . nfc . newConf emptyEnv
+evalc = first toExpr . nfc . initConf
 
 {-|
-  Creates an empty environment.
+  Creates an initial environment.
+  By definition, an initial environment is the empty environment.
 -}
-emptyEnv :: Env
-emptyEnv = []
+initEnv :: Env
+initEnv = []
+
+{-|
+  Creates an initial Conf, using the initEnv.
+-}
+initConf :: Expr -> Conf
+initConf = newConf initEnv
 
 {-|
   Given an environment,
@@ -80,8 +87,11 @@ emptyEnv = []
 newConf :: Env -> Expr -> Conf
 newConf env = (,,) env []
 
-newConf' :: Expr -> Conf
-newConf' = (,,) emptyEnv []
+{-|
+  Drops the environment from the given configuration.
+-}
+dropEnv :: Conf -> (Stack, Expr)
+dropEnv (_env, stack, expr) = (stack, expr)
 
 {-|
   Selects the expr from a given configuration:
@@ -149,23 +159,12 @@ reducec conf'' = reducec' (conf'', 0)
 -}
 put :: Binding -> Env -> Env
 put (var, expr) [] = [(var, expr)]
-put (var, expr) ((var',expr'):env) = if var' == var
-  then (var,expr):env
-  else (var',expr'):put (var, expr) env
+put (var, expr) ((var',expr'):env') = if var' == var
+  then (var,expr):env'
+  else (var',expr'):put (var, expr) env'
 
 {-|
   Operational semantics with one-step reduction.
-
-  let
-  copy={x->
-    case x of
-      Zero->Zero;
-      Succ x'->Succ (copy x')};
-  root=copy (Succ 1)
-  in
-  root
-
-  root =>
 -}
 step :: Conf -> Maybe Conf
 step (env, stack, expr) =
@@ -186,7 +185,6 @@ step (env, stack, expr) =
   val@(Lam var lamexpr) -> case stack of
     [] -> Nothing
     Arg argexpr:stack' -> Just (env, stack', subst (var, argexpr) lamexpr)
-    -- Arg argexpr:stack' -> Just (put (var, argexpr) env, stack', lamexpr)
     Update x:stack' -> Just (put (x, val) env, stack', val)
     Alts _alts:_stack' -> error "Can't do a case for lambda"
   Let binds inexpr ->
@@ -197,11 +195,11 @@ step (env, stack, expr) =
 
 instance {-# OVERLAPPING #-} Show Conf where
   show (env, stack, expr) =
-    "<" ++ show env ++ " | " ++ show stack ++ " | " ++ show expr ++ " >"
+    "<" ++ show env ++ " | " ++ show stack ++ " | " ++ show expr ++ ">"
 
 instance {-# OVERLAPPING #-} Show (Stack, Expr) where
   show (stack, expr) =
-    "<" ++ show stack ++ " | " ++ show expr ++ " >"
+    "<" ++ show stack ++ " | " ++ show expr ++ ">"
 
 instance {-# OVERLAPPING #-} Show Env where
   show env = intercalate " &" (map ((++) " " . show) env)

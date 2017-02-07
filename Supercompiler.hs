@@ -1,135 +1,24 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 {-|
   Defines the Supercompiler based on the operational semantics of the
   language using Eval.
 -}
 module Supercompiler (
-  Node(VarNode, ArgNode, ConNode, CaseNode),
-  Hist, HistNode, HistEdge, supercompile, supercompileMemo,
-  split, Label
+  Node(VarNode, ArgNode, ConNode, CaseNode), Label, process
 ) where
 
-import Data.List (intercalate, union, nub)
-import Data.Maybe (isNothing, fromJust)
--- import Control.Exception (assert)
-import Control.Monad.State (State, state, runState)
+import Data.List (find, intercalate)
+import Data.Maybe (isJust, fromJust)
 import Control.Arrow (second)
 
-import Expr (
-  Expr(Var, Con, Let, Case, Lam, App), Var, Pat(Pat),
-  con, app, appVars, let1, isVar, freeVars, subst, substAlts)
-import Eval (
-  Conf, Env, StackFrame(Arg, Alts),
-  newConf, emptyEnv, toExpr, reduce, whnf)
-import Match (match, toLambda, envExpr, freduce, (<|), (|><|))
+import Expr (Var, Expr(Var, Con), Pat(Pat), Subst,
+             con, appVars, isVar, isLet, isCase, subst, substAlts)
+import Eval (Conf, Env, StackFrame(Arg, Alts), newConf, initConf, step)
+import Match ((|~~|), (<|), (|><|))
+import Tree (Tree(Node), depth)
 
-{-|
-  Supercompiles an Expr.
--}
-supercompile :: Expr -> Expr
-supercompile = fst . supercompileMemo
-
-{-|
-  Supercompiles an Expr, and also returns the memo.
--}
-supercompileMemo :: Expr -> (Expr, ((Var, Expr), (Hist, Env)))
-supercompileMemo expr =
-  let rm = runMemo expr in
-  let gp ((_, expr0), (_, prom)) = fromMemo prom expr0 in
-  (gp rm, rm)
-
-{-|
-  Rebuilds an expression from the promises.
--}
-fromMemo :: Env -> Expr -> Expr
-fromMemo [] expr0 = expr0
-fromMemo ((var, expr):prom) expr0 = let1 var expr (fromMemo prom expr0)
-
-{-|
-  Runs the state machine for memo/hist.
--}
-runMemo :: Expr -> ((Var, Expr), (Hist, Env))
-runMemo expr = runState s (([], []), [])
-  where s = memo [] (newConf emptyEnv expr)
-
-isCon :: Conf -> Bool
-isCon (_, _, Con _ _) = True
-isCon _ = False
-
-isVar' :: Conf -> Bool
-isVar' (_, _, Var _) = True
-isVar' _ = False
-
-{-|
-  Runs the supercompiler
-  Conf has to be WHNF?
--}
-memo :: [Var] -> Conf -> Memo (Var, Expr)
-memo path conf@(_env, _stack, expr) =
-  do
-  next <- getNext
-  if next > 20
-    then return ("??", expr)
-    else
-    do
-    ii <- isin conf
-    if isNothing ii
-      then do
-        ee <- embin path conf
-        let genIsVarOrNoEmb = if isNothing ee
-              then True
-              else let (var, fv, gconf) = fromJust ee
-                       (gexpr, s, t) = doExpr gconf |><| doExpr conf
-                    in isVar gexpr
-        -- FIXME: Merge this if w/ HE and generalization. Use only generalization.
-        if isNothing ee || isVar expr -- || isCon (reduce conf)
-          || genIsVarOrNoEmb || next < 10
-          then do
-            let rconf@(_, _, vv) = reduce $ freduce $ reduce conf
-            let (node, sps) = split rconf
-            let fv = fvs rconf
-            --let fv = fvs conf
-            v <- recVertex fv node rconf sps
-
-            splits' <- mapM (memo (v:path) . snd) sps
-            let (childVars, splits) = unzip splits'
-            let ccs = zipWith (\(l, _c) u -> (l, u)) sps childVars
-
-            mapM_ (\(l,cv)->recEdge (v, l, cv, fvs conf, conf)) ccs
-
-            let fvl = fvs (reduce conf) `union` fvs rconf
-            let e = toLambda fvl $ case node of
-                  VarNode -> vv
-                  ArgNode -> app vv splits
-                  ConNode -> let Con tag _args = vv in app (Con tag []) splits
-                  CaseNode -> let alts = zip (fst (unzip sps)) splits in
-                    Case vv (map (\(PatLabel p,pe)-> (p, pe)) alts)
-
-            promise v e
-            return (v, appVars (Var v) (fvs $ reduce conf))
-            --return (v, appVars (Var v) fv)
-          else do
-            -- TODO: Apply generalization.
-            let (var, fv, gconf) =  -- traceShow (reduce conf) $
-                  fromJust ee
-            let gen@(gexpr, s, t) = doExpr gconf |><| doExpr conf
-            return $ -- traceShow gen
-            -- let t' = (nub t)
-             ("EMB:" ++ var ++ "/" ++ unwords fv,
-              Let (nub t) $
-              -- App (Lam "$_" (Var "$_")) $
-              appVars (Var var)
-                     --(fvs $ reduce conf)
-                     (  nub  ((fst . unzip) t)  )
-                     -- $ (snd . unzip) (nub t)
-                   )
-      else do
-        let (var, _fv) = fromJust ii
-        --recEdge (parentVar, label, var, fvs conf, conf)
-        return (var, appVars (Var var) (fvs $ reduce conf))
-        --return (var, appVars (Var var) (fvs conf))
-  where fvs = freeVars . envExpr
+import Debug.Trace
 
 {-|
   Represents where the expression has been stucked.
@@ -139,18 +28,19 @@ data Node = VarNode | ArgNode | ConNode | CaseNode deriving Show
 {-|
   Represents how an expression connects to all its splitted childs.
 -}
-data Label = PatLabel Pat | ConLabel String | ArgLabel
+data Label = PatLabel Pat | ConLabel String | ArgLabel | Step | Let String
+  deriving Eq
 
 instance Show Label where
-  show (PatLabel pat) = show pat
-  show (ConLabel s) = s
-  show ArgLabel = "ArgLabel"
+  show label = case label of
+    PatLabel pat -> '?' : show pat
+    ConLabel s -> s
+    ArgLabel -> "ArgLabel"
+    Step -> "Step"
+    Let s -> "Let:" ++ s
 
--- reduce' :: Conf -> a
--- reduce' conf =
---   let rconf@(_, _, vv) = reduce $ freduce $ reduce conf in
---   let (node, sps) = split rconf in
---   let splits' = map (memo . snd) sps in error ""
+process :: Expr -> Tree Label (Key, Conf)
+process = depth 24 . stamp . generalize . drive . initConf
 
 {-|
   Given a state, returns where to continue the computation.
@@ -182,125 +72,78 @@ split s@(env, stack, expr) = case expr of
           (zip [1..length args] args))
     _ -> error $ "Spliting with Con and stack: " ++ show stack
 
-{-|
-  Represents a node in the history graph.
--}
-type HistNode = (Var, [Var], Node, Conf, [(Label, Conf)])
+-- freduce :: Conf -> Conf
+-- freduce = freduce' 1
+--   where
+--    v = Var . (++) "$m_" . show
+--    freduce' next conf = let (env, stack, expr) = reduce conf in
+--     case expr of
+--       Lam var lamexpr ->
+--         case stack of
+--           [] -> freduce' (next + 1) (env, [Arg (v next)], Lam var lamexpr)
+--           _ -> error $ "Stack not empty in freduce" ++ show stack
+--       _ -> (env, stack, expr)
 
-{-|
-  Represents an edge in the history graph.
--}
-type HistEdge = (Var, Label, Var, [Var], Conf)
+drive :: Conf -> Tree Label Conf
+drive conf = case step conf of
+  Nothing -> Node conf (map (second drive) $ (snd . split) conf)
+  Just conf' -> Node conf [(Step, drive conf')]
 
-{-|
-  Represents the history graph of memoized expression being supercompiled.
--}
-type Hist = ([HistEdge], [HistNode])
+type Key = [Int]
 
-{-|
--}
-type Memo a = State (Hist, Env) a
+initKey :: Key
+initKey = [1]
 
-{-|
--}
-recVertex :: [Var] -> Node -> Conf -> [(Label, Conf)] -> Memo Var
-recVertex fv node conf sps = state $ \((es, vs), prom) ->
-  let var = "$v_" ++ show (length vs) in
-  let vertex = (var, fv, node, conf, sps) in
-    (var, ((es, vertex:vs), prom))
+instance {-# OVERLAPPING #-} Show a => Show (Key, a) where
+  show (key, x) = show x -- intercalate "" (map show key) ++ "#" ++ show x
+    -- where
+    --   getKey :: Key -> Int
+    --   getKey [] = 0
+    --   getKey ((k, n):xs) = k*n + getKey xs
 
-{-|
--}
-recEdge :: HistEdge -> Memo ()
-recEdge edge = state $ \((es, vs), prom) ->
-    ((), ((edge:es, vs), prom))
-
-{-|
--}
-promise :: Var -> Expr -> Memo ()
-promise var expr = state $ \(hist, prom) ->
-  ((), (hist, (var, expr):prom))
-
-{-|
--}
-isin :: Conf -> Memo (Maybe (Var, [Var]))
-isin conf = state $ \(hist@(_es, vs), prom) ->
-  (lookupMatch vs conf, (hist, prom))
-
-{-|
--}
-embin :: [Var] -> Conf -> Memo (Maybe (Var, [Var], Conf))
-embin path conf =
-  -- trace ("**" ++ show path) $
-  -- trace ("  -" ++ show (doExpr conf)) $
-  state $ \(hist@(_es, vs), prom) ->
-  (lookupEmb (filter (\(v,_,_,_,_)->v `elem` path) vs) conf, (hist, prom))
-
--- where
-doExpr = toExpr . reduce
-
-lookupEmb :: [HistNode] -> Conf -> Maybe (Var, [Var], Conf)
-lookupEmb [] _c = Nothing
-lookupEmb vs@((var, vars, _node, conf', _sps):hist) conf =
-  -- trace ("  >" ++ var ++ ":" ++ show (doExpr conf') ++ "") $
-  if doExpr conf' <| doExpr conf || doExpr conf <| doExpr conf' -- || True
-    then if False -- True -- False --fvs (reduce conf) /= fvs (reduce conf')
-      then error $
-        show (toExpr conf) ++ "\n"++
-        show (toExpr conf') ++ "\n" ++
-        show vs
-      else Just (var, vars, conf')
-    else lookupEmb hist conf
+stamp :: Tree e a -> Tree e (Key, a)
+stamp = stamp' initKey
   where
-    _fvs = freeVars . envExpr
-    doExpr = toExpr . reduce
+    stamp' :: Key -> Tree e a -> Tree e (Key, a)
+    stamp' key (Node x cs) = let n = length cs in
+      Node (key, x) $ zipWith (\k (e, v) -> (e, stamp' (k:key) v)) [1..n] cs
 
-{-|
--}
-getNext :: Memo Int
-getNext = state $ \(hist@(_es, vs), prom) -> (length vs, (hist, prom))
+generalize :: Tree Label Conf -> Tree Label Conf
+generalize = generalize' []
+  where
+    generalize' :: [Conf] -> Tree Label Conf -> Tree Label Conf
+    generalize' xs (Node conf ts) = let c = findGen conf xs in if isJust c
+      then
+            let x@(eg, s, s') = fromJust c
+                (env, _, _) = conf
+                cg = newConf env eg in
+            Node (conf) [(Let $ show x, (generalize . drive) cg)]
+          else Node conf (fmap (second $ generalize' (conf:xs)) ts)
+    findGen :: Conf -> [Conf] -> Maybe (Expr, [Subst], [Subst])
+    findGen conf [] = Nothing
+    findGen conf (c:cs) = let x@(e,_,_) = g c conf in
+      if isEmb conf c -- && not (isVar e)
+      then Just x
+      else findGen conf cs
+    isEmb :: Conf -> Conf -> Bool
+    isEmb (_, [], e) (_, [], e') = e' <| e
+    isEmb _ _ = False
+    g :: Conf -> Conf -> (Expr, [Subst], [Subst])
+    g (_, _, e) (_, _, e') = let x@(eg, s, s') = e |><| e' in x
 
-{-|
--}
-lookupMatch :: [HistNode] -> Conf -> Maybe (Var, [Var])
-lookupMatch [] _ = Nothing
-lookupMatch ((var, vars, _node, conf', _sps):hist) conf =
-  if match conf conf'
-    then if False --fvs (reduce conf) /= fvs (reduce conf')
-      then error $ show (fvs $ reduce conf) ++
-        show (fvs $ reduce conf') ++ "\n" ++
-        show conf ++ "\n"++ show conf' ++ "\n" -- ++
-        -- show (match' conf) ++ "\n" ++ show (match' conf') ++ "\n" ++
-        -- show (freeVars $ match' conf) ++ "\n" ++
-        -- show (freeVars $ match' conf')
-      else Just (var, vars)
-    else lookupMatch hist conf
-  where fvs = freeVars . envExpr
+tie :: Tree e (Key, Conf) -> Tree e (Key, Conf)
+tie = tie' []
+  where
+    tie' :: [(Key, Conf)] -> Tree e (Key, Conf) -> Tree e (Key, Conf)
+    tie' xs (Node (id, conf) cs) = let c = find (uni conf) xs in if isJust c
+          then let cc=fromJust c in Node (fst cc, conf)[]
+          else Node (id, conf) (fmap (second $ tie' ((id,conf):xs)) cs)
+    uni :: Conf -> (Key, Conf) -> Bool
+    uni (env, s, e) (id,(env', s', e')) = case e |~~| e' of
+      Nothing -> False
+      Just xs -> null s && null s' && all (\(v,e)->isVar e && n v env && n (let Var v'=e in v') env') xs
+    n :: Var -> Env -> Bool
+    n v ls = v `notElem` (fst . unzip) ls
 
-instance {-# OVERLAPPING #-} Show Hist where
-  show (es, vs) = "" ++
-    intercalate "\n" (map ((++) "  " . show) es) ++ "\n" ++
-    intercalate "\n" (map ((++) "  " . show) vs)
-
--- instance {-# OVERLAPPING #-} Show Prom where
---   show prom = "" ++
---     intercalate "\n" (map ((++) "  " . show) prom)
-
-instance {-# OVERLAPPING #-} Show HistEdge where
-  show (parentVar, label, var, fv, conf) =
-    parentVar ++ "/"++show label++"/" ++ var ++ unwords fv ++ show conf
-
-instance {-# OVERLAPPING #-} Show HistNode where
-  show (var, args, node, expr, sps) =
-    var ++ "(" ++ unwords args ++ ") ~> " ++ show node ++ "@" ++
-    show expr ++ "\n    " ++ intercalate "\n    " (map show sps)
-
--- instance {-# OVERLAPPING #-} Show (Var, [Var], Expr) where
---   show (var, args, expr) =
---     var ++ "(" ++ unwords args ++ ") ~> " ++ show expr
-
-instance {-# OVERLAPPING #-} Show ((Var, Expr), (Hist, Env)) where
-  show ((var0, expr0), (hist, prom)) =
-    "Var0/Expr0: " ++ var0 ++ "/" ++ show expr0 ++"\n" ++
-    "Hist: \n" ++ show hist ++ "\n" ++
-    "Prom: \n" ++ show prom
+-- residuate (Node (id, (_,s,e)) cs) = case e of
+--   Var var ->
