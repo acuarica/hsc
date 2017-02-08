@@ -1,21 +1,20 @@
 
 module Main (main) where
 
-import Data.List (intercalate, isPrefixOf)
+import Control.Arrow (first, second)
+import Data.List (isPrefixOf)
 import Data.Char (isSpace)
-import Control.Arrow (second)
 import System.Exit (exitFailure)
 import System.Environment (getArgs)
 import System.FilePath (takeExtension)
 import System.IO (hPutStrLn, stderr)
-import Text.Printf (printf)
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
-import Expr (Expr(Var, Con, Let), Var)
+import Expr (Expr(Var, Let))
 import Eval (dropEnv)
 import Parser (parseExpr)
 import Tree (draw)
-import Supercompiler (Node(VarNode, ArgNode, ConNode, CaseNode), process)
+import Supercompiler (ptree, residuate)
 import HSE (fromHSE)
 
 usage :: String
@@ -109,9 +108,14 @@ main = do
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
 
-      -- writeFileLog (makeName fname "hist") (show rm)
-      -- writeFileLog (makeName fname "sexpr") (pprint sexpr)
-      -- writeFileLog (makeName fname "dot") (makeDot (caption expr) v0 h)
+      let pt = ptree expr
+      let dpt = draw $ (second . first) dropEnv <$> pt
+      let sexpr = residuate pt
 
-      putStrLn $ draw $ second dropEnv <$> process expr
+      writeFileLog (makeName fname "ptree") dpt
+      writeFileLog (makeName fname "sexpr") (show sexpr)
+
+      putStrLn dpt
+      print sexpr
+
       return ()

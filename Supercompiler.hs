@@ -4,54 +4,97 @@
   Defines the Supercompiler based on the operational semantics of the
   language using Eval.
 -}
-module Supercompiler (
-  Node(VarNode, ArgNode, ConNode, CaseNode), Label, process
-) where
+module Supercompiler (supercompile, ptree, residuate) where
 
-import Data.List (find, intercalate)
-import Data.Maybe (isJust, fromJust)
-import Control.Arrow (second)
+import Control.Exception (assert)
+import Data.Maybe (fromJust)
+import Control.Arrow (first, second)
 
-import Expr (Var, Expr(Var, Con), Pat(Pat), Subst,
-             con, appVars, isVar, isLet, isCase, subst, substAlts)
-import Eval (Conf, Env, StackFrame(Arg, Alts), newConf, initConf, step)
+import Expr (Var, Tag, Expr(Var, Con, Let, Case), Pat(Pat), Subst,
+             con, app, appVars, isVar, subst, substAlts)
+import Eval (Conf, Env, Stack, StackFrame(Arg, Alts), newConf, initConf, step)
 import Match ((|~~|), (<|), (|><|))
-import Tree (Tree(Node), depth)
+import Tree (Tree(Node), depth, flatten)
 
-import Debug.Trace
+{-|
+  Supercompiles an expr.
+-}
+supercompile :: Expr -> Expr
+supercompile = residuate . ptree
+
+{-|
+  Given an Expr, builds the corresponding process tree.
+-}
+ptree :: Expr -> Tree Label (Integer, (Conf, Emit))
+ptree = stamp . back . tie . path . generalize . drive . initConf
+
+{-|
+  Builds an Expr from the given process tree.
+-}
+residuate :: Tree Label (Integer, (Conf, Emit)) -> Expr
+residuate (Node (key, (_conf, emit)) ts) = case emit of
+  EmitNop -> assert (length ts == 1 && fst (head ts) == Step) $
+    residuate $ snd (head ts)
+  EmitVar var -> assert (null ts) $
+    Var var
+  EmitCon tag -> app (Con tag []) (map (residuate . snd) ts)
+  EmitLet -> assert (length ts >= 2) $
+    Let (map (\(LetLabel l, t) -> (l, residuate t)) $ tail ts)
+        (residuate . snd $ head ts)
+  EmitCase scvar ->
+    Case (Var scvar) $ map (\(PatLabel p, t) -> (p, residuate t)) ts
+  EmitTie vs -> assert (null ts) $
+    appVars (Var fkey) vs
+  EmitLam -> assert (length ts == 1 && fst (head ts) == Step) $
+    Let [(fkey, residuate $ snd (head ts))] (Var fkey)
+  where fkey = "$f_" ++ show key
 
 {-|
   Represents where the expression has been stucked.
 -}
-data Node = VarNode | ArgNode | ConNode | CaseNode deriving Show
+data Emit =
+  EmitNop |
+  EmitVar Var |
+  EmitArg | EmitCon Tag | EmitLet | EmitCase Var | EmitTie [Var] | EmitLam
 
 {-|
   Represents how an expression connects to all its splitted childs.
 -}
-data Label = PatLabel Pat | ConLabel String | ArgLabel | Step | Let String
+data Label = PatLabel Pat | ConEdge | ArgLabel | Step | LetLabel String
   deriving Eq
+
+instance Show Emit where
+  show emit = case emit of
+    EmitNop -> "-"
+    EmitVar var -> "var:" ++ var
+    EmitArg -> "&arg"
+    EmitCon tag -> "Con:" ++ tag
+    EmitLet -> "let"
+    EmitCase var -> "case:" ++ var
+    EmitTie vs -> "~~" ++ show vs
+    EmitLam -> "lam"
 
 instance Show Label where
   show label = case label of
     PatLabel pat -> '?' : show pat
-    ConLabel s -> s
+    ConEdge -> "Con"
     ArgLabel -> "ArgLabel"
     Step -> "Step"
-    Let s -> "Let:" ++ s
+    LetLabel s -> "Let:" ++ s
 
-process :: Expr -> Tree Label (Key, Conf)
-process = depth 24 . stamp . generalize . drive . initConf
+instance {-# OVERLAPPING #-} Show (Integer, ((Stack, Expr), Emit)) where
+  show (k, (x, emit)) = show k ++ "#" ++ show x ++ " %" ++ show emit
 
 {-|
   Given a state, returns where to continue the computation.
   The given conf must be stucked.
 -}
-split :: Conf -> (Node, [(Label, Conf)])
+split :: Conf -> (Emit, [(Label, Conf)])
 split s@(env, stack, expr) = case expr of
   Var var -> case stack of
-    [] -> (VarNode, [])
-    Arg arg:stack' -> (ArgNode, [(ArgLabel, (env, stack', arg))])
-    Alts alts:stack' -> (CaseNode,
+    [] -> (EmitVar var, [])
+    Arg arg:stack' -> (EmitArg, [(ArgLabel, (env, stack', arg))])
+    Alts alts:stack' -> (EmitCase var,
       map (\(Pat tag vars, alt) ->
         let cVar v = "$" ++ var ++ "_" ++ v in
         let cVars = map cVar vars in
@@ -66,10 +109,7 @@ split s@(env, stack, expr) = case expr of
         (PatLabel (Pat tag cVars), altConf) ) alts)
     _ -> error $ "Error: split var: " ++ show s
   Con tag args -> case stack of
-    [] -> (ConNode,
-      map (\(i, e)->
-        (ConLabel $ tag ++ "_" ++ show i, newConf env e))
-          (zip [1..length args] args))
+    [] -> (EmitCon tag, map ((,) ConEdge . newConf env) args)
     _ -> error $ "Spliting with Con and stack: " ++ show stack
 
 -- freduce :: Conf -> Conf
@@ -84,66 +124,72 @@ split s@(env, stack, expr) = case expr of
 --           _ -> error $ "Stack not empty in freduce" ++ show stack
 --       _ -> (env, stack, expr)
 
-drive :: Conf -> Tree Label Conf
+drive :: Conf -> Tree Label (Conf, Emit)
 drive conf = case step conf of
-  Nothing -> Node conf (map (second drive) $ (snd . split) conf)
-  Just conf' -> Node conf [(Step, drive conf')]
+  Nothing -> let s = split conf in
+    Node (conf, fst s) (map (second drive) $ snd s)
+  Just conf' -> Node (conf, EmitNop) [(Step, drive conf')]
 
-type Key = [Int]
-
-initKey :: Key
-initKey = [1]
-
-instance {-# OVERLAPPING #-} Show a => Show (Key, a) where
-  show (key, x) = show x -- intercalate "" (map show key) ++ "#" ++ show x
-    -- where
-    --   getKey :: Key -> Int
-    --   getKey [] = 0
-    --   getKey ((k, n):xs) = k*n + getKey xs
-
-stamp :: Tree e a -> Tree e (Key, a)
-stamp = stamp' initKey
+path :: Tree e a -> Tree e ([Int], a)
+path = path' [1]
   where
-    stamp' :: Key -> Tree e a -> Tree e (Key, a)
-    stamp' key (Node x cs) = let n = length cs in
-      Node (key, x) $ zipWith (\k (e, v) -> (e, stamp' (k:key) v)) [1..n] cs
+    path' :: [Int] -> Tree e a -> Tree e ([Int], a)
+    path' key (Node x cs) = let n = length cs in
+      Node (key, x) $ zipWith (\k (e, v) -> (e, path' (k:key) v)) [1..n] cs
 
-generalize :: Tree Label Conf -> Tree Label Conf
+stamp :: Eq k => Tree e (k, a) -> Tree e (Integer, a)
+stamp t = fmap (first $ flookup $ zip (map fst $ flatten t) [0..]) t
+  where
+    flookup :: Eq k => [(k, a)] -> k -> a
+    flookup d k = fromJust (lookup k d)
+
+generalize :: Tree Label (Conf, Emit) -> Tree Label (Conf, Emit)
 generalize = generalize' []
   where
-    generalize' :: [Conf] -> Tree Label Conf -> Tree Label Conf
-    generalize' xs (Node conf ts) = let c = findGen conf xs in if isJust c
-      then
-            let x@(eg, s, s') = fromJust c
-                (env, _, _) = conf
-                cg = newConf env eg in
-            Node (conf) [(Let $ show x, (generalize . drive) cg)]
-          else Node conf (fmap (second $ generalize' (conf:xs)) ts)
+    generalize' :: [Conf] -> Tree Label (Conf, Emit) -> Tree Label (Conf, Emit)
+    generalize' xs (Node (conf@(env,_,_), emit) ts) = case findGen conf xs of
+      Nothing -> Node (conf, emit) (fmap (second $ generalize' (conf:xs)) ts)
+      Just (eg, _s, s') -> Node (conf, EmitLet) $
+        map (first LetLabel . second (generalize.drive.newConf env )) $ ("",eg):s'
     findGen :: Conf -> [Conf] -> Maybe (Expr, [Subst], [Subst])
-    findGen conf [] = Nothing
+    findGen _ [] = Nothing
     findGen conf (c:cs) = let x@(e,_,_) = g c conf in
-      if isEmb conf c -- && not (isVar e)
+      if isEmb conf c && not (isVar e)
       then Just x
       else findGen conf cs
     isEmb :: Conf -> Conf -> Bool
     isEmb (_, [], e) (_, [], e') = e' <| e
     isEmb _ _ = False
     g :: Conf -> Conf -> (Expr, [Subst], [Subst])
-    g (_, _, e) (_, _, e') = let x@(eg, s, s') = e |><| e' in x
+    g (_, _, e) (_, _, e') = e |><| e'
 
-tie :: Tree e (Key, Conf) -> Tree e (Key, Conf)
+tie :: Tree e (k, (Conf, Emit)) -> Tree e (k, (Conf, Emit))
 tie = tie' []
   where
-    tie' :: [(Key, Conf)] -> Tree e (Key, Conf) -> Tree e (Key, Conf)
-    tie' xs (Node (id, conf) cs) = let c = find (uni conf) xs in if isJust c
-          then let cc=fromJust c in Node (fst cc, conf)[]
-          else Node (id, conf) (fmap (second $ tie' ((id,conf):xs)) cs)
-    uni :: Conf -> (Key, Conf) -> Bool
-    uni (env, s, e) (id,(env', s', e')) = case e |~~| e' of
-      Nothing -> False
-      Just xs -> null s && null s' && all (\(v,e)->isVar e && n v env && n (let Var v'=e in v') env') xs
+    tie' :: [(k, Conf)] -> Tree e (k, (Conf, Emit)) -> Tree e (k, (Conf, Emit))
+    tie' xs (Node (key, (conf, emit)) cs) = case findUni conf xs of
+      Nothing -> Node (key, (conf, emit)) (fmap (second $ tie' ((key,conf):xs)) cs)
+      Just (k, ss) -> Node (k, (conf, EmitTie (map fst ss) )) []
+    findUni :: Conf -> [(k, Conf)] -> Maybe (k, [Subst])
+    findUni _ [] = Nothing
+    findUni c@(env, s, e) ((key,(env', s', e')):cs) = case e |~~| e' of
+      Nothing -> findUni c cs
+      Just ss -> if null s && null s' &&
+        all (\(v,ee)->isVar ee && n v env && n (let Var v'=ee in v') env') ss
+        then Just (key, ss)
+        else findUni c cs
     n :: Var -> Env -> Bool
     n v ls = v `notElem` (fst . unzip) ls
 
--- residuate (Node (id, (_,s,e)) cs) = case e of
---   Var var ->
+back :: Eq k => Tree e (k, (Conf, Emit)) -> Tree e (k, (Conf, Emit))
+back t0 = fmap (updateNode $ backKeys t0) t0
+  where
+    backKeys :: Tree e (k, (Conf, Emit)) -> [k]
+    backKeys t = map fst $ filter (isTie . snd . snd) (flatten t)
+    isTie :: Emit -> Bool
+    isTie (EmitTie _) = True
+    isTie _ = False
+    updateNode :: Eq k => [k] -> (k, (Conf, Emit)) -> (k, (Conf, Emit))
+    updateNode ks node@(key, (conf, emit)) = if key `elem` ks && not (isTie emit)
+      then (key, (conf, EmitLam))
+      else node

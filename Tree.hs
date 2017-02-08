@@ -1,6 +1,6 @@
 
 module Tree
-  (Tree(Node), depth, draw)
+  (Tree(Node), depth, draw, flatten)
 where
 
 import Control.Arrow (second)
@@ -25,6 +25,9 @@ draw = unlines . draw'
     drawForest ((e, t):ts) = "|" : shift e "+- " "|  " (draw' t) ++ drawForest ts
     shift :: Show e => e -> String -> String -> [String] -> [String]
     shift e first other = zipWith (++) ((first++show e ++ " -> "):repeat other)
+
+flatten :: Tree e a -> [a]
+flatten (Node x ts) = x : concatMap (flatten . snd) ts
 
 instance Functor (Tree e) where
   fmap f (Node x ts) = Node (f x) (map (second $ fmap f) ts)
