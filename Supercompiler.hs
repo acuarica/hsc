@@ -26,7 +26,7 @@ supercompile = residuate . ptree
   Given an Expr, builds the corresponding process tree.
 -}
 ptree :: Expr -> Tree Label (Integer, (Conf, Emit))
-ptree = stamp . back . tie . path . generalize . drive . initConf
+ptree = depth 15 . stamp . id . id . path . id . drive . initConf
 
 {-|
   Builds an Expr from the given process tree.
@@ -154,7 +154,7 @@ generalize = generalize' []
     findGen :: Conf -> [Conf] -> Maybe (Expr, [Subst], [Subst])
     findGen _ [] = Nothing
     findGen conf (c:cs) = let x@(e,_,_) = g c conf in
-      if isEmb conf c && not (isVar e)
+      if isEmb conf c -- && not (isVar e)
       then Just x
       else findGen conf cs
     isEmb :: Conf -> Conf -> Bool

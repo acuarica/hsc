@@ -1,5 +1,3 @@
 dist/
-*.dot
-*.dot.png
 *.sexpr
-*.hist
+*.ptree

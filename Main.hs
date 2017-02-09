@@ -108,14 +108,16 @@ main = do
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
 
-      let pt = ptree expr
-      let dpt = draw $ (second . first) dropEnv <$> pt
-      let sexpr = residuate pt
+      -- let pt = ptree expr
+      -- let dpt = draw $ (second . first) dropEnv <$> pt
+      -- let sexpr = residuate pt
 
-      writeFileLog (makeName fname "ptree") dpt
-      writeFileLog (makeName fname "sexpr") (show sexpr)
+      -- writeFileLog (makeName fname "ptree") dpt
+      -- writeFileLog (makeName fname "sexpr") (show sexpr)
 
-      putStrLn dpt
-      print sexpr
+      -- putStrLn dpt
+      -- print sexpr
+
+      putStrLn $ draw $ (second . first) dropEnv <$> ptree expr
 
       return ()
