@@ -119,13 +119,6 @@ number = do
   _ <- spaces
   return (read (s ++ cs))
 
-lowerword :: Parser String
-lowerword = do
-  c  <- loweralpha
-  cs <- many alpha
-  _ <- spaces
-  return (c:cs)
-
 upperword :: Parser String
 upperword = do
   c  <- upperalpha
@@ -138,14 +131,17 @@ sat msg p predicate = (>>=) p (\s -> if predicate s
     then return s
     else Parser (const (Error (printf "expecting %s got %s" msg s))))
 
+enclose :: String -> String -> Parser a -> Parser a
+enclose o c m = do { _ <- reserved o; n <- m; _ <- reserved c; return n }
+
 parens :: Parser a -> Parser a
-parens m = do { reserved "("; n <- m; reserved ")"; return n }
+parens = enclose "(" ")"
 
 braces :: Parser a -> Parser a
-braces m = do { reserved "{"; n <- m; reserved "}"; return n }
+braces = enclose "{" "}"
 
 brackets :: Parser a -> Parser a
-brackets m = do { reserved "["; n <- m; reserved "]"; return n }
+brackets = enclose "[" "]"
 
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 p `chainl1` op = do {a <- p; rest a}
@@ -231,12 +227,12 @@ altp = do
 
 listp :: Parser Expr
 listp = (do
-      item <- exprp
+      listelem <- exprp
       (do
         _ <- reserved ","
         rest <- listp
-        return (app cons [item, rest])) <|>
-        return (app cons [item, nil])
+        return (app cons [listelem, rest])) <|>
+        return (app cons [listelem, nil])
     ) <|> return nil
 
 varnamep :: Parser Var

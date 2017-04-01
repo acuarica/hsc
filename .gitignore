@@ -1,4 +1,7 @@
 TAGS
-dist/
+/dist/
+/.stack-work/
+/stack.yaml
+
 *.sexpr
 *.ptree

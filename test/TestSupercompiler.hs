@@ -114,8 +114,8 @@ testEvalSupercompiled = testGroup "eval" [
   where
     go e fexpr = let (expr, sexpr) = supercompileWithPrelude e in
       testProperty e $ (\cexpr ->
-        let (srexpr, ssteps) = evalc (cexpr sexpr) in
-        let (rexpr, steps) = evalc (cexpr expr) in
+        let (srexpr, _ssteps) = evalc (cexpr sexpr) in
+        let (rexpr, _steps) = evalc (cexpr expr) in
         --srexpr == rexpr && ssteps <= steps) . fexpr
         srexpr == rexpr) . fexpr
 
@@ -164,8 +164,8 @@ testInvertible = testGroup "supercompile Invertible Functions" [
   where
     go e fexpr = let (expr, sexpr) = supercompileWithPrelude e in
       testProperty e $ (\cexpr ->
-        let (srexpr, ssteps) = evalc (cexpr sexpr) in
-        let (rexpr, steps) = evalc (cexpr expr) in
+        let (srexpr, _ssteps) = evalc (cexpr sexpr) in
+        let (rexpr, _steps) = evalc (cexpr expr) in
         --srexpr == rexpr && ssteps <= steps) . fexpr
         srexpr == rexpr) . fexpr
 

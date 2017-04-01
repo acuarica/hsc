@@ -10,7 +10,7 @@ import System.FilePath (takeExtension)
 import System.IO (hPutStrLn, stderr)
 import Language.Haskell.Exts (parseFileContents, fromParseResult)
 
-import Expr (Expr(Var, Let))
+import Expr (Expr(Var))
 import Eval (dropEnv)
 import Parser (parseExpr)
 import Tree (draw)
@@ -74,15 +74,15 @@ filterByExt ext fileText = case lookup ext filters of
       (".core", parseHs)
       ]
 
-pprint :: Expr -> String
-pprint (Let binds inexpr) =
-  "let \n" ++ unwords (map pplet binds) ++ "in \n" ++ pprint inexpr
-  where pplet (var, valexpr) = "  " ++ var ++ "=" ++ show valexpr ++ "\n"
-pprint expr = show expr
+-- pprint :: Expr -> String
+-- pprint (Let binds inexpr) =
+--   "let \n" ++ unwords (map pplet binds) ++ "in \n" ++ pprint inexpr
+--   where pplet (var, valexpr) = "  " ++ var ++ "=" ++ show valexpr ++ "\n"
+-- pprint expr = show expr
 
-caption :: Expr -> String
-caption (Let _ inexpr) = caption inexpr
-caption expr = show expr
+-- caption :: Expr -> String
+-- caption (Let _ inexpr) = caption inexpr
+-- caption expr = show expr
 
 writeFileLog :: FilePath -> String -> IO ()
 writeFileLog fileName content =
@@ -108,16 +108,16 @@ main = do
       let exprText = (unlines . filter noComment . lines) content
       let expr = filterByExt ext exprText
 
-      -- let pt = ptree expr
-      -- let dpt = draw $ (second . first) dropEnv <$> pt
+      let pt = ptree expr
+      let dpt = draw $ (second . first) dropEnv <$> pt
       -- let sexpr = residuate pt
 
       -- writeFileLog (makeName fname "ptree") dpt
       -- writeFileLog (makeName fname "sexpr") (show sexpr)
 
-      -- putStrLn dpt
+      putStrLn dpt
       -- print sexpr
 
-      putStrLn $ draw $ (second . first) dropEnv <$> ptree expr
+      -- putStrLn $ draw $ (second . first) dropEnv <$> ptree expr
 
       return ()
