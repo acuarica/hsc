@@ -110,13 +110,13 @@ main = do
 
       let pt = ptree expr
       let dpt = draw $ (second . first) dropEnv <$> pt
-      -- let sexpr = residuate pt
+      let sexpr = residuate pt
 
       -- writeFileLog (makeName fname "ptree") dpt
       -- writeFileLog (makeName fname "sexpr") (show sexpr)
 
       putStrLn dpt
-      -- print sexpr
+      print sexpr
 
       -- putStrLn $ draw $ (second . first) dropEnv <$> ptree expr
 
