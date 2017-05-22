@@ -42,23 +42,20 @@ In particular, to manage substitutions and work with free variables.
 ### Parser
 
 The `Parser` implements a textual representation of `Expr`.
+There are six constructors of `Expr`:
 
 * **Variables** `x`
 * **Constructors** `Nil`
-* `{x -> x}`
-* `f x`
-* `let y = Nil in y`
-* `case x of Nil -> True`
-
-```haskell
-Nil
-```
+* **Lambda Expressions** `{x -> x}`
+* **Function Application** `f x`
+* **let Expressions** `let y = Nil in y`
+* **case Expressions** `case x of Nil -> True`
 
 ### Eval
 
-The eval module defines the language semantics of the language.
+The `Eval` module defines the semantics of the language.
 This module supports two alternatives to reduce expressions,
-one is to normal form, and the other to weak head normal form.
+One is to normal form, and the other to weak head normal form.
 
 ### Match
 
