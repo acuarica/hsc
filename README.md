@@ -54,8 +54,17 @@ There are six constructors of `Expr`:
 ### Eval
 
 The `Eval` module defines the semantics of the language.
-This module supports two alternatives to reduce expressions,
-One is to normal form, and the other to weak head normal form.
+The semantics are lazy with Weak Head Normal Form (WHNF).
+
+The evaluator uses at its core an abstract machine.
+This machine is composed by `(Env, Stack, Expr)`.
+The `Env` is a mapping environment from variables to expressions.
+The `Stack` is the current computation stack.
+Finally, the `Expr` is focus of the computation.
+
+```haskell
+eval[[ {x -> x} A ]] = A
+```
 
 ### Match
 
