@@ -49,7 +49,7 @@ There are six constructors of `Expr`:
 * **Lambda Expressions** `{x -> x}`
 * **Function Application** `f x`
 * **let Expressions** `let y = Nil in y`
-* **case Expressions** `case x of Nil -> True`
+* **case Expressions** `case x of Nil -> True;`
 
 ### Eval
 
@@ -63,7 +63,11 @@ The `Stack` is the current computation stack.
 Finally, the `Expr` is focus of the computation.
 
 ```haskell
-eval[[ {x -> x} A ]] = A
+eval[[ {x -> x} A ]] ~~> A
+```
+
+```haskell
+eval[[ case B of A -> False; B -> True; ]] ~~> True
 ```
 
 ### Match
