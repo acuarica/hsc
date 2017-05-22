@@ -23,15 +23,36 @@ well-suited for these wide range applications, and what are the short-comings.
 ### Expr
 
 This module defines the `Expr` type, which is the core language used for all transformations.
-The `Expr` type is core lambda calculus, with algebraic data types and case expressions.
+The `Expr` type is core lambda calculus, with Algebraic Data Types (ADTs) and case expressions.
 This variant of `Expr` is untyped.
+
+ADTs and lambda expressions are the only values in this language.
+This imply, in particular, that there are no literal values of any kind.
+That is, no numbers, chars nor strings.
+All this values can be interpreted using ADTs.
+The rationale behind this decision is to keep as clean as possible the core language.
+
+A program in `Expr` is represented by a single `Expr`.
+There is no explicit support for multiple definitions.
+They are superseded by `let`-expressions, since `let`-expressions can be arbitrarily nested.
 
 The module `Expr` additionally contains functions to query and manipulate `Expr` expressions.
 In particular, to manage substitutions and work with free variables.
 
 ### Parser
 
-The parser is a textual representation of Expr.
+The `Parser` implements a textual representation of `Expr`.
+
+* **Variables** `x`
+* **Constructors** `Nil`
+* `{x -> x}`
+* `f x`
+* `let y = Nil in y`
+* `case x of Nil -> True`
+
+```haskell
+Nil
+```
 
 ### Eval
 
