@@ -26,7 +26,8 @@ supercompile = residuate . ptree
   Given an Expr, builds the corresponding process tree.
 -}
 ptree :: Expr -> Tree Label (Integer, (Conf, Emit))
-ptree = depth 15 . stamp . id . id . path . id . drive . initConf
+-- ptree = depth 15 . stamp . id . id . path . id . drive . initConf
+ptree = stamp . back . tie . path . generalize . drive . initConf
 
 {-|
   Builds an Expr from the given process tree.

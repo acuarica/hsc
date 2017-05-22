@@ -3,13 +3,12 @@
 
 ## Introduction
 
-Pushing the Boundaries of Call-by-Need Supercompilation
+Pushing the Boundaries of Call-by-Need Supercompilation.
 
 The Haskell Supercompiler Project explores uses of supercompilation.
 Supercompilation is a program transformation technique due to Turchin.
-The main use so far of supercompilation was program optimization.
-The project aims to support theorem proving on algebraic data structures
-as well.
+The main use so far of Supercompilation was program optimization.
+The project aims to support theorem proving on algebraic data structures as well.
 
 Supercompilation is a program transformation technique aimed at reduce unnecessary computation when composing functional programs.
 Supercompilation can be used for different purposes.
@@ -23,8 +22,12 @@ well-suited for these wide range applications, and what are the short-comings.
 
 ### Expr
 
-This module defines the Expr type,
-which is the core language used for all transformations.
+This module defines the `Expr` type, which is the core language used for all transformations.
+The `Expr` type is core lambda calculus, with algebraic data types and case expressions.
+This variant of `Expr` is untyped.
+
+The module `Expr` additionally contains functions to query and manipulate `Expr` expressions.
+In particular, to manage substitutions and work with free variables.
 
 ### Parser
 
