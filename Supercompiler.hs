@@ -14,7 +14,7 @@ import Expr (Var, Tag, Expr(Var, Con, Let, Case), Pat(Pat), Subst,
              con, app, appVars, isVar, subst, substAlts)
 import Eval (Conf, Env, Stack, StackFrame(Arg, Alts), newConf, initConf, step)
 import Match ((|~~|), (<|), (|><|))
-import Tree (Tree(Node), depth, flatten)
+import Tree (Tree(Node), flatten)
 
 {-|
   Supercompiles an expr.
@@ -26,7 +26,6 @@ supercompile = residuate . ptree
   Given an Expr, builds the corresponding process tree.
 -}
 ptree :: Expr -> Tree Label (Integer, (Conf, Emit))
--- ptree = depth 15 . stamp . id . id . path . id . drive . initConf
 ptree = stamp . back . tie . path . generalize . drive . initConf
 
 {-|
