@@ -72,44 +72,32 @@ supercompileWithPrelude exprText = (expr, sexpr)
 
 testEvalSupercompiled :: TestTree
 testEvalSupercompiled = testGroup "eval" [
-    go "map inc zs" $
-      let1 "zs" . list nat,
-    go "map inc zs" $
-      let1 "zs" . list bool,
-    go "map inc zs" $
-      let1 "zs" . list (list nat),
-    go "map inc" $
-      flip App . list nat,
-    go "map inc (map inc zs)" $
-      let1 "zs" . list nat,
-    go "map {n->Succ n} (map {n->Succ(Succ n)} zs)" $
-      \zs -> let1 "zs" (list nat zs),
-    go "map h (map g zs)" $
-      \zs ->
-        let1 "h" (parseExpr
-          "{n->Succ n}") .
-        let1 "g" (parseExpr
-          "{n->case n of Zero->Zero;Succ n'->Succ(Succ (g n'));}") .
-        let1 "zs" (list nat zs),
-    go "let mimi={zs->map inc (map inc zs)} in mimi" $
-      flip App . list nat,
-    go "c (map inc) (map inc)" $
-      flip App . list nat,
-    go "append as bs" $
-      \(as, bs) -> let1 "as" (list nat as) . let1 "bs" (list nat bs),
+    go "map inc zs" $ let1 "zs" . list nat,
+    go "map inc zs" $ let1 "zs" . list bool,
+    go "map inc zs" $ let1 "zs" . list (list nat),
+    -- go "map inc" $ flip App . list nat,
+    go "map inc (map inc zs)" $ let1 "zs" . list nat,
+    go "map {n->Succ n} (map {n->Succ(Succ n)} zs)" $ \zs -> let1 "zs" (list nat zs),
+    -- go "map h (map g zs)" $
+    --   \zs ->
+    --     let1 "h" (parseExpr
+    --       "{n->Succ n}") .
+    --     let1 "g" (parseExpr
+    --       "{n->case n of Zero->Zero;Succ n'->Succ(Succ (g n'));}") .
+    --     let1 "zs" (list nat zs),
+    -- go "let mimi={zs->map inc (map inc zs)} in mimi" $ flip App . list nat,
+    -- go "c (map inc) (map inc)" $
+    --   flip App . list nat,
+    go "append as bs" $ \(as, bs) -> let1 "as" (list nat as) . let1 "bs" (list nat bs),
     go "append (append as bs) cs" $
-      \(as, bs, cs) ->
-        let1 "as" (list nat as) .
-          let1 "bs" (list nat bs) .
-            let1 "cs" (list nat cs),
-    go "plus'accum x y" $
-      \(x, y) -> let1 "x" (nat x) . let1 "y" (nat y),
-    go "reverse zs" $
-      let1 "zs" . list nat,
-    go "reverseAccum zs" $
-      let1 "zs" . list nat -- ,
-    -- go "T (map inc [1,2,3]) (map not [False, True])" $
-      
+      \(as, bs, cs) -> let1 "as" (list nat as) . let1 "bs" (list nat bs) . let1 "cs" (list nat cs)
+    -- go "plus'accum x y" $
+    --   \(x, y) -> let1 "x" (nat x) . let1 "y" (nat y),
+    -- go "reverse zs" $
+    --   let1 "zs" . list nat,
+    -- go "reverseAccum zs" $
+    --   let1 "zs" . list nat -- ,
+    -- -- go "T (map inc [1,2,3]) (map not [False, True])" $
   ]
   where
     go e fexpr = let (expr, sexpr) = supercompileWithPrelude e in
@@ -171,7 +159,7 @@ testInvertible = testGroup "supercompile Invertible Functions" [
 
 main :: IO ()
 main = defaultMain $ testGroup "Supercompiler" [
-  testEvalSupercompiled,
-  testPredicates,
-  testInvertible
+  testEvalSupercompiled -- ,
+  -- testPredicates,
+  -- testInvertible
   ]

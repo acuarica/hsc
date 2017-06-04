@@ -1,7 +1,8 @@
 
-let inc={n->Succ n} in
-let map={f->{xs->case xs of
-  Nil -> Nil;
-  Cons x' xs' -> Cons (f x') (map f xs');
-}} in
+let
+  inc={n->Succ n};
+  map={f->{xs->case xs of
+    Nil -> Nil;
+    Cons x' xs' -> Cons (f x') (map f xs');
+  }} in
 map inc

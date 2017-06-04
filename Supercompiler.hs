@@ -7,12 +7,12 @@
 module Supercompiler (supercompile, ptree, residuate) where
 
 import Control.Exception (assert)
-import Data.Maybe (fromJust)
+-- import Data.Maybe (fromJust)
 import Control.Arrow (first, second)
 
-import Expr (Var, Tag, Expr(Var, Con, Let, Case), Pat(Pat), Subst,
-             con, app, appVars, isVar, subst, substAlts)
-import Eval (Conf, Env, Stack, StackFrame(Arg, Alts), newConf, initConf, step)
+import Expr (Var, Tag, Expr(Var, Con, Lam, App, Let, Case), Pat(Pat), Subst,
+             con, app, appVars, isVar, subst, substAlts, freeVars)
+import Eval (Conf, Env, Stack, StackFrame(Arg, Alts, Update), newConf, initConf, step)
 import Match ((|~~|), (<|), (|><|))
 import Tree (Tree(Node), flatten)
 
@@ -45,8 +45,8 @@ residuate (Node (key, (_conf, emit)) ts) = case emit of
     Case (Var scvar) $ map (\(PatLabel p, t) -> (p, residuate t)) ts
   EmitTie vs -> assert (null ts) $
     appVars (Var fkey) vs
-  EmitLam -> assert (length ts == 1 && fst (head ts) == Step) $
-    Let [(fkey, residuate $ snd (head ts))] (Var fkey)
+  EmitLam vars -> assert (length ts == 1 && fst (head ts) == Step) $
+    Let [(fkey, foldr Lam (residuate $ snd (head ts)) vars)] (appVars (Var fkey) vars)
   where fkey = "$f_" ++ show key
 
 {-|
@@ -55,7 +55,7 @@ residuate (Node (key, (_conf, emit)) ts) = case emit of
 data Emit =
   EmitNop |
   EmitVar Var |
-  EmitArg | EmitCon Tag | EmitLet | EmitCase Var | EmitTie [Var] | EmitLam
+  EmitArg | EmitCon Tag | EmitLet | EmitCase Var | EmitTie [Var] | EmitLam [Var]
 
 {-|
   Represents how an expression connects to all its splitted childs.
@@ -71,8 +71,8 @@ instance Show Emit where
     EmitCon tag -> "Con:" ++ tag
     EmitLet -> "let"
     EmitCase var -> "case:" ++ var
-    EmitTie vs -> "~~" ++ show vs
-    EmitLam -> "lam"
+    EmitTie vars -> "~~" ++ show vars
+    EmitLam vars -> "lam" ++ show vars
 
 instance Show Label where
   show label = case label of
@@ -111,18 +111,8 @@ split s@(env, stack, expr) = case expr of
   Con tag args -> case stack of
     [] -> (EmitCon tag, map ((,) ConEdge . newConf env) args)
     _ -> error $ "Spliting with Con and stack: " ++ show stack
-
--- freduce :: Conf -> Conf
--- freduce = freduce' 1
---   where
---    v = Var . (++) "$m_" . show
---    freduce' next conf = let (env, stack, expr) = reduce conf in
---     case expr of
---       Lam var lamexpr ->
---         case stack of
---           [] -> freduce' (next + 1) (env, [Arg (v next)], Lam var lamexpr)
---           _ -> error $ "Stack not empty in freduce" ++ show stack
---       _ -> (env, stack, expr)
+  Lam _var _lamexpr -> (EmitNop, [(Step, (env, [Arg $ Var "$m_0"], expr))])
+  _ -> error $ show s
 
 drive :: Conf -> Tree Label (Conf, Emit)
 drive conf = case step conf of
@@ -137,11 +127,13 @@ path = path' [1]
     path' key (Node x cs) = let n = length cs in
       Node (key, x) $ zipWith (\k (e, v) -> (e, path' (k:key) v)) [1..n] cs
 
-stamp :: Eq k => Tree e (k, a) -> Tree e (Integer, a)
+stamp :: (Show k, Eq k) => Tree e (k, a) -> Tree e (Integer, a)
 stamp t = fmap (first $ flookup $ zip (map fst $ flatten t) [0..]) t
   where
-    flookup :: Eq k => [(k, a)] -> k -> a
-    flookup d k = fromJust (lookup k d)
+    flookup :: (Show k, Eq k) => [(k, a)] -> k -> a
+    flookup d k = case lookup k d of
+      Just v -> v
+      Nothing -> error $ show k
 
 generalize :: Tree Label (Conf, Emit) -> Tree Label (Conf, Emit)
 generalize = generalize' []
@@ -191,5 +183,14 @@ back t0 = fmap (updateNode $ backKeys t0) t0
     isTie _ = False
     updateNode :: Eq k => [k] -> (k, (Conf, Emit)) -> (k, (Conf, Emit))
     updateNode ks node@(key, (conf, emit)) = if key `elem` ks && not (isTie emit)
-      then (key, (conf, EmitLam))
+      then (key, (conf, EmitLam $ freeVars $ toExpr' conf))
       else node
+
+toExpr' :: Conf -> Expr
+toExpr' (env, stack, expr') = go expr' stack
+  where go expr [] = Let env expr
+        go expr (Arg arg:stack') = go (App expr arg) stack'
+        go expr (Alts alts:stack') = go (Case expr alts) stack'
+        --go expr (Update var:stack') =
+        -- go (let1 var expr (Var var)) stack'
+        go expr (Update _var:stack') = go expr stack'

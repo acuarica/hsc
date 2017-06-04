@@ -104,7 +104,7 @@ toExpr (_env, stack, expr') = go expr' stack
         go expr (Arg arg:stack') = go (App expr arg) stack'
         go expr (Alts alts:stack') = go (Case expr alts) stack'
         --go expr (Update var:stack') =
-          --go (let1 var expr (Var var)) stack'
+        -- go (let1 var expr (Var var)) stack'
         go expr (Update _var:stack') = go expr stack'
 
 {-|
