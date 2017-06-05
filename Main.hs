@@ -110,6 +110,7 @@ main = do
 
       let pt = ptree expr
       let dpt = draw $ (second . first) dropEnv <$> pt
+      -- let dpt = draw pt
       -- let dpt = draw pt -- (second . first) dropEnv <$> pt
       let sexpr = residuate pt
 
